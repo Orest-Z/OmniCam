@@ -58,8 +58,10 @@ async function startServer(): Promise<void> {
   const tls = await loadOrCreateCert();
   const port = await phoneServer.start(tls, settings.get().port);
   session.setPort(port);
-  console.log(`OmniCam phone page: https://<lan-ip>:${port}/`);
-  broadcast({ pairing: await session.pairingInfo() });
+  const info = await session.pairingInfo();
+  // Dev convenience only: the token is a secret, never log it from a packaged build.
+  console.log(app.isPackaged ? `OmniCam phone page on port ${port}` : `OmniCam phone page: ${info.url}`);
+  broadcast({ pairing: info });
 }
 
 function wireIpc(): void {
