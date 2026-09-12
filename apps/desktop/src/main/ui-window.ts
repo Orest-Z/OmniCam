@@ -1,9 +1,11 @@
 import { app, BrowserWindow, screen, shell } from 'electron';
 import { join } from 'node:path';
+import { restartBudget } from './engine-bridge';
 import { settings } from './settings';
 
 let win: BrowserWindow | null = null;
 let quitting = false;
+const restarts: number[] = [];
 
 // Must match the CSS tokens in renderer/styles.css.
 export const THEME = { bg: '#0a0a0d', symbol: '#9d99ab', titlebarHeight: 40 };
@@ -62,8 +64,11 @@ export function createOrShowUiWindow(): BrowserWindow {
   });
 
   win.once('ready-to-show', () => win?.show());
+  // Renderer warnings/errors go to the log file; in dev everything does.
+  win.webContents.on('console-message', (e) => {
+    if (!app.isPackaged || e.level === 'warning' || e.level === 'error') console.log(`[ui:${e.level}]`, e.message);
+  });
   if (!app.isPackaged) {
-    win.webContents.on('console-message', (e) => console.log(`[ui:${e.level}]`, e.message));
     if ((process.env.OMNICAM_UI_DEBUG ?? '').includes('metrics')) {
       // Renderer layout/style/paint counters via the DevTools protocol, logged every 3 s.
       const dbg = win.webContents.debugger;
@@ -80,6 +85,11 @@ export function createOrShowUiWindow(): BrowserWindow {
       }, 3000);
     }
   }
+  // A dead renderer leaves an empty black window; reload it (the page re-fetches all state).
+  win.webContents.on('render-process-gone', (_e, d) => {
+    console.error(`ui renderer gone: ${d.reason} (exit code ${d.exitCode})`);
+    if (restartBudget(restarts)) setTimeout(() => win?.webContents.reload(), 500);
+  });
   win.webContents.setWindowOpenHandler(({ url }) => {
     void shell.openExternal(url);
     return { action: 'deny' };

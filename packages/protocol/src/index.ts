@@ -30,7 +30,7 @@ export interface SessionResponse {
 
 export interface SessionError {
   ok: false;
-  error: 'bad-token' | 'bad-request' | 'engine-unavailable' | 'timeout' | 'internal';
+  error: 'bad-token' | 'bad-request' | 'engine-unavailable' | 'timeout' | 'internal' | 'busy';
   message?: string;
 }
 

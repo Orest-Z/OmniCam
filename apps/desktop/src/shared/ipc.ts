@@ -40,6 +40,7 @@ export const UI_CONTROL = 'ui:control';
 export const UI_ROTATE_TOKEN = 'ui:rotate-token';
 export const UI_SET_PREVIEW = 'ui:set-preview';
 export const UI_OPEN_EXTERNAL = 'ui:open-external';
+export const UI_OPEN_LOGS = 'ui:open-logs';
 export const UI_DISCONNECT = 'ui:disconnect';
 export const UI_STATE = 'ui:state';
 export const UI_PREVIEW_FRAME = 'ui:preview-frame';
@@ -95,6 +96,8 @@ export interface UiApi {
   disconnect(): Promise<void>;
   setPreview(enabled: boolean): Promise<void>;
   openExternal(url: string): Promise<void>;
+  /** Opens the folder holding omnicam.log in the file manager. */
+  openLogs(): Promise<void>;
   onState(cb: (patch: StatePatch) => void): () => void;
   onPreviewFrame(cb: (frame: PreviewFrame) => void): () => void;
   onPhoneMessage(cb: (msg: PhoneToDesktop) => void): () => void;

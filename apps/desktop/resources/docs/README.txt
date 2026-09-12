@@ -53,6 +53,13 @@ IF "OmniCam" DOES NOT SHOW UP AS A CAMERA
   Chrome, Firefox, OBS, Slack and most others do.
 
 
+SOMETHING ELSE?
+---------------
+Settings > "Open log folder" shows omnicam.log (connections, camera device, crashes).
+Nothing is uploaded anywhere. Attach it when reporting a problem at
+https://github.com/Orest-Z/OmniCam/issues
+
+
 WINDOWS SMARTSCREEN
 -------------------
 OmniCam is open source and not (yet) code-signed, so Windows may show

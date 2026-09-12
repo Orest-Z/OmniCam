@@ -6,6 +6,7 @@ import {
   UI_DISCONNECT,
   UI_GET_STATE,
   UI_OPEN_EXTERNAL,
+  UI_OPEN_LOGS,
   UI_PREVIEW_FRAME,
   UI_ROTATE_TOKEN,
   UI_SET_PREVIEW,
@@ -17,6 +18,8 @@ import {
 import { broadcast, disconnectPhone } from './actions';
 import { loadOrCreateCert } from './cert';
 import { engine } from './engine-bridge';
+import { installFileLog, logDir } from './log';
+import { migrateLegacyUserData } from './user-data';
 import { phoneServer } from './server';
 import { session } from './session';
 import { settings } from './settings';
@@ -34,6 +37,8 @@ app.commandLine.appendSwitch('disable-background-timer-throttling');
 // frame costs ~12 ms of GPU readback per VideoFrame.copyTo() and lands as NV12; a software-decoded
 // one costs ~0.4 ms to copy and is already I420. The virtual camera is a CPU consumer, so the GPU
 // round trip is pure overhead until 4K. (Settings must be read before app.whenReady.)
+installFileLog();
+migrateLegacyUserData();
 settings.load();
 if (!settings.get().hardwareDecode) app.commandLine.appendSwitch('disable-accelerated-video-decode');
 
@@ -100,6 +105,8 @@ function wireIpc(): void {
     if (/^https?:\/\//.test(url)) return shell.openExternal(url);
   });
 
+  ipcMain.handle(UI_OPEN_LOGS, () => shell.openPath(logDir()));
+
   engine.on('stats', (s) => {
     updateTray(s);
     broadcast({ stats: s });
@@ -113,6 +120,7 @@ function wireIpc(): void {
     vcamError = message;
     uiWindow()?.webContents.send(UI_VCAM_ERROR, message);
   });
+  engine.on('restarted', () => broadcast({ stats: engine.stats, vcam: engine.vcam }));
 }
 
 async function main(): Promise<void> {
@@ -150,6 +158,9 @@ async function main(): Promise<void> {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createOrShowUiWindow();
   });
+  // A helper process (GPU, network, a renderer) went away. Renderers are restarted by their
+  // owners (engine-bridge / ui-window); the rest is logged so a bug report has the reason.
+  app.on('child-process-gone', (_e, d) => console.warn(`child process gone: ${d.type}${d.name ? ' ' + d.name : ''} reason=${d.reason} exitCode=${d.exitCode}`));
   app.on('before-quit', () => markQuitting());
   app.on('will-quit', () => {
     engine.shutdown();

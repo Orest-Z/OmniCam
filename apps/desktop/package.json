@@ -1,5 +1,6 @@
 {
   "name": "@omnicam/desktop",
+  "productName": "OmniCam",
   "version": "1.0.0",
   "private": true,
   "description": "OmniCam desktop — turns your phone into a virtual webcam",

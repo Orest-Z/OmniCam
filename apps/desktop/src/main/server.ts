@@ -81,6 +81,23 @@ function serveStatic(res: ServerResponse, urlPath: string) {
   createReadStream(file).pipe(res);
 }
 
+// One negotiation at a time and a modest budget per client: a misbehaving device on the LAN
+// cannot keep the engine busy renegotiating (each attempt tears down the current phone).
+const SESSION_BURST = 6;
+const SESSION_WINDOW_MS = 60_000;
+const attempts = new Map<string, number[]>();
+let negotiating = false;
+
+function sessionAllowed(ip: string): boolean {
+  const now = Date.now();
+  const list = (attempts.get(ip) ?? []).filter((t) => now - t < SESSION_WINDOW_MS);
+  if (list.length >= SESSION_BURST) return false;
+  list.push(now);
+  attempts.set(ip, list);
+  if (attempts.size > 64) attempts.delete(attempts.keys().next().value as string);
+  return true;
+}
+
 async function handle(req: IncomingMessage, res: ServerResponse) {
   const url = new URL(req.url ?? '/', 'https://localhost');
   res.setHeader('x-content-type-options', 'nosniff');
@@ -104,7 +121,14 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       const e: SessionError = { ok: false, error: 'bad-token' };
       return json(res, 403, e);
     }
+    if (negotiating || !sessionAllowed(req.socket.remoteAddress ?? '?')) {
+      const e: SessionError = { ok: false, error: 'busy' };
+      res.setHeader('retry-after', '5');
+      return json(res, 429, e);
+    }
+    negotiating = true;
     try {
+      console.log(`session: ${body.device.platform} from ${req.socket.remoteAddress}`);
       const result = await engine.negotiate(body.sdp, body.device);
       const ok: SessionResponse = { ok: true, ...result };
       return json(res, 200, ok);
@@ -117,6 +141,8 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
           : 'internal';
       const e: SessionError = { ok: false, error, message };
       return json(res, 503, e);
+    } finally {
+      negotiating = false;
     }
   }
 

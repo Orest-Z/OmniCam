@@ -29,7 +29,7 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, version, on
           <span>
             The "OmniCam" camera device is unavailable: <code>{vcamError}</code>
             <br />
-            Reinstall OmniCam, or from a checkout run <code>npm run native:build</code> then <code>npm run native:register</code> (admin).
+            Run the OmniCam installer again to register the camera driver. From a source checkout: <code>npm run native:build</code> then <code>npm run native:register</code> (admin).
           </span>
         </div>
       ) : (
@@ -135,6 +135,17 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, version, on
         <div className="k">Start OmniCam when I sign in</div>
         <div className="v">
           <Switch on={settings.launchAtLogin} onChange={(v) => onSettings({ launchAtLogin: v })} />
+        </div>
+      </div>
+      <div className="field">
+        <div className="k">
+          Log file
+          <small>Attach it to a bug report. Nothing is ever sent automatically.</small>
+        </div>
+        <div className="v">
+          <button className="btn" onClick={() => void window.omnicam.openLogs()}>
+            Open log folder
+          </button>
         </div>
       </div>
       <div className="field">

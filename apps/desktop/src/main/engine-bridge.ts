@@ -42,6 +42,18 @@ export const EMPTY_VCAM_STATS: VirtualCamStats = {
 };
 
 const NEGOTIATE_TIMEOUT_MS = 10_000;
+// A renderer that keeps dying is not going to be fixed by another reload.
+const RESTART_WINDOW_MS = 60_000;
+const RESTART_LIMIT = 3;
+
+/** True if another restart is allowed; keeps a sliding window of recent restart times. */
+export function restartBudget(times: number[]): boolean {
+  const now = Date.now();
+  while (times.length && now - times[0] > RESTART_WINDOW_MS) times.shift();
+  if (times.length >= RESTART_LIMIT) return false;
+  times.push(now);
+  return true;
+}
 
 /** Location of the native addon + softcam DLLs (dev: packages/vcam-native/build; packaged: resources/native). */
 export function nativePaths(): { addonPath: string; nativeDir: string } {
@@ -70,11 +82,13 @@ export function toEngineSettings(s: AppSettings): EngineSettings {
  * the native virtual-camera addon; this class is the only thing that talks to it.
  *
  * Events: 'stats' (StreamStats), 'vcam' (VirtualCamStats), 'preview' (Buffer jpeg),
- *         'phone' (PhoneToDesktop), 'ready'
+ *         'phone' (PhoneToDesktop), 'ready', 'restarted' (after a renderer crash + reload)
  */
 class EngineBridge extends EventEmitter {
   private win: BrowserWindow | null = null;
   private ready = false;
+  private restarts: number[] = [];
+  private crashed = false;
   private pending = new Map<string, { resolve: (a: EngineAnswer) => void; timer: NodeJS.Timeout }>();
   stats: StreamStats = { ...EMPTY_STREAM_STATS };
   vcam: VirtualCamStats = { ...EMPTY_VCAM_STATS };
@@ -101,6 +115,11 @@ class EngineBridge extends EventEmitter {
       this.ready = true;
       this.send(ENGINE_APPLY_SETTINGS, toEngineSettings(settings.get()));
       this.emit('ready');
+      if (this.crashed) {
+        this.crashed = false;
+        console.log('engine restarted');
+        this.emit('restarted');
+      }
     });
     ipcMain.on(ENGINE_ANSWER, (e, answer: EngineAnswer) => {
       if (e.sender !== win.webContents) return;
@@ -135,6 +154,29 @@ class EngineBridge extends EventEmitter {
     ipcMain.on(ENGINE_LOG, (e, level: 'log' | 'warn' | 'error', ...args: unknown[]) => {
       if (e.sender !== win.webContents) return;
       console[level]('[engine]', ...args);
+    });
+
+    // The engine renderer died (GPU driver, OOM, killed from Task Manager…). Without this the
+    // camera silently stops forever: reload the page so it reconnects the addon and waits for a
+    // phone again. The phone's own reconnect loop brings the stream back.
+    win.webContents.on('render-process-gone', (_e, d) => {
+      console.error(`engine renderer gone: ${d.reason} (exit code ${d.exitCode})`);
+      this.ready = false;
+      this.crashed = true;
+      for (const [id, p] of this.pending) {
+        clearTimeout(p.timer);
+        this.pending.delete(id);
+        p.resolve({ id, error: 'engine restarted' });
+      }
+      this.stats = { ...EMPTY_STREAM_STATS };
+      this.vcam = { ...EMPTY_VCAM_STATS };
+      this.emit('stats', this.stats);
+      this.emit('vcam', this.vcam);
+      if (!restartBudget(this.restarts)) {
+        this.emit('vcam-error', 'The camera engine crashed repeatedly. Quit OmniCam from the tray and start it again; the log folder (Settings) has details.');
+        return;
+      }
+      setTimeout(() => this.win?.webContents.reload(), 500);
     });
 
     win.on('closed', () => {

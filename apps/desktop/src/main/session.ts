@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import QRCode from 'qrcode';
 import type { PairingInfo } from '@omnicam/protocol';
 import { pickAddress, lanAddresses } from './network';
@@ -22,7 +22,8 @@ class SessionManager {
   }
 
   validate(token: unknown): boolean {
-    return typeof token === 'string' && token.length > 8 && token === this.token;
+    if (typeof token !== 'string' || token.length !== this.token.length) return false;
+    return timingSafeEqual(Buffer.from(token), Buffer.from(this.token));
   }
 
   async pairingInfo(): Promise<PairingInfo> {

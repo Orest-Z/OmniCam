@@ -7,7 +7,7 @@
   nsExec::ExecToLog '"$SYSDIR\regsvr32.exe" /s "$INSTDIR\resources\native\omnicam_vcam.dll"'
   Pop $0
   ${If} $0 != 0
-    MessageBox MB_ICONEXCLAMATION "The OmniCam camera driver (x64) could not be registered (code $0). You can retry from the app settings."
+    MessageBox MB_ICONEXCLAMATION "The OmniCam camera driver (x64) could not be registered (code $0). Run this installer again to retry."
   ${EndIf}
 
   ${If} ${FileExists} "$INSTDIR\resources\native\x86\omnicam_vcam.dll"
