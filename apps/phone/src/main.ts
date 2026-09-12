@@ -344,3 +344,6 @@ els.res.addEventListener('change', () => {
 window.addEventListener('beforeunload', () => teardownPeer());
 
 showOverlay(token ? '' : NO_TOKEN_MSG, !token);
+// `auto=1` skips the Start button (automated tests, reconnect deep links). Browsers may still
+// require a gesture for some features (wake lock), which is why the button is the default.
+if (token && new URLSearchParams(location.search).get('auto') === '1') void startSession();
