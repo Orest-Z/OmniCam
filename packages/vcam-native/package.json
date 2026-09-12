@@ -2,14 +2,17 @@
   "name": "@omnicam/vcam-native",
   "version": "0.1.0",
   "private": true,
-  "description": "Native virtual camera backend for OmniCam (N-API)",
-  "main": "index.js",
+  "description": "Native virtual camera backend for OmniCam (N-API addon + DirectShow filter)",
+  "type": "module",
   "scripts": {
-    "build": "cmake-js compile --runtime electron --runtime-version $npm_package_config_electron",
-    "rebuild": "cmake-js rebuild --runtime electron --runtime-version $npm_package_config_electron",
-    "clean": "cmake-js clean"
+    "build": "node scripts/build.mjs",
+    "build:debug": "node scripts/build.mjs --debug",
+    "register": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/register.ps1",
+    "unregister": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/register.ps1 -Unregister",
+    "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true});require('node:fs').rmSync('build-x86',{recursive:true,force:true})\""
   },
-  "config": {
-    "electron": "0.0.0"
+  "devDependencies": {
+    "cmake-js": "^7.3.0",
+    "node-addon-api": "^8.3.0"
   }
 }
