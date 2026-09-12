@@ -47,7 +47,12 @@ PHONE (browser)                       DESKTOP (Electron)
 - **The native thread owns the camera clock.** JS deposits frames; C++ repeats the last one when
   the source stalls and shows a placeholder when nothing is connected.
 - **Security model:** per-launch random token in the QR URL; `/api/session` rejects anything
-  else; one active phone at a time.
+  else (constant-time compare, one negotiation at a time, 6 attempts/min per client); one active
+  phone at a time.
+- **Crash recovery:** both renderers are reloaded on `render-process-gone` (at most 3 times per
+  minute, then the UI shows an error). The engine re-attaches the addon and the phone's own
+  reconnect loop restores the stream. Everything `console.*` in main (engine logs are relayed)
+  goes to `%APPDATA%\OmniCam\logs\omnicam.log`, 2 MB with one rotation.
 
 ## Repository layout
 
@@ -55,7 +60,8 @@ PHONE (browser)                       DESKTOP (Electron)
 package.json                 npm workspaces (no pnpm — keep prerequisites minimal)
 apps/desktop/                Electron app (electron-vite, React, TS)
   src/main/                  index.ts, server.ts, cert.ts, network.ts, session.ts, settings.ts,
-                             engine-bridge.ts (only thing that talks to the engine), tray.ts, ui-window.ts
+                             engine-bridge.ts (only thing that talks to the engine), tray.ts, ui-window.ts,
+                             log.ts (%APPDATA%\OmniCam\logs), user-data.ts (1.0.0 folder migration)
   src/engine/                engine.ts (WebRTC receiver, stats, preview JPEGs, frame pump), vcam.ts (addon API)
   src/renderer/              React UI (Pairing, Preview, Controls, Settings)
   src/preload/               contextBridge → window.omnicam (typed in shared/ipc.ts)
@@ -101,6 +107,8 @@ Without the native build the app still runs (QR, phone connection, preview) and 
   libyuv's "RGB24" is B,G,R in memory — that *is* DirectShow RGB24; don't "fix" it.
 - Errors that a user can act on (driver not registered, port busy, firewall) must surface in
   the UI with a concrete instruction, not just in logs.
+- CI (`.github/workflows/build.yml`) typechecks, builds the native pieces and the installer on
+  every push; a `v*` tag additionally creates a draft GitHub release with the installer attached.
 
 ## Brand & UI
 

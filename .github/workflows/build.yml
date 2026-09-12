@@ -1,0 +1,61 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # N-API addon (Electron ABI) + DirectShow filter DLLs, x64 and x86. Needs the VS 2022 C++
+      # toolset and CMake, both preinstalled on windows-latest.
+      - name: Native build
+        run: npm run native:build
+
+      - name: Installer
+        run: npm run dist
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OmniCam-Setup
+          path: |
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.blockmap
+          if-no-files-found: error
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: |
+            apps/desktop/release/*.exe
+            apps/desktop/resources/docs/README.txt
+          body: |
+            Download **OmniCam-Setup-*.exe** and run it. Windows SmartScreen may show
+            "Windows protected your PC" (not code-signed yet): click **More info → Run anyway**.
+            Setup, usage and troubleshooting: README.txt below, or the project README.

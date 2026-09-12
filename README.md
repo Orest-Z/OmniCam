@@ -13,6 +13,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/Orest-Z/OmniCam/actions/workflows/build.yml"><img alt="Build" src="https://github.com/Orest-Z/OmniCam/actions/workflows/build.yml/badge.svg"></a>
   <img alt="Windows 10 / 11, 64-bit" src="https://img.shields.io/badge/Windows-10%20%2F%2011%20·%2064--bit-3b3552?style=flat-square">
   <img alt="Phone: no app needed" src="https://img.shields.io/badge/Phone-no%20app%20needed-3b3552?style=flat-square">
   <img alt="Video: WebRTC on your LAN" src="https://img.shields.io/badge/Video-WebRTC%20on%20your%20LAN-3b3552?style=flat-square">
@@ -44,6 +45,20 @@ H.264; nothing leaves your network, and there is no account, no cloud and no app
 - **Stays out of the way** — runs from the tray; closing the window keeps the camera live. The phone drops to 5 fps
   whenever nothing on the PC is using the camera.
 
+### How it compares
+
+|                          | OmniCam                  | DroidCam          | Iriun             | Camo              | EpocCam           |
+| ------------------------ | ------------------------ | ----------------- | ----------------- | ----------------- | ----------------- |
+| App to install on phone  | **none — a web page**    | required          | required          | required          | required          |
+| Price                    | **free, MIT**            | free tier + paid  | free tier + paid  | free tier + paid  | free tier + paid  |
+| Open source              | **yes**                  | no                | no                | no                | no                |
+| Account / cloud          | **none**                 | none              | none              | account           | none              |
+| Video path               | phone → PC on your Wi-Fi | Wi-Fi / USB       | Wi-Fi / USB       | Wi-Fi / USB       | Wi-Fi / USB       |
+| Microphone               | not yet                  | yes               | yes               | yes               | yes               |
+
+The trade-off for "no app" is a browser security warning the first time (explained below), and USB is not an option
+yet — a phone hotspot or USB tethering with the PC on it works as a stand-in.
+
 ---
 
 ## Install (Windows)
@@ -72,7 +87,11 @@ The link only works from your network and changes every time you generate a new 
 
 ### 2 · Accept the security warning — it's expected, and it's once
 
-The link is private to your Wi-Fi, so the phone can't verify it the way it verifies public websites.
+**Why the warning?** Browsers only allow camera access over HTTPS, and a certificate for a private address like
+`192.168.1.11` can't be issued by a public authority, so OmniCam makes its own. The phone is talking to your PC
+directly — nothing else is on that link — but the browser has no way to know that, so it warns once. Accepting it
+applies only to this address on this network. (A warning-free mode with a real certificate is on the roadmap.)
+
 Here's exactly what to tap on an iPhone:
 
 <table align="center">
@@ -185,6 +204,14 @@ the camera, and it resumes when you come back (the last frame is held meanwhile,
 
 Use **Rotate** and **Fill/Fit** on the desktop. *Fill* crops a portrait phone into 16:9; *Fit* keeps everything with
 bars. Holding the phone in landscape avoids both.
+</details>
+
+<details>
+<summary><strong>Something else — where are the logs?</strong></summary>
+
+Settings → **Open log folder** (`%APPDATA%\OmniCam\logs\omnicam.log`). It records connections, the camera device
+state and any crashes, and nothing is ever uploaded. Attach it when you
+[open an issue](https://github.com/Orest-Z/OmniCam/issues).
 </details>
 
 <details>

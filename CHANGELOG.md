@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Log file at `%APPDATA%\OmniCam\logs\omnicam.log` with an "Open log folder" button in Settings.
+- The app recovers when one of its renderer processes dies (previously: black window / camera
+  silently stopped until a restart).
+- User data moves from `%APPDATA%\@omnicam\desktop` to `%APPDATA%\OmniCam`; settings and the
+  certificate are carried over so phones keep their exception.
+- Pairing endpoint: constant-time token check and a per-client rate limit.
+- GitHub Actions build; installer attached to tagged releases.
+
 ## 1.0.0 — 2026-09-12
 
 First release. Windows 10 (1809+) and Windows 11, 64-bit.
