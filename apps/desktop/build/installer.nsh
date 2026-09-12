@@ -16,6 +16,9 @@
     Pop $0
   ${EndIf}
 
+  ; Start-menu shortcut to the README so the instructions are one click away.
+  CreateShortCut "$SMPROGRAMS\OmniCam README.lnk" "$INSTDIR\resources\docs\README.txt"
+
   DetailPrint "Adding Windows Firewall rule..."
   nsExec::ExecToLog 'netsh advfirewall firewall delete rule name="OmniCam"'
   nsExec::ExecToLog 'netsh advfirewall firewall add rule name="OmniCam" dir=in action=allow program="$INSTDIR\OmniCam.exe" enable=yes profile=private,public description="Lets your phone reach OmniCam on the local network"'
@@ -32,4 +35,5 @@
   ${EndIf}
   nsExec::ExecToLog 'netsh advfirewall firewall delete rule name="OmniCam"'
   Pop $0
+  Delete "$SMPROGRAMS\OmniCam README.lnk"
 !macroend

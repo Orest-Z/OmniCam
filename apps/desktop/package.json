@@ -2,9 +2,12 @@
   "name": "@omnicam/desktop",
   "version": "0.1.0",
   "private": true,
-  "description": "OmniCam desktop — turns your phone into a virtual webcam",
+  "description": "OmniCam desktop \u2014 turns your phone into a virtual webcam",
   "main": "./out/main/index.js",
-  "author": "Orest-Z",
+  "author": {
+    "name": "Orest Zogju",
+    "url": "https://github.com/Orest-Z"
+  },
   "license": "MIT",
   "scripts": {
     "dev": "electron-vite dev",
@@ -13,19 +16,17 @@
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "dist": "electron-vite build && electron-builder --win --config electron-builder.yml"
   },
-  "dependencies": {
-    "@omnicam/protocol": "*",
-    "lucide-react": "^1.45.0"
-  },
   "devDependencies": {
+    "@omnicam/protocol": "*",
     "@types/node": "^24.13.4",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^5.2.0",
-    "electron": "^44.3.0",
+    "electron": "44.3.0",
     "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
+    "lucide-react": "^1.45.0",
     "png-to-ico": "^3.0.2",
     "qrcode": "^1.5.4",
     "react": "^19.3.0",
@@ -34,5 +35,6 @@
     "sharp": "^0.35.4",
     "typescript": "^7.0.2",
     "vite": "^7.3.6"
-  }
+  },
+  "homepage": "https://github.com/Orest-Z/OmniCam"
 }

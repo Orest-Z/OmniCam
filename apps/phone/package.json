@@ -8,10 +8,8 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
-  "dependencies": {
-    "@omnicam/protocol": "*"
-  },
   "devDependencies": {
+    "@omnicam/protocol": "*",
     "typescript": "^7.0.2",
     "vite": "^7.3.6"
   }

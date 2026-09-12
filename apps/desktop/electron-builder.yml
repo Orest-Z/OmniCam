@@ -14,6 +14,8 @@ extraResources:
     to: native
   - from: resources/icons
     to: icons
+  - from: resources/docs
+    to: docs
 asar: true
 win:
   target:
@@ -30,4 +32,5 @@ nsis:
   runAfterFinish: true
   artifactName: ${productName}-Setup-${version}.${ext}
   shortcutName: OmniCam
+electronVersion: 44.3.0
 publish: null

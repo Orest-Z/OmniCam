@@ -13,3 +13,4 @@ packages/vcam-native/build/
 *.user
 *.tsbuildinfo
 packages/vcam-native/build-x86/
+apps/desktop/release/
