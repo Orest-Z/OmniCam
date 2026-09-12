@@ -21,6 +21,8 @@ export interface PushFrameInfo {
 export interface Transform {
   mirror: boolean;
   rotation: 0 | 90 | 180 | 270;
+  /** Crop to fill the output instead of letterboxing. */
+  fill: boolean;
 }
 
 /**

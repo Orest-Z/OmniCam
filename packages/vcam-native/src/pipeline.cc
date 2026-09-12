@@ -295,13 +295,31 @@ bool Pipeline::convert(const RawFrame& raw, const Transform& t, std::vector<uint
         cur = dst;
     }
 
-    // Aspect-fit into the fixed output canvas (letterbox / pillarbox with black bars).
+    // Map the source onto the fixed output canvas.
+    //   fit : scale to fit, letterbox/pillarbox with black bars (never crops)
+    //   fill: scale to cover, crop the overflow symmetrically (webcam-like; a portrait phone
+    //         becomes a normal landscape picture instead of a narrow pillar)
     I420View canvas = cur;
     if (cur.w != width_ || cur.h != height_) {
         I420Buf fit = bufOf(fit_, width_, height_);
-        const double scale = std::min((double)width_ / cur.w, (double)height_ / cur.h);
-        const int dw = std::max(2, evenDown((int)(cur.w * scale + 0.5)));
-        const int dh = std::max(2, evenDown((int)(cur.h * scale + 0.5)));
+        I420View src = cur;
+        int dw, dh;
+        if (t.fill) {
+            const double scale = std::max((double)width_ / cur.w, (double)height_ / cur.h);
+            const int sw = std::min(cur.w, std::max(2, evenDown((int)(width_ / scale + 0.5))));
+            const int sh = std::min(cur.h, std::max(2, evenDown((int)(height_ / scale + 0.5))));
+            const int cx = evenDown((cur.w - sw) / 2);
+            const int cy = evenDown((cur.h - sh) / 2);
+            src = {cur.y + (size_t)cy * cur.sy + cx, cur.sy,
+                   cur.u + (size_t)(cy / 2) * cur.su + cx / 2, cur.su,
+                   cur.v + (size_t)(cy / 2) * cur.sv + cx / 2, cur.sv, sw, sh};
+            dw = width_;
+            dh = height_;
+        } else {
+            const double scale = std::min((double)width_ / cur.w, (double)height_ / cur.h);
+            dw = std::max(2, evenDown((int)(cur.w * scale + 0.5)));
+            dh = std::max(2, evenDown((int)(cur.h * scale + 0.5)));
+        }
         const int x0 = evenDown((width_ - dw) / 2);
         const int y0 = evenDown((height_ - dh) / 2);
         if (dw != width_ || dh != height_) fillI420Black(fit);
@@ -309,8 +327,8 @@ bool Pipeline::convert(const RawFrame& raw, const Transform& t, std::vector<uint
         uint8_t* du = fit.u + (size_t)(y0 / 2) * fit.su + x0 / 2;
         uint8_t* dv = fit.v + (size_t)(y0 / 2) * fit.sv + x0 / 2;
         // Box filter when shrinking (proper area averaging), bilinear when enlarging.
-        const auto filter = cur.w > dw ? libyuv::kFilterBox : libyuv::kFilterBilinear;
-        if (libyuv::I420Scale(cur.y, cur.sy, cur.u, cur.su, cur.v, cur.sv, cur.w, cur.h,
+        const auto filter = src.w > dw ? libyuv::kFilterBox : libyuv::kFilterBilinear;
+        if (libyuv::I420Scale(src.y, src.sy, src.u, src.su, src.v, src.sv, src.w, src.h,
                               dy, fit.sy, du, fit.su, dv, fit.sv, dw, dh, filter) != 0)
             return false;
         canvas = fit;

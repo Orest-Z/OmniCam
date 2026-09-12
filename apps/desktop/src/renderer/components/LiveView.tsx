@@ -23,7 +23,7 @@ export function LiveView({ stats, vcam, settings, onSettings, onControl, onShowQ
   return (
     <div className="live">
       <div className="stage">
-        <Preview stats={stats} mirror={settings.mirror} rotation={settings.rotation} />
+        <Preview stats={stats} />
       </div>
 
       <div className="bar">
@@ -62,12 +62,20 @@ export function LiveView({ stats, vcam, settings, onSettings, onControl, onShowQ
             <FlipHorizontal2 />
           </IconButton>
           <IconButton
-            title={`Rotate (${settings.rotation}°)`}
+            title={`Rotate output (${settings.rotation}°)`}
             on={settings.rotation !== 0}
             onClick={() => onSettings({ rotation: ((settings.rotation + 90) % 360) as AppSettings['rotation'] })}
           >
             <RotateCw />
           </IconButton>
+          <Segmented
+            value={settings.scaleMode}
+            options={[
+              { value: 'fill', label: 'Fill', title: 'Crop to fill the frame (like a webcam)' },
+              { value: 'fit', label: 'Fit', title: 'Show everything, with black bars if needed' },
+            ]}
+            onChange={(v) => onSettings({ scaleMode: v })}
+          />
         </div>
 
         <span className="spacer" />

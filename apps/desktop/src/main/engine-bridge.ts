@@ -59,6 +59,7 @@ export function toEngineSettings(s: AppSettings): EngineSettings {
     outputFps: s.outputFps,
     mirror: s.mirror,
     rotation: s.rotation,
+    scaleMode: s.scaleMode,
     holdLastFrame: s.holdLastFrame,
     ...nativePaths(),
   };

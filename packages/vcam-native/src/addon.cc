@@ -122,6 +122,7 @@ Napi::Value SetTransform(const Napi::CallbackInfo& info) {
     t.mirror = o.Has("mirror") && o.Get("mirror").ToBoolean().Value();
     t.rotation = o.Has("rotation") ? o.Get("rotation").ToNumber().Int32Value() : 0;
     t.rotation = ((t.rotation % 360) + 360) % 360;
+    t.fill = o.Has("fill") && o.Get("fill").ToBoolean().Value();
     if (t.rotation % 90 != 0) throw Napi::RangeError::New(env, "rotation must be a multiple of 90");
     pipeline().setTransform(t);
     return env.Undefined();

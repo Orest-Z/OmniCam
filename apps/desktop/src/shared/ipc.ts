@@ -59,6 +59,7 @@ export interface EngineSettings {
   outputFps: number;
   mirror: boolean;
   rotation: 0 | 90 | 180 | 270;
+  scaleMode: 'fit' | 'fill';
   holdLastFrame: boolean;
   /** Absolute path to the native addon (.node), or empty to run without a virtual camera. */
   addonPath: string;

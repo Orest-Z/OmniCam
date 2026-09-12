@@ -129,7 +129,7 @@ function applySettings(next: EngineSettings) {
   }
   if (vcamStarted) {
     vcam.setHoldLastFrame(next.holdLastFrame);
-    vcam.setTransform({ mirror: next.mirror, rotation: next.rotation });
+    vcam.setTransform({ mirror: next.mirror, rotation: next.rotation, fill: next.scaleMode === 'fill' });
     vcam.setPreview(previewEnabled, PREVIEW_MAX_WIDTH, PREVIEW_INTERVAL_MS);
   }
   ipcRenderer.send(ENGINE_VCAM_STATS, vcamStats());

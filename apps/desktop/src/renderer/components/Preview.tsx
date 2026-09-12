@@ -3,8 +3,6 @@ import type { StreamStats } from '@omnicam/protocol';
 
 interface Props {
   stats: StreamStats;
-  mirror: boolean;
-  rotation: 0 | 90 | 180 | 270;
 }
 
 const CHIP: Record<StreamStats['state'], { text: string; cls: string } | null> = {
@@ -20,7 +18,7 @@ const CHIP: Record<StreamStats['state'], { text: string; cls: string } | null> =
  * blitted with putImageData on a software canvas. Deliberately no ImageBitmap / blob <img> /
  * accelerated canvas: each of those was measured to grow Chromium's GPU process without bound.
  */
-export function Preview({ stats, mirror, rotation }: Props) {
+export function Preview({ stats }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [showStats, setShowStats] = useState(true);
   const live = stats.state === 'connected' || stats.state === 'stalled';
@@ -63,14 +61,8 @@ export function Preview({ stats, mirror, rotation }: Props) {
 
   return (
     <div className="preview">
-      <canvas
-        ref={canvasRef}
-        style={{
-          // Mirror the native pipeline: rotate, then mirror; 90/270 must shrink to fit the 16:9 box.
-          transform: `rotate(${rotation}deg) scaleX(${mirror ? -1 : 1})${rotation % 180 ? ' scale(0.5625)' : ''}`,
-          opacity: live ? 1 : 0.2,
-        }}
-      />
+      {/* The snapshot is the virtual camera's actual output (rotation, mirror and fit/fill applied). */}
+      <canvas ref={canvasRef} style={{ opacity: live ? 1 : 0.2 }} />
       {chip && (
         <span className={`chip ${chip.cls}`}>
           <i />

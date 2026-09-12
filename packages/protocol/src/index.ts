@@ -171,6 +171,8 @@ export interface AppSettings {
   outputFps: 30 | 60;
   mirror: boolean;
   rotation: 0 | 90 | 180 | 270;
+  /** fit = letterbox/pillarbox (never crops); fill = crop to fill the output like a webcam. */
+  scaleMode: 'fit' | 'fill';
   /** When the phone stalls, hold the last frame instead of showing the placeholder. */
   holdLastFrame: boolean;
   closeToTray: boolean;
@@ -192,6 +194,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   outputFps: 30,
   mirror: false,
   rotation: 0,
+  scaleMode: 'fill',
   holdLastFrame: true,
   closeToTray: true,
   launchAtLogin: false,

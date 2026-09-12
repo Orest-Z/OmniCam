@@ -35,6 +35,7 @@ struct FrameInfo {
 struct Transform {
     bool mirror = false;
     int rotation = 0; // 0, 90, 180, 270 (clockwise)
+    bool fill = false; // crop to fill the output (webcam-like) instead of letterboxing
 };
 
 struct PipelineStats {
