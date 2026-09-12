@@ -238,6 +238,7 @@ async function handleOffer(offer: EngineOffer): Promise<EngineAnswer> {
 
   peer.ontrack = (ev) => {
     if (ev.track.kind !== 'video') return;
+    log('video track received', ev.track.id);
     track = ev.track;
     sink.srcObject = new MediaStream([ev.track]);
     void sink.play().catch(() => undefined);
@@ -259,6 +260,7 @@ async function handleOffer(offer: EngineOffer): Promise<EngineAnswer> {
   };
   peer.onconnectionstatechange = () => {
     if (pc !== peer) return;
+    log('peer connection', peer.connectionState);
     switch (peer.connectionState) {
       case 'connected':
         setState('connected');
