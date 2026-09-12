@@ -15,7 +15,11 @@ const CHIP: Record<StreamStats['state'], { text: string; cls: string } | null> =
   disconnected: { text: 'RECONNECTING', cls: 'bad' },
 };
 
-/** Live preview fed by JPEG snapshots from the engine (only while this window is visible). */
+/**
+ * Live preview: raw RGBA snapshots from the native pipeline (only while this window is visible),
+ * blitted with putImageData on a software canvas. Deliberately no ImageBitmap / blob <img> /
+ * accelerated canvas: each of those was measured to grow Chromium's GPU process without bound.
+ */
 export function Preview({ stats, mirror, rotation }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [showStats, setShowStats] = useState(true);
@@ -31,24 +35,19 @@ export function Preview({ stats, mirror, rotation }: Props) {
 
   useEffect(() => {
     void window.omnicam.setPreview(true);
-    let pending: Promise<void> | null = null;
-    const off = window.omnicam.onPreviewFrame((buf) => {
-      if (pending) return; // behind: drop this frame
+    let ctx: CanvasRenderingContext2D | null = null;
+    const off = window.omnicam.onPreviewFrame((frame) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
-      pending = createImageBitmap(new Blob([buf], { type: 'image/jpeg' }))
-        .then((bmp) => {
-          if (canvas.width !== bmp.width || canvas.height !== bmp.height) {
-            canvas.width = bmp.width;
-            canvas.height = bmp.height;
-          }
-          canvas.getContext('2d')?.drawImage(bmp, 0, 0);
-          bmp.close();
-        })
-        .catch(() => undefined)
-        .finally(() => {
-          pending = null;
-        });
+      if (canvas.width !== frame.width || canvas.height !== frame.height) {
+        canvas.width = frame.width;
+        canvas.height = frame.height;
+        ctx = null;
+      }
+      ctx ??= canvas.getContext('2d', { alpha: false, willReadFrequently: true });
+      if (!ctx) return;
+      const rgba = frame.rgba;
+      ctx.putImageData(new ImageData(new Uint8ClampedArray(rgba.buffer as ArrayBuffer, rgba.byteOffset, rgba.byteLength), frame.width, frame.height), 0, 0);
     });
     const onVis = () => void window.omnicam.setPreview(document.visibilityState === 'visible');
     document.addEventListener('visibilitychange', onVis);

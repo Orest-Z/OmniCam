@@ -78,6 +78,13 @@ export interface AppState {
 
 export type StatePatch = Partial<AppState>;
 
+/** Raw RGBA snapshot for the UI preview (~12 fps while the window is visible). */
+export interface PreviewFrame {
+  width: number;
+  height: number;
+  rgba: Uint8Array;
+}
+
 export interface UiApi {
   getState(): Promise<AppState>;
   setSettings(patch: Partial<AppSettings>): Promise<AppSettings>;
@@ -88,6 +95,6 @@ export interface UiApi {
   setPreview(enabled: boolean): Promise<void>;
   openExternal(url: string): Promise<void>;
   onState(cb: (patch: StatePatch) => void): () => void;
-  onPreviewFrame(cb: (jpeg: ArrayBuffer) => void): () => void;
+  onPreviewFrame(cb: (frame: PreviewFrame) => void): () => void;
   onPhoneMessage(cb: (msg: PhoneToDesktop) => void): () => void;
 }

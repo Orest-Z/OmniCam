@@ -29,6 +29,7 @@ import {
   type EngineAnswer,
   type EngineOffer,
   type EngineSettings,
+  type PreviewFrame,
 } from '../shared/ipc';
 import { settings } from './settings';
 
@@ -118,9 +119,9 @@ class EngineBridge extends EventEmitter {
       this.vcam = s;
       this.emit('vcam', s);
     });
-    ipcMain.on(ENGINE_PREVIEW_FRAME, (e, jpeg: Uint8Array) => {
+    ipcMain.on(ENGINE_PREVIEW_FRAME, (e, frame: PreviewFrame) => {
       if (e.sender !== win.webContents) return;
-      this.emit('preview', jpeg);
+      this.emit('preview', frame);
     });
     ipcMain.on(ENGINE_PHONE_MESSAGE, (e, msg: PhoneToDesktop) => {
       if (e.sender !== win.webContents) return;
@@ -143,7 +144,7 @@ class EngineBridge extends EventEmitter {
     if (!app.isPackaged && process.env.ELECTRON_RENDERER_URL) {
       void win.loadURL(`${process.env.ELECTRON_RENDERER_URL}/engine/index.html`);
     } else {
-      void win.loadFile(join(__dirname, '../renderer/engine/index.html'));
+      void win.loadFile(join(__dirname, '../renderer/engine/index.html'), { query: { dbg: process.env.OMNICAM_DEBUG ?? '' } });
     }
   }
 
@@ -183,6 +184,10 @@ class EngineBridge extends EventEmitter {
 
   setPreview(enabled: boolean): void {
     this.send(ENGINE_PREVIEW, enabled);
+  }
+
+  osPid(): number | undefined {
+    return this.win?.webContents.getOSProcessId();
   }
 
   openDevTools(): void {

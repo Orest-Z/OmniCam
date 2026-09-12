@@ -11,6 +11,7 @@ import {
   UI_SET_SETTINGS,
   UI_STATE,
   UI_VCAM_ERROR,
+  type PreviewFrame,
   type StatePatch,
   type UiApi,
 } from '../shared/ipc';
@@ -30,7 +31,7 @@ const api: UiApi = {
   setPreview: (enabled: boolean) => ipcRenderer.invoke(UI_SET_PREVIEW, enabled),
   openExternal: (url: string) => ipcRenderer.invoke(UI_OPEN_EXTERNAL, url),
   onState: (cb) => subscribe<StatePatch>(UI_STATE, cb),
-  onPreviewFrame: (cb) => subscribe<Uint8Array>(UI_PREVIEW_FRAME, (buf) => cb(buf.buffer as ArrayBuffer)),
+  onPreviewFrame: (cb) => subscribe<PreviewFrame>(UI_PREVIEW_FRAME, cb),
   onPhoneMessage: (cb) => subscribe<PhoneToDesktop>('ui:phone-message', cb),
 };
 
