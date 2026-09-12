@@ -13,6 +13,9 @@ export interface PushFrameInfo {
   width: number;
   height: number;
   layout: FrameLayout[];
+  /** YUV->RGB matrix of the source (WebCodecs VideoColorSpace). Wrong matrix = subtly wrong colors. */
+  matrix: 'bt601' | 'bt709';
+  fullRange: boolean;
 }
 
 export interface Transform {
@@ -35,6 +38,10 @@ export interface VcamAddon {
   showPlaceholder(): void;
   setHoldLastFrame(hold: boolean): void;
   setTransform(t: Transform): void;
+  /** Ask the pipeline to produce downscaled RGBA snapshots of its output. */
+  setPreview(enabled: boolean, maxWidth: number, intervalMs: number): void;
+  /** Newest unread snapshot, or null. */
+  takePreview(): { width: number; height: number; data: Uint8Array } | null;
   getStats(): VirtualCamStats;
   /** Cheap pre-flight: is the driver registered on this machine? */
   probe(nativeDir: string): { ok: boolean; reason?: string };

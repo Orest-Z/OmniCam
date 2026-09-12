@@ -62,6 +62,24 @@ export function createOrShowUiWindow(): BrowserWindow {
   });
 
   win.once('ready-to-show', () => win?.show());
+  if (!app.isPackaged) {
+    win.webContents.on('console-message', (e) => console.log(`[ui:${e.level}]`, e.message));
+    if ((process.env.OMNICAM_UI_DEBUG ?? '').includes('metrics')) {
+      // Renderer layout/style/paint counters via the DevTools protocol, logged every 3 s.
+      const dbg = win.webContents.debugger;
+      dbg.attach('1.3');
+      void dbg.sendCommand('Performance.enable');
+      let prev: Record<string, number> = {};
+      setInterval(async () => {
+        const { metrics } = (await dbg.sendCommand('Performance.getMetrics')) as { metrics: { name: string; value: number }[] };
+        const m: Record<string, number> = {};
+        for (const x of metrics) m[x.name] = x.value;
+        const d = (k: string) => Math.round((m[k] ?? 0) - (prev[k] ?? 0));
+        console.log(`[ui-metrics] layouts=${d('LayoutCount')} styleRecalcs=${d('RecalcStyleCount')} layoutMs=${(((m.LayoutDuration ?? 0) - (prev.LayoutDuration ?? 0)) * 1000).toFixed(0)} scriptMs=${(((m.ScriptDuration ?? 0) - (prev.ScriptDuration ?? 0)) * 1000).toFixed(0)} taskMs=${(((m.TaskDuration ?? 0) - (prev.TaskDuration ?? 0)) * 1000).toFixed(0)} nodes=${m.Nodes} jsHeapMB=${Math.round((m.JSHeapUsedSize ?? 0) / 1048576)}`);
+        prev = m;
+      }, 3000);
+    }
+  }
   win.webContents.setWindowOpenHandler(({ url }) => {
     void shell.openExternal(url);
     return { action: 'deny' };

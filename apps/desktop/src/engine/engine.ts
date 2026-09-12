@@ -3,7 +3,6 @@ import {
   CONTROL_CHANNEL_LABEL,
   type ConnectionState,
   type DesktopToPhone,
-  type DeviceInfo,
   type PhoneToDesktop,
   type StreamStats,
   type VirtualCamStats,
@@ -29,6 +28,7 @@ import {
 } from '../shared/ipc';
 import { loadVcam, renderPlaceholder, type FrameFormat, type VcamAddon } from './vcam';
 import { installFonts } from '../renderer/fonts';
+import { tuneAnswerSdp } from './sdp';
 
 installFonts();
 
@@ -38,15 +38,19 @@ const { ipcRenderer } = window.require('electron') as { ipcRenderer: IpcRenderer
 const log = (...a: unknown[]) => ipcRenderer.send(ENGINE_LOG, 'log', ...a);
 const warn = (...a: unknown[]) => ipcRenderer.send(ENGINE_LOG, 'warn', ...a);
 
-const sink = document.getElementById('sink') as HTMLVideoElement;
+// Tunables --------------------------------------------------------------------
+const PREVIEW_INTERVAL_MS = 100; // ~10 fps raw RGBA preview while the UI window is visible
+const PREVIEW_MAX_WIDTH = 640;
+const CONSUMER_POLL_MS = 250; // how fast we notice an app opening/closing the camera
+const IDLE_AFTER_MS = 5000; // no consumer + no preview for this long -> ask the phone to relax
+const STALL_AFTER_MS = 2000;
+// Dev diagnostics, passed by main as ?dbg= : OMNICAM_DEBUG=timing | nocopy | nopreview
+const DEBUG = new Set((new URLSearchParams(location.search).get('dbg') ?? '').split(',').filter(Boolean));
+if (DEBUG.size) console.warn('engine debug switches:', [...DEBUG].join(','));
 
-// ---------------------------------------------------------------------------
-// State
-// ---------------------------------------------------------------------------
+// State -----------------------------------------------------------------------
 let pc: RTCPeerConnection | null = null;
 let control: RTCDataChannel | null = null;
-let track: MediaStreamTrack | null = null;
-let device: DeviceInfo | undefined;
 let sessionId = '';
 let engineSettings: EngineSettings | null = null;
 let vcam: VcamAddon | null = null;
@@ -54,6 +58,20 @@ let vcamStarted = false;
 let pumpAbort: AbortController | null = null;
 let previewEnabled = false;
 let lastFrameAt = 0;
+let loggedFormat = false;
+let copyMs = 0;
+let copyN = 0;
+if (DEBUG.has('timing')) {
+  setInterval(() => {
+    const v = vcamStats() as VirtualCamStats & { convertUs?: number; convertN?: number };
+    log(`state=${stats.state} fps=${stats.fps} kbps=${stats.bitrateKbps} idle=${phoneIdle} consumers=${consumersActive} preview=${previewEnabled} | timing: copyTo avg ${(copyN ? copyMs / copyN : 0).toFixed(2)} ms over ${copyN} frames; native convert avg ${((v.convertUs ?? 0) / Math.max(1, v.convertN ?? 0) / 1000).toFixed(2)} ms`);
+    copyMs = 0;
+    copyN = 0;
+  }, 5000);
+}
+let consumersActive = false;
+let lastDemandAt = performance.now(); // last time anything needed full-quality frames
+let phoneIdle = false;
 
 const stats: StreamStats = {
   state: 'idle', width: 0, height: 0, fps: 0, bitrateKbps: 0, rttMs: 0, codec: '',
@@ -70,16 +88,13 @@ function publishStats() {
   ipcRenderer.send(ENGINE_STATS, { ...stats });
 }
 
-function publishVcamStats() {
-  const s: VirtualCamStats = vcam && vcamStarted
+function vcamStats(): VirtualCamStats {
+  return vcam && vcamStarted
     ? vcam.getStats()
     : { running: false, width: 0, height: 0, fps: 0, framesSent: 0, framesRepeated: 0, framesDropped: 0, consumers: 0 };
-  ipcRenderer.send(ENGINE_VCAM_STATS, s);
 }
 
-// ---------------------------------------------------------------------------
-// Virtual camera lifecycle
-// ---------------------------------------------------------------------------
+// Virtual camera lifecycle ------------------------------------------------------
 function applySettings(next: EngineSettings) {
   const prev = engineSettings;
   engineSettings = next;
@@ -115,8 +130,9 @@ function applySettings(next: EngineSettings) {
   if (vcamStarted) {
     vcam.setHoldLastFrame(next.holdLastFrame);
     vcam.setTransform({ mirror: next.mirror, rotation: next.rotation });
+    vcam.setPreview(previewEnabled, PREVIEW_MAX_WIDTH, PREVIEW_INTERVAL_MS);
   }
-  publishVcamStats();
+  ipcRenderer.send(ENGINE_VCAM_STATS, vcamStats());
 }
 
 function setPlaceholderFrame() {
@@ -127,15 +143,39 @@ function setPlaceholderFrame() {
 // Re-render once the bundled font is available (first render may fall back to a system font).
 void document.fonts.ready.then(() => setPlaceholderFrame());
 
-// ---------------------------------------------------------------------------
-// Frame pump: decoded VideoFrames -> native double buffer
-// ---------------------------------------------------------------------------
+// Consumer awareness: nothing is converted or copied while no app reads the camera. ----------
+setInterval(() => {
+  const active = vcamStats().consumers > 0;
+  if (active !== consumersActive) {
+    consumersActive = active;
+    log(active ? 'camera opened by an app' : 'camera closed by all apps');
+  }
+  if (active || previewEnabled) lastDemandAt = performance.now();
+  const idle = performance.now() - lastDemandAt > IDLE_AFTER_MS;
+  if (idle !== phoneIdle) {
+    phoneIdle = idle;
+    sendControl({ type: 'setIdle', idle });
+  }
+}, CONSUMER_POLL_MS);
+
+// Frame pump: decoded VideoFrames -> preview snapshot + native double buffer ------------------
+// Preview: the native pipeline hands back a downscaled RGBA snapshot of what the virtual camera
+// outputs; it goes to the UI as raw pixels. (JPEG via canvas, <img> blob URLs and ImageBitmaps were
+// all measured to leak GPU-process memory in Chromium; raw putImageData does not.)
+function snapshotPreview() {
+  if (!vcam || !vcamStarted) return;
+  const p = vcam.takePreview();
+  if (!p) return;
+  ipcRenderer.send(ENGINE_PREVIEW_FRAME, { width: p.width, height: p.height, rgba: p.data });
+}
+
 async function runPump(t: MediaStreamTrack, abort: AbortSignal) {
   if (typeof MediaStreamTrackProcessor === 'undefined') {
     warn('MediaStreamTrackProcessor unavailable; virtual camera gets no frames');
     return;
   }
-  const processor = new MediaStreamTrackProcessor({ track: t });
+  // maxBufferSize 1: if we ever fall behind, drop stale frames instead of queueing latency.
+  const processor = new MediaStreamTrackProcessor({ track: t, maxBufferSize: 1 });
   const reader = processor.readable.getReader();
   let buffer = new Uint8Array(0);
   abort.addEventListener('abort', () => void reader.cancel().catch(() => undefined));
@@ -146,17 +186,29 @@ async function runPump(t: MediaStreamTrack, abort: AbortSignal) {
       if (done || !frame) break;
       try {
         lastFrameAt = performance.now();
-        if (vcam && vcamStarted && frame.format) {
+        // Skip the GPU readback + conversion entirely while nothing needs frames.
+        if (vcam && vcamStarted && (consumersActive || previewEnabled) && frame.format && !DEBUG.has('nocopy')) {
           const rect = frame.visibleRect ?? undefined;
           const size = frame.allocationSize({ rect });
           if (buffer.byteLength < size) buffer = new Uint8Array(size);
+          const t0 = performance.now();
           const layout = await frame.copyTo(buffer, { rect });
+          copyMs += performance.now() - t0;
+          copyN++;
+          if (!loggedFormat) {
+            loggedFormat = true;
+            log(`frame format ${frame.format} ${frame.codedWidth}x${frame.codedHeight} copyTo ${(performance.now() - t0).toFixed(1)} ms, planes ${layout.length}`);
+          }
+          const cs = frame.colorSpace;
           vcam.pushFrame(buffer.subarray(0, size), {
             format: frame.format as FrameFormat,
             width: rect?.width ?? frame.codedWidth,
             height: rect?.height ?? frame.codedHeight,
             layout: layout.map((l: PlaneLayout) => ({ offset: l.offset, stride: l.stride })),
+            matrix: cs?.matrix === 'bt709' ? 'bt709' : 'bt601',
+            fullRange: cs?.fullRange === true,
           });
+          if (previewEnabled && !DEBUG.has('nopreview')) snapshotPreview();
         }
       } finally {
         frame.close();
@@ -178,14 +230,11 @@ function stopPump() {
   pumpAbort = null;
 }
 
-// ---------------------------------------------------------------------------
-// Peer connection
-// ---------------------------------------------------------------------------
+// Peer connection -------------------------------------------------------------
 function teardownPeer() {
   stopPump();
   control?.close();
   control = null;
-  track = null;
   if (pc) {
     pc.onconnectionstatechange = null;
     pc.ontrack = null;
@@ -193,8 +242,7 @@ function teardownPeer() {
     pc.close();
     pc = null;
   }
-  sink.srcObject = null;
-  if (vcam && vcamStarted && !(engineSettings?.holdLastFrame)) vcam.showPlaceholder();
+  if (vcam && vcamStarted && !engineSettings?.holdLastFrame) vcam.showPlaceholder();
 }
 
 function preferReceiveCodecs(peer: RTCPeerConnection) {
@@ -202,10 +250,12 @@ function preferReceiveCodecs(peer: RTCPeerConnection) {
   if (!caps) return;
   const rank = (c: RTCRtpCodec) => {
     const m = c.mimeType.toLowerCase();
-    if (m === 'video/h264') return 0;
-    if (m === 'video/vp9') return 1;
-    if (m === 'video/vp8') return 2;
-    if (m === 'video/av1') return 3;
+    const fmtp = c.sdpFmtpLine ?? '';
+    // H.264 High profile first (better quality per bit), then constrained baseline, then VP9/VP8.
+    if (m === 'video/h264') return /profile-level-id=64/i.test(fmtp) ? 0 : 1;
+    if (m === 'video/vp9') return 2;
+    if (m === 'video/vp8') return 3;
+    if (m === 'video/av1') return 4;
     return 9;
   };
   for (const tr of peer.getTransceivers()) {
@@ -234,8 +284,7 @@ function waitForIceComplete(peer: RTCPeerConnection, timeoutMs = 2500): Promise<
 
 async function handleOffer(offer: EngineOffer): Promise<EngineAnswer> {
   teardownPeer();
-  device = offer.device;
-  stats.device = device;
+  stats.device = offer.device;
   stats.trackInfo = undefined;
   stats.caps = undefined;
   setState('connecting');
@@ -243,13 +292,18 @@ async function handleOffer(offer: EngineOffer): Promise<EngineAnswer> {
   const peer = new RTCPeerConnection({ iceServers: [], bundlePolicy: 'max-bundle' });
   pc = peer;
   sessionId = crypto.randomUUID();
+  phoneIdle = false;
+  lastDemandAt = performance.now();
 
   peer.ontrack = (ev) => {
     if (ev.track.kind !== 'video') return;
     log('video track received', ev.track.id);
-    track = ev.track;
-    sink.srcObject = new MediaStream([ev.track]);
-    void sink.play().catch(() => undefined);
+    // LAN: do not spend a jitter buffer's worth of latency. Chromium honors this receiver hint.
+    try {
+      (ev.receiver as RTCRtpReceiver & { jitterBufferTarget?: number }).jitterBufferTarget = 0;
+    } catch {
+      /* not supported */
+    }
     ev.track.onmute = () => setState('stalled');
     ev.track.onunmute = () => setState('connected');
     ev.track.onended = () => setState('disconnected');
@@ -277,7 +331,7 @@ async function handleOffer(offer: EngineOffer): Promise<EngineAnswer> {
       case 'failed':
       case 'closed':
         setState('disconnected');
-        if (vcam && vcamStarted && !(engineSettings?.holdLastFrame)) vcam.showPlaceholder();
+        if (vcam && vcamStarted && !engineSettings?.holdLastFrame) vcam.showPlaceholder();
         break;
     }
   };
@@ -285,7 +339,7 @@ async function handleOffer(offer: EngineOffer): Promise<EngineAnswer> {
   await peer.setRemoteDescription({ type: 'offer', sdp: offer.sdp });
   preferReceiveCodecs(peer);
   const answer = await peer.createAnswer();
-  await peer.setLocalDescription(answer);
+  await peer.setLocalDescription({ type: 'answer', sdp: tuneAnswerSdp(answer.sdp!) });
   await waitForIceComplete(peer);
   if (pc !== peer) return { id: offer.id, error: 'superseded' };
   return { id: offer.id, sdp: peer.localDescription!.sdp, sessionId };
@@ -314,11 +368,10 @@ function sendControl(msg: DesktopToPhone) {
   if (control?.readyState === 'open') control.send(JSON.stringify(msg));
 }
 
-// ---------------------------------------------------------------------------
-// Stats (1 Hz) + stall detection
-// ---------------------------------------------------------------------------
+// Stats (1 Hz) + stall detection -----------------------------------------------------
 let lastBytes = 0;
 let lastStatsAt = 0;
+let loggedDecoder = '';
 
 async function pollStats() {
   if (!pc) {
@@ -350,56 +403,26 @@ async function pollStats() {
     stats.packetsLost = inbound.packetsLost ?? 0;
     stats.jitterMs = Math.round((inbound.jitter ?? 0) * 1000);
     stats.codec = (codecs.get(inbound.codecId ?? '') ?? '').replace('video/', '');
+    const dec = inbound as { decoderImplementation?: string; powerEfficientDecoder?: boolean };
+    if (dec.decoderImplementation && dec.decoderImplementation !== loggedDecoder) {
+      loggedDecoder = dec.decoderImplementation;
+      log(`decoder: ${dec.decoderImplementation} (power efficient: ${dec.powerEfficientDecoder ?? 'unknown'})`);
+    }
   }
   if (rtt !== undefined) stats.rttMs = Math.round(rtt * 1000);
   lastStatsAt = now;
 
   if (pc.connectionState === 'connected') {
-    const stalled = now - lastFrameAt > 2000;
-    stats.state = stalled ? 'stalled' : 'connected';
+    stats.state = now - lastFrameAt > STALL_AFTER_MS ? 'stalled' : 'connected';
   }
   publishStats();
-  publishVcamStats();
+  ipcRenderer.send(ENGINE_VCAM_STATS, vcamStats());
 }
 
 setInterval(() => void pollStats(), 1000);
 setInterval(() => sendControl({ type: 'ping', t: performance.now() }), 5000);
 
-// ---------------------------------------------------------------------------
-// Preview snapshots for the UI window (JPEG, ~15 fps while the UI is open)
-// ---------------------------------------------------------------------------
-const previewCanvas = new OffscreenCanvas(640, 360);
-const previewCtx = previewCanvas.getContext('2d', { alpha: false })!;
-let previewBusy = false;
-
-async function previewTick() {
-  if (!previewEnabled || previewBusy || !track || sink.readyState < 2) return;
-  previewBusy = true;
-  try {
-    const vw = sink.videoWidth || 16;
-    const vh = sink.videoHeight || 9;
-    const scale = Math.min(previewCanvas.width / vw, previewCanvas.height / vh);
-    const w = Math.round(vw * scale);
-    const h = Math.round(vh * scale);
-    if (previewCanvas.width !== w || previewCanvas.height !== h) {
-      previewCanvas.width = w;
-      previewCanvas.height = h;
-    }
-    previewCtx.drawImage(sink, 0, 0, w, h);
-    const blob = await previewCanvas.convertToBlob({ type: 'image/jpeg', quality: 0.75 });
-    const buf = new Uint8Array(await blob.arrayBuffer());
-    ipcRenderer.send(ENGINE_PREVIEW_FRAME, buf);
-  } catch {
-    /* ignore transient draw errors */
-  } finally {
-    previewBusy = false;
-  }
-}
-setInterval(() => void previewTick(), 66);
-
-// ---------------------------------------------------------------------------
-// IPC wiring
-// ---------------------------------------------------------------------------
+// IPC wiring -------------------------------------------------------------------------
 ipcRenderer.on(ENGINE_APPLY_SETTINGS, (_e, s: EngineSettings) => applySettings(s));
 ipcRenderer.on(ENGINE_OFFER, (_e, offer: EngineOffer) => {
   handleOffer(offer)
@@ -418,6 +441,8 @@ ipcRenderer.on(ENGINE_DISCONNECT, () => {
 });
 ipcRenderer.on(ENGINE_PREVIEW, (_e, enabled: boolean) => {
   previewEnabled = enabled;
+  if (enabled) lastDemandAt = performance.now();
+  if (vcam && vcamStarted) vcam.setPreview(enabled, PREVIEW_MAX_WIDTH, PREVIEW_INTERVAL_MS);
 });
 ipcRenderer.on(ENGINE_SHUTDOWN, () => {
   teardownPeer();
