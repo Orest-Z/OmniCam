@@ -1,0 +1,14 @@
+node_modules/
+dist/
+out/
+release/
+build/Release/
+build/Debug/
+*.log
+.DS_Store
+apps/desktop/resources/phone/
+apps/desktop/resources/native/
+packages/vcam-native/build/
+.vs/
+*.user
+*.tsbuildinfo
