@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 — 2026-09-12
+## 1.0.0 — 2026-09-12
 
 First release. Windows 10 (1809+) and Windows 11, 64-bit.
 

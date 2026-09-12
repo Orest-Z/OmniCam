@@ -1,8 +1,8 @@
 {
   "name": "@omnicam/desktop",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
-  "description": "OmniCam desktop \u2014 turns your phone into a virtual webcam",
+  "description": "OmniCam desktop — turns your phone into a virtual webcam",
   "main": "./out/main/index.js",
   "author": {
     "name": "Orest Zogju",

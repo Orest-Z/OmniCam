@@ -1,8 +1,8 @@
 {
   "name": "omnicam",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
-  "description": "Use your phone's camera as a virtual webcam \u00e2\u20ac\u201d no app install on the phone.",
+  "description": "Use your phone's camera as a virtual webcam â€” no app install on the phone.",
   "workspaces": [
     "packages/*",
     "apps/*"

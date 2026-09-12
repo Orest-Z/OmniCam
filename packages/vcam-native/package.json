@@ -1,6 +1,6 @@
 {
   "name": "@omnicam/vcam-native",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Native virtual camera backend for OmniCam (N-API addon + DirectShow filter)",
   "type": "module",
