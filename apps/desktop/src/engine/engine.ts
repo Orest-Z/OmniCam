@@ -12,6 +12,7 @@ import {
   ENGINE_ANSWER,
   ENGINE_APPLY_SETTINGS,
   ENGINE_CONTROL,
+  ENGINE_DISCONNECT,
   ENGINE_LOG,
   ENGINE_OFFER,
   ENGINE_PHONE_MESSAGE,
@@ -27,6 +28,9 @@ import {
   type EngineSettings,
 } from '../shared/ipc';
 import { loadVcam, renderPlaceholder, type FrameFormat, type VcamAddon } from './vcam';
+import { installFonts } from '../renderer/fonts';
+
+installFonts();
 
 // `window.require` bypasses Vite so Electron's module is resolved at runtime.
 const { ipcRenderer } = window.require('electron') as { ipcRenderer: IpcRenderer };
@@ -98,11 +102,7 @@ function applySettings(next: EngineSettings) {
       if (vcamStarted) vcam.stop();
       vcam.start({ width: next.outputWidth, height: next.outputHeight, fps: next.outputFps, nativeDir: next.nativeDir });
       vcamStarted = true;
-      vcam.setPlaceholder(
-        renderPlaceholder(next.outputWidth, next.outputHeight, ['OmniCam', 'Scan the QR code in the OmniCam app on this computer']),
-        next.outputWidth,
-        next.outputHeight,
-      );
+      setPlaceholderFrame();
       if (stats.state !== 'connected') vcam.showPlaceholder();
       ipcRenderer.send(ENGINE_VCAM_ERROR, null);
     } catch (err) {
@@ -118,6 +118,14 @@ function applySettings(next: EngineSettings) {
   }
   publishVcamStats();
 }
+
+function setPlaceholderFrame() {
+  if (!vcam || !vcamStarted || !engineSettings) return;
+  const { outputWidth: w, outputHeight: h } = engineSettings;
+  vcam.setPlaceholder(renderPlaceholder(w, h, ['OmniCam', 'Scan the QR code in the OmniCam app on this computer']), w, h);
+}
+// Re-render once the bundled font is available (first render may fall back to a system font).
+void document.fonts.ready.then(() => setPlaceholderFrame());
 
 // ---------------------------------------------------------------------------
 // Frame pump: decoded VideoFrames -> native double buffer
@@ -404,6 +412,10 @@ ipcRenderer.on(ENGINE_OFFER, (_e, offer: EngineOffer) => {
     });
 });
 ipcRenderer.on(ENGINE_CONTROL, (_e, msg: DesktopToPhone) => sendControl(msg));
+ipcRenderer.on(ENGINE_DISCONNECT, () => {
+  teardownPeer();
+  setState('idle');
+});
 ipcRenderer.on(ENGINE_PREVIEW, (_e, enabled: boolean) => {
   previewEnabled = enabled;
 });

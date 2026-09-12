@@ -173,6 +173,8 @@ export interface AppSettings {
   holdLastFrame: boolean;
   closeToTray: boolean;
   launchAtLogin: boolean;
+  /** Last window geometry; restored on launch. */
+  windowBounds?: { x: number; y: number; width: number; height: number };
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {

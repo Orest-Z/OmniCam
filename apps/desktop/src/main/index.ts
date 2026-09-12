@@ -2,17 +2,17 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import type { AppSettings, DesktopToPhone, PhoneToDesktop } from '@omnicam/protocol';
 import {
   UI_CONTROL,
+  UI_DISCONNECT,
   UI_GET_STATE,
   UI_OPEN_EXTERNAL,
   UI_PREVIEW_FRAME,
   UI_ROTATE_TOKEN,
   UI_SET_PREVIEW,
   UI_SET_SETTINGS,
-  UI_STATE,
   UI_VCAM_ERROR,
   type AppState,
-  type StatePatch,
 } from '../shared/ipc';
+import { broadcast, disconnectPhone } from './actions';
 import { loadOrCreateCert } from './cert';
 import { engine } from './engine-bridge';
 import { phoneServer } from './server';
@@ -37,10 +37,6 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 let vcamError: string | null = null;
-
-function broadcast(patch: StatePatch): void {
-  uiWindow()?.webContents.send(UI_STATE, patch);
-}
 
 async function fullState(): Promise<AppState> {
   return {
@@ -83,6 +79,8 @@ function wireIpc(): void {
 
   ipcMain.handle(UI_CONTROL, (_e, msg: DesktopToPhone) => engine.control(msg));
 
+  ipcMain.handle(UI_DISCONNECT, () => disconnectPhone());
+
   ipcMain.handle(UI_ROTATE_TOKEN, async () => {
     session.rotateToken();
     broadcast({ pairing: await session.pairingInfo() });
@@ -95,7 +93,7 @@ function wireIpc(): void {
   });
 
   engine.on('stats', (s) => {
-    updateTray(s.state);
+    updateTray(s);
     broadcast({ stats: s });
   });
   engine.on('vcam', (v) => broadcast({ vcam: v }));

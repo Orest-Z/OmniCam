@@ -21,6 +21,7 @@ export const ENGINE_APPLY_SETTINGS = 'engine:apply-settings';
 export const ENGINE_CONTROL = 'engine:control';
 export const ENGINE_PREVIEW = 'engine:preview';
 export const ENGINE_SHUTDOWN = 'engine:shutdown';
+export const ENGINE_DISCONNECT = 'engine:disconnect';
 
 // engine -> main
 export const ENGINE_READY = 'engine:ready';
@@ -39,6 +40,7 @@ export const UI_CONTROL = 'ui:control';
 export const UI_ROTATE_TOKEN = 'ui:rotate-token';
 export const UI_SET_PREVIEW = 'ui:set-preview';
 export const UI_OPEN_EXTERNAL = 'ui:open-external';
+export const UI_DISCONNECT = 'ui:disconnect';
 export const UI_STATE = 'ui:state';
 export const UI_PREVIEW_FRAME = 'ui:preview-frame';
 export const UI_VCAM_ERROR = 'ui:vcam-error';
@@ -81,6 +83,8 @@ export interface UiApi {
   setSettings(patch: Partial<AppSettings>): Promise<AppSettings>;
   control(msg: DesktopToPhone): Promise<void>;
   rotateToken(): Promise<void>;
+  /** Drops the current phone and invalidates its QR code. */
+  disconnect(): Promise<void>;
   setPreview(enabled: boolean): Promise<void>;
   openExternal(url: string): Promise<void>;
   onState(cb: (patch: StatePatch) => void): () => void;

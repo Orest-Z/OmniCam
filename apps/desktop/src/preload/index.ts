@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type { AppSettings, DesktopToPhone, PhoneToDesktop } from '@omnicam/protocol';
 import {
   UI_CONTROL,
+  UI_DISCONNECT,
   UI_GET_STATE,
   UI_OPEN_EXTERNAL,
   UI_PREVIEW_FRAME,
@@ -25,6 +26,7 @@ const api: UiApi = {
   setSettings: (patch: Partial<AppSettings>) => ipcRenderer.invoke(UI_SET_SETTINGS, patch),
   control: (msg: DesktopToPhone) => ipcRenderer.invoke(UI_CONTROL, msg),
   rotateToken: () => ipcRenderer.invoke(UI_ROTATE_TOKEN),
+  disconnect: () => ipcRenderer.invoke(UI_DISCONNECT),
   setPreview: (enabled: boolean) => ipcRenderer.invoke(UI_SET_PREVIEW, enabled),
   openExternal: (url: string) => ipcRenderer.invoke(UI_OPEN_EXTERNAL, url),
   onState: (cb) => subscribe<StatePatch>(UI_STATE, cb),

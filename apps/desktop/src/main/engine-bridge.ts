@@ -15,6 +15,7 @@ import {
   ENGINE_ANSWER,
   ENGINE_APPLY_SETTINGS,
   ENGINE_CONTROL,
+  ENGINE_DISCONNECT,
   ENGINE_LOG,
   ENGINE_OFFER,
   ENGINE_PHONE_MESSAGE,
@@ -170,6 +171,10 @@ class EngineBridge extends EventEmitter {
 
   applySettings(s: AppSettings): void {
     this.send(ENGINE_APPLY_SETTINGS, toEngineSettings(s));
+  }
+
+  disconnect(): void {
+    this.send(ENGINE_DISCONNECT);
   }
 
   control(msg: DesktopToPhone): void {

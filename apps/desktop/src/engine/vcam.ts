@@ -62,32 +62,39 @@ export function loadVcam(addonPath: string): { addon: VcamAddon | null; reason?:
 export function renderPlaceholder(width: number, height: number, lines: string[]): Uint8Array {
   const canvas = new OffscreenCanvas(width, height);
   const ctx = canvas.getContext('2d')!;
-  const g = ctx.createLinearGradient(0, 0, width, height);
-  g.addColorStop(0, '#111827');
-  g.addColorStop(1, '#0b0d10');
-  ctx.fillStyle = g;
+  ctx.fillStyle = '#0a0a0b';
   ctx.fillRect(0, 0, width, height);
 
-  // lens glyph
-  const r = Math.round(height * 0.11);
+  // The OmniCam mark (same geometry as build/icons.mjs), ~14% of the frame height.
+  const u = (height * 0.14) / 100;
+  const ox = width / 2 - 44 * u;
+  const oy = height * 0.36 - 56 * u;
+  const arc = (r: number, w: number) => {
+    ctx.beginPath();
+    ctx.arc(ox + 44 * u, oy + 56 * u, r * u, (-66 * Math.PI) / 180, (-20 * Math.PI) / 180);
+    ctx.lineWidth = w * u;
+    ctx.stroke();
+  };
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.arc(width / 2, height * 0.38, r, 0, Math.PI * 2);
-  ctx.strokeStyle = '#3b82f6';
-  ctx.lineWidth = Math.max(3, r * 0.18);
+  ctx.arc(ox + 44 * u, oy + 56 * u, 26 * u, 0, Math.PI * 2);
+  ctx.lineWidth = 8.6 * u;
   ctx.stroke();
+  arc(38.5, 6);
+  arc(50.5, 6);
   ctx.beginPath();
-  ctx.arc(width / 2, height * 0.38, r * 0.45, 0, Math.PI * 2);
-  ctx.fillStyle = '#3b82f6';
+  ctx.arc(ox + 44 * u, oy + 56 * u, 7.2 * u, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff';
   ctx.fill();
 
-  ctx.fillStyle = '#e8ecf1';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  const base = Math.round(height * 0.06);
+  const base = Math.round(height * 0.05);
   lines.forEach((line, i) => {
-    ctx.font = `${i === 0 ? 600 : 400} ${i === 0 ? base : Math.round(base * 0.7)}px Segoe UI, system-ui, sans-serif`;
-    ctx.fillStyle = i === 0 ? '#e8ecf1' : '#8a94a3';
-    ctx.fillText(line, width / 2, height * 0.6 + i * base * 1.3);
+    ctx.font = `${i === 0 ? 600 : 400} ${i === 0 ? base : Math.round(base * 0.68)}px Geist, "Segoe UI", system-ui, sans-serif`;
+    ctx.fillStyle = i === 0 ? '#ededef' : '#8a8a94';
+    ctx.fillText(line, width / 2, height * 0.6 + i * base * 1.4);
   });
   const img = ctx.getImageData(0, 0, width, height);
   return new Uint8Array(img.data.buffer, img.data.byteOffset, img.data.byteLength);
