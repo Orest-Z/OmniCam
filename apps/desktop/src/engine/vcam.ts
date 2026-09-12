@@ -62,7 +62,12 @@ export function loadVcam(addonPath: string): { addon: VcamAddon | null; reason?:
 export function renderPlaceholder(width: number, height: number, lines: string[]): Uint8Array {
   const canvas = new OffscreenCanvas(width, height);
   const ctx = canvas.getContext('2d')!;
-  ctx.fillStyle = '#0a0a0b';
+  ctx.fillStyle = '#0a0a0d';
+  ctx.fillRect(0, 0, width, height);
+  const glow = ctx.createRadialGradient(width / 2, height * 0.3, 0, width / 2, height * 0.3, height * 0.9);
+  glow.addColorStop(0, 'rgba(138, 92, 243, 0.22)');
+  glow.addColorStop(1, 'rgba(138, 92, 243, 0)');
+  ctx.fillStyle = glow;
   ctx.fillRect(0, 0, width, height);
 
   // The OmniCam mark (same geometry as build/icons.mjs), ~14% of the frame height.
@@ -93,7 +98,7 @@ export function renderPlaceholder(width: number, height: number, lines: string[]
   const base = Math.round(height * 0.05);
   lines.forEach((line, i) => {
     ctx.font = `${i === 0 ? 600 : 400} ${i === 0 ? base : Math.round(base * 0.68)}px Geist, "Segoe UI", system-ui, sans-serif`;
-    ctx.fillStyle = i === 0 ? '#ededef' : '#8a8a94';
+    ctx.fillStyle = i === 0 ? '#e8e6ef' : '#9d99ab';
     ctx.fillText(line, width / 2, height * 0.6 + i * base * 1.4);
   });
   const img = ctx.getImageData(0, 0, width, height);

@@ -5,5 +5,6 @@
 - `mark.svg` — the OmniCam mark. The canonical geometry lives in `apps/desktop/build/icons.mjs`, which
   generates every icon size; keep this file in sync by re-running that script.
 
-Palette: background `#0a0a0b`, surfaces `#121214` / `#19191c` / `#212126`, text `#ededef` / `#a1a1aa` / `#6e6e78`,
+Palette (from the brand sheet): background `#0a0a0d`, surfaces `#141317` / `#1b1a20` / `#242229`, text `#e8e6ef` / `#9d99ab` / `#6b6778`,
+accent violet `#8a5cf3` (hover `#9b74f7`), light violet `#ccb6fe` for active text, live `#a78bfa`, warn `#e9b35a`, danger `#f06a7e`.
 accent white, live `#0ad950`, warn `#f5a524`, danger `#f04a5e`.

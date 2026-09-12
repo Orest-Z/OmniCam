@@ -6,7 +6,7 @@ let win: BrowserWindow | null = null;
 let quitting = false;
 
 // Must match the CSS tokens in renderer/styles.css.
-export const THEME = { bg: '#0a0a0b', symbol: '#a1a1aa', titlebarHeight: 40 };
+export const THEME = { bg: '#0a0a0d', symbol: '#9d99ab', titlebarHeight: 40 };
 
 export function markQuitting(): void {
   quitting = true;

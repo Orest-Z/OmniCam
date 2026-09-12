@@ -23,7 +23,7 @@ export function LiveView({ stats, vcam, settings, onSettings, onControl, onShowQ
   return (
     <div className="live">
       <div className="stage">
-        <Preview stats={stats} mirror={settings.mirror} />
+        <Preview stats={stats} mirror={settings.mirror} rotation={settings.rotation} />
       </div>
 
       <div className="bar">

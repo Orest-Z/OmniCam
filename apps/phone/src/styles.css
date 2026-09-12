@@ -1,11 +1,13 @@
 :root {
-  --bg: #0a0a0b;
-  --fg: #ededef;
-  --dim: #a1a1aa;
-  --live: #0ad950;
-  --warn: #f5a524;
-  --danger: #f04a5e;
-  --glass: rgba(10, 10, 11, 0.62);
+  --bg: #0a0a0d;
+  --fg: #e8e6ef;
+  --dim: #9d99ab;
+  --accent: #8a5cf3;
+  --accent-soft: #ccb6fe;
+  --live: #a78bfa;
+  --warn: #e9b35a;
+  --danger: #f06a7e;
+  --glass: rgba(12, 11, 16, 0.62);
   --font: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --mono: 'Geist Mono', ui-monospace, Menlo, monospace;
 }
@@ -16,16 +18,16 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); f
 #preview.mirror { transform: scaleX(-1); }
 
 .overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px;
-  padding: 24px; text-align: center; background: var(--bg); }
+  padding: 24px; text-align: center; background: radial-gradient(80% 50% at 50% 0%, rgba(138, 92, 243, 0.22), transparent 70%), var(--bg); }
 .overlay[hidden] { display: none; }
 .brand .mark { width: 72px; height: 72px; margin: 0 auto 6px; }
 .brand h1 { margin: 0 0 6px; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
 .brand .sub { margin: 0; color: var(--dim); max-width: 30ch; font-size: 15px; }
 .msg { color: var(--dim); min-height: 1.4em; max-width: 34ch; font-size: 14px; }
-.msg.error { color: #ffb3bd; }
+.msg.error { color: #ffb9c4; }
 
 button { font: inherit; color: inherit; border: 0; background: none; padding: 0; cursor: pointer; }
-button.primary { border-radius: 14px; background: #fff; color: #0a0a0b; font-size: 17px; font-weight: 600; padding: 16px 32px; min-width: 220px; }
+button.primary { border-radius: 14px; background: var(--accent); color: #fff; font-size: 17px; font-weight: 600; padding: 16px 32px; min-width: 220px; box-shadow: 0 8px 24px rgba(138, 92, 243, 0.35); }
 button.primary:active { filter: brightness(0.9); }
 button:disabled { opacity: 0.5; }
 
@@ -39,7 +41,8 @@ button:disabled { opacity: 0.5; }
 .pill { display: inline-flex; align-items: center; gap: 7px; background: var(--glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
   border-radius: 999px; padding: 7px 12px; font-size: 12.5px; font-weight: 600; }
 .pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); }
-.pill.live i { background: var(--live); box-shadow: 0 0 0 3px rgba(10, 217, 80, 0.2); }
+.pill.live { color: var(--accent-soft); }
+.pill.live i { background: var(--live); box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.25); }
 .pill.warn i { background: var(--warn); }
 .pill.bad i { background: var(--danger); }
 .pill.dim { color: var(--dim); font-weight: 500; font-family: var(--mono); }
@@ -49,8 +52,8 @@ button:disabled { opacity: 0.5; }
 button.round { width: 60px; height: 60px; border-radius: 50%; background: var(--glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
   color: var(--fg); display: grid; place-items: center; }
 button.round svg { width: 26px; height: 26px; }
-button.round.stop { width: 74px; height: 74px; background: #fff; color: #0a0a0b; }
-button.round.on { background: #fff; color: #0a0a0b; }
+button.round.stop { width: 74px; height: 74px; background: #fff; color: #0a0a0d; }
+button.round.on { background: var(--accent); color: #fff; }
 button.round:active { filter: brightness(0.85); }
 button[hidden] { display: none; }
 .bottom { display: flex; flex-direction: column; align-items: center; gap: 10px; }

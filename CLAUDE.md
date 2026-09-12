@@ -109,8 +109,9 @@ Without the native build the app still runs (QR, phone connection, preview) and 
   The same geometry is duplicated in `renderer/components/Mark.tsx`, the phone `index.html` and the
   engine placeholder (`vcam.ts`); change all four together.
 - Palette/typography are CSS tokens at the top of `renderer/styles.css` (mirrored in the phone
-  `styles.css` and `THEME` in `main/ui-window.ts` for the native title bar). White is the accent;
-  green `#0ad950` means "live" and nothing else.
+  `styles.css` and `THEME` in `main/ui-window.ts` for the native title bar). Violet `#8a5cf3` is the
+  single accent (buttons, active states, live indicator); light violet `#ccb6fe` for active text;
+  amber/red only for paused/error. Low contrast on purpose: violet-tinted grays, no pure white surfaces.
 - The main window is state-driven: `PairView` (QR + steps) until a phone connects, `LiveView`
   (preview + controls) afterwards. Settings and the QR-while-live are dialogs, not panels.
 - Icons: `lucide-react` only. Fonts: Geist / Geist Mono, self-hosted (no network on the phone page).

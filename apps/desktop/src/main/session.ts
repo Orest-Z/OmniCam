@@ -33,7 +33,7 @@ class SessionManager {
       errorCorrectionLevel: 'M',
       margin: 1,
       width: 512,
-      color: { dark: '#0b0d10', light: '#ffffff' },
+      color: { dark: '#17151d', light: '#efe9ff' },
     });
     return { url, token: this.token, port: this.port, ip, addresses: lanAddresses(), qrDataUrl };
   }

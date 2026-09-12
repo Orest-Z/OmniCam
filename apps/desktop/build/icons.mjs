@@ -19,9 +19,9 @@ mkdirSync(iconsDir, { recursive: true });
 mkdirSync(phoneDir, { recursive: true });
 
 export const BRAND = {
-  bg: '#0B0D10',
+  bg: '#0A0A0D',
   fg: '#FFFFFF',
-  live: '#0AD950',
+  live: '#8A5CF3',
 };
 
 const deg = (d) => (d * Math.PI) / 180;
