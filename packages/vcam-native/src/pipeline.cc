@@ -274,7 +274,7 @@ void Pipeline::workerLoop() {
             frame = placeholderSet_ ? placeholder_.data() : nullptr;
         }
         if (!frame) {
-            if (!haveOut_) std::fill(out_.begin(), out_.end(), 0);
+            if (!haveOut_) std::fill(out_.begin(), out_.end(), uint8_t{0});
             frame = out_.data();
         }
         device_->sendFrame(frame);

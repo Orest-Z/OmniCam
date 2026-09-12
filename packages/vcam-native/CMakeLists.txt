@@ -17,7 +17,8 @@ if(NOT EXISTS "${SOFTCAM_DIR}/softcamcore/SenderAPI.cpp" OR NOT EXISTS "${LIBYUV
   message(FATAL_ERROR "Submodules missing. Run: git submodule update --init --recursive")
 endif()
 
-add_compile_definitions(WIN32 _WINDOWS _CRT_SECURE_NO_WARNINGS UNICODE _UNICODE NOMINMAX)
+# No NOMINMAX here: the DirectShow base classes rely on the min/max macros.
+add_compile_definitions(WIN32 _WINDOWS _CRT_SECURE_NO_WARNINGS UNICODE _UNICODE)
 
 # --- softcam sender core (shared memory + watchdog), shm names patched to "OmniCam/*" ------
 include(cmake/patch_softcam.cmake)
@@ -65,7 +66,7 @@ if(OMNICAM_BUILD_ADDON)
     "${CMAKE_CURRENT_SOURCE_DIR}/node_modules/node-addon-api"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../node_modules/node-addon-api"
     "${LIBYUV_DIR}/include")
-  target_compile_definitions(omnicam_vcam PRIVATE NAPI_VERSION=8 NAPI_CPP_EXCEPTIONS NODE_ADDON_API_DISABLE_DEPRECATED)
+  target_compile_definitions(omnicam_vcam PRIVATE NOMINMAX NAPI_VERSION=8 NAPI_CPP_EXCEPTIONS NODE_ADDON_API_DISABLE_DEPRECATED)
   target_compile_options(omnicam_vcam PRIVATE /EHsc /W4)
   target_link_libraries(omnicam_vcam PRIVATE ${CMAKE_JS_LIB} softcam_core yuv advapi32)
 endif()
