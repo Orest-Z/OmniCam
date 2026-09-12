@@ -116,6 +116,27 @@ Without the native build the app still runs (QR, phone connection, preview) and 
   (preview + controls) afterwards. Settings and the QR-while-live are dialogs, not panels.
 - Icons: `lucide-react` only. Fonts: Geist / Geist Mono, self-hosted (no network on the phone page).
 
+## Performance notes (measured, Electron 44 / Win10, 1080p stream)
+
+Numbers from the perf pass on 2026-09-12; re-measure before changing any of these decisions.
+
+- **Software video decoding is the default** (`--disable-accelerated-video-decode` unless
+  `settings.hardwareDecode`). Hardware-decoded frames are GPU-backed NV12: `VideoFrame.copyTo()`
+  costs ~12 ms per 1080p frame (GPU readback). Software frames are CPU I420: ~0.4 ms. Decode itself
+  costs ~0.13 core at 1080p20. Whole app while streaming into a consumer: ~0.25 core, flat memory.
+- **Never draw frames into a canvas/img in either renderer.** `drawImage(VideoFrame)`,
+  `createImageBitmap` + `drawImage`, and blob-URL `<img>` all grow the GPU process by 10–30 MB/s
+  without bound. The preview path is: native pipeline → downscaled RGBA → IPC → `putImageData` on a
+  `willReadFrequently` canvas in the UI. Keep it that way.
+- libyuv under MSVC x64 has no SIMD for NV12→RGB24 (10 ms/frame); NV12 goes through I420 (1.5 ms).
+- Nothing is copied or converted while no app reads the camera and the preview is hidden; after
+  5 s of that the phone is told to drop to 5 fps (`setIdle`) to save its battery.
+- H.264 High profile is preferred only on Safari. Chrome's software encoder advertises High but
+  stalls the sender after ~30 s when it is selected.
+- Diagnostics: `OMNICAM_DEBUG=timing,cpu` (engine copy/convert times, per-process CPU),
+  `nocopy` / `nopreview` to bisect the pipeline; `OMNICAM_UI_DEBUG=metrics` logs renderer
+  layout/style counters. `scripts`: see `packages/vcam-native/scripts`.
+
 ## Git
 
 Commits are authored by the repository owner only — **no `Co-Authored-By` or session trailers**
