@@ -19,9 +19,20 @@
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-3b3552?style=flat-square"></a>
 </p>
 
-<p align="center">
-  <img src="docs/screenshots/desktop-live.webp" width="900" alt="OmniCam desktop app streaming a live 1080p picture from an iPhone">
-</p>
+<table align="center">
+  <tr>
+    <td align="center" valign="middle" width="640">
+      <img src="docs/gifs/desktop-demo.gif" width="640" alt="Desktop: OmniCam shows a QR code, then switches to the live preview once the phone connects">
+    </td>
+    <td align="center" valign="middle" width="190">
+      <img src="docs/gifs/phone-demo.gif" width="190" alt="Phone: scan the QR code, accept the one-time warning, tap Start camera">
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>On the PC</b> — show the QR code, wait, go live.</sub></td>
+    <td align="center"><sub><b>On the phone</b> — scan, accept once, tap Start.</sub></td>
+  </tr>
+</table>
 
 Scan a QR code, tap **Start camera**, and a camera named **OmniCam** appears in Discord, Zoom, Google Meet,
 Chrome, OBS — anything that lists webcams. Video goes phone → PC directly over your Wi-Fi with hardware-encoded
@@ -96,6 +107,10 @@ Apps list cameras when they start, so restart an app that was already open.
 ---
 
 ## While you're live
+
+<p align="center">
+  <img src="docs/screenshots/desktop-live.webp" width="900" alt="Live view: 1080p preview with the control bar">
+</p>
 
 The desktop window shows exactly what the camera device outputs (WYSIWYG, including Fill/Fit and rotation)
 with live stats: resolution, fps, bitrate, codec and network round-trip time.
