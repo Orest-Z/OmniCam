@@ -5,6 +5,9 @@ import {
   type PhoneToDesktop,
 } from '@omnicam/protocol';
 import { CameraController } from './camera';
+import { installFonts } from './fonts';
+
+installFonts();
 import { exchangeSdp, waitForIceComplete, describeDevice, SignalingError } from './signaling';
 
 // ---------------------------------------------------------------------------
@@ -18,6 +21,8 @@ const els = {
   start: $<HTMLButtonElement>('start'),
   hud: $<HTMLDivElement>('hud'),
   status: $<HTMLSpanElement>('status'),
+  statusText: $<HTMLSpanElement>('status-text'),
+  livebar: $<HTMLDivElement>('livebar'),
   trackinfo: $<HTMLSpanElement>('trackinfo'),
   flip: $<HTMLButtonElement>('flip'),
   stop: $<HTMLButtonElement>('stop'),
@@ -32,10 +37,10 @@ const device = describeDevice();
 type UiState = 'idle' | 'starting' | 'connecting' | 'live' | 'reconnecting' | 'error';
 const STATUS_LABEL: Record<UiState, string> = {
   idle: 'idle',
-  starting: 'starting camera…',
-  connecting: 'connecting…',
-  live: 'LIVE',
-  reconnecting: 'reconnecting…',
+  starting: 'Starting camera…',
+  connecting: 'Connecting…',
+  live: 'Live',
+  reconnecting: 'Reconnecting…',
   error: 'error',
 };
 const STATUS_CLASS: Partial<Record<UiState, string>> = { live: 'live', reconnecting: 'warn', error: 'bad' };
@@ -50,8 +55,9 @@ let wakeLock: WakeLockSentinel | null = null;
 let torchOn = false;
 
 function setStatus(state: UiState, text?: string) {
-  els.status.textContent = text ?? STATUS_LABEL[state];
+  els.statusText.textContent = text ?? STATUS_LABEL[state];
   els.status.className = 'pill ' + (STATUS_CLASS[state] ?? '');
+  els.livebar.classList.toggle('on', state === 'live');
 }
 
 function showOverlay(msg = '', isError = false) {
@@ -182,7 +188,7 @@ async function connect() {
         void tuneSender(sender!);
         break;
       case 'disconnected':
-        setStatus('reconnecting', 'connection lost…');
+        setStatus('reconnecting', 'Connection lost…');
         scheduleReconnect(3000);
         break;
       case 'failed':

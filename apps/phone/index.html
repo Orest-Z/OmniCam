@@ -3,9 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-    <meta name="theme-color" content="#0b0d10" />
+    <meta name="theme-color" content="#0a0a0b" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="OmniCam" />
     <meta name="mobile-web-app-capable" content="yes" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <link rel="manifest" href="./manifest.webmanifest" />
     <title>OmniCam</title>
     <link rel="stylesheet" href="./src/styles.css" />
   </head>
@@ -15,37 +20,47 @@
 
       <div id="overlay" class="overlay">
         <div class="brand">
-          <div class="logo">◉</div>
+          <svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
+            <g fill="none" stroke="#fff" stroke-linecap="round">
+              <circle cx="44" cy="56" r="26" stroke-width="8.6" />
+              <path d="M 59.66 20.83 A 38.5 38.5 0 0 1 80.18 42.83" stroke-width="6" />
+              <path d="M 64.54 9.87 A 50.5 50.5 0 0 1 91.45 38.73" stroke-width="6" />
+            </g>
+            <circle cx="44" cy="56" r="7.2" fill="#fff" />
+          </svg>
           <h1>OmniCam</h1>
-          <p class="sub">Your phone is about to become a webcam for your computer.</p>
+          <p class="sub">This phone is about to become the webcam of your computer.</p>
         </div>
         <button id="start" class="primary">Start camera</button>
         <p id="overlay-msg" class="msg"></p>
       </div>
 
       <div id="hud" class="hud" hidden>
+        <div id="livebar" class="livebar"></div>
         <div class="statusbar">
-          <span id="status" class="pill">connecting…</span>
+          <span id="status" class="pill"><i></i><span id="status-text">Connecting</span></span>
           <span id="trackinfo" class="pill dim"></span>
         </div>
         <div class="controls">
-          <button id="flip" class="round" title="Switch camera" aria-label="Switch camera">
-            <svg viewBox="0 0 24 24"><path d="M20 5h-3.2L15 3H9L7.2 5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-8 3a5 5 0 0 1 4.9 4H15l2.5 3 2.5-3h-1.6A7 7 0 0 0 12 6v2zm0 10a5 5 0 0 1-4.9-4H9L6.5 11 4 14h1.6a7 7 0 0 0 6.4 4v-2z"/></svg>
-          </button>
-          <button id="stop" class="round danger" title="Stop" aria-label="Stop">
-            <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
-          </button>
           <button id="torch" class="round" title="Torch" aria-label="Torch" hidden>
-            <svg viewBox="0 0 24 24"><path d="M6 2h12v4l-3 3v13H9V9L6 6V2zm2 2v1.2l3 3V22h2V8.2l3-3V4H8z"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6c0 2-2 2-2 4v10a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V10c0-2-2-2-2-4V2h12z" /><line x1="6" y1="6" x2="18" y2="6" /></svg>
           </button>
+          <button id="stop" class="round stop" title="Stop" aria-label="Stop">
+            <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2" /></svg>
+          </button>
+          <button id="flip" class="round" title="Switch camera" aria-label="Switch camera">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 19H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5" /><path d="M13 5h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5" /><circle cx="12" cy="12" r="3" /><path d="m18 22-3-3 3-3" /><path d="m6 2 3 3-3 3" /></svg>
+          </button>
+        </div>
+        <div class="bottom">
           <select id="res" class="select" title="Resolution">
             <option value="720p">720p</option>
             <option value="1080p" selected>1080p</option>
-            <option value="1080p60">1080p 60</option>
+            <option value="1080p60">1080p 60 fps</option>
             <option value="4k">4K</option>
           </select>
+          <p class="hint">Keep this page open. Locking the phone pauses the camera.</p>
         </div>
-        <p id="hint" class="hint">Keep this page open. Lock screen or switching apps pauses the camera.</p>
       </div>
     </div>
     <script type="module" src="./src/main.ts"></script>
