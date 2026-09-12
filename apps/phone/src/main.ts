@@ -1,0 +1,346 @@
+import {
+  CONTROL_CHANNEL_LABEL,
+  RESOLUTION_PRESETS,
+  type DesktopToPhone,
+  type PhoneToDesktop,
+} from '@omnicam/protocol';
+import { CameraController } from './camera';
+import { exchangeSdp, waitForIceComplete, describeDevice, SignalingError } from './signaling';
+
+// ---------------------------------------------------------------------------
+// DOM
+// ---------------------------------------------------------------------------
+const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+const els = {
+  preview: $<HTMLVideoElement>('preview'),
+  overlay: $<HTMLDivElement>('overlay'),
+  overlayMsg: $<HTMLParagraphElement>('overlay-msg'),
+  start: $<HTMLButtonElement>('start'),
+  hud: $<HTMLDivElement>('hud'),
+  status: $<HTMLSpanElement>('status'),
+  trackinfo: $<HTMLSpanElement>('trackinfo'),
+  flip: $<HTMLButtonElement>('flip'),
+  stop: $<HTMLButtonElement>('stop'),
+  torch: $<HTMLButtonElement>('torch'),
+  res: $<HTMLSelectElement>('res'),
+};
+
+const token = new URLSearchParams(location.search).get('t') ?? '';
+const camera = new CameraController();
+const device = describeDevice();
+
+type UiState = 'idle' | 'starting' | 'connecting' | 'live' | 'reconnecting' | 'error';
+const STATUS_LABEL: Record<UiState, string> = {
+  idle: 'idle',
+  starting: 'starting camera…',
+  connecting: 'connecting…',
+  live: 'LIVE',
+  reconnecting: 'reconnecting…',
+  error: 'error',
+};
+const STATUS_CLASS: Partial<Record<UiState, string>> = { live: 'live', reconnecting: 'warn', error: 'bad' };
+
+let pc: RTCPeerConnection | null = null;
+let control: RTCDataChannel | null = null;
+let sender: RTCRtpSender | null = null;
+let wantConnected = false;
+let reconnectAttempt = 0;
+let reconnectTimer: number | undefined;
+let wakeLock: WakeLockSentinel | null = null;
+let torchOn = false;
+
+function setStatus(state: UiState, text?: string) {
+  els.status.textContent = text ?? STATUS_LABEL[state];
+  els.status.className = 'pill ' + (STATUS_CLASS[state] ?? '');
+}
+
+function showOverlay(msg = '', isError = false) {
+  els.overlay.hidden = false;
+  els.hud.hidden = true;
+  els.overlayMsg.textContent = msg;
+  els.overlayMsg.className = 'msg' + (isError ? ' error' : '');
+}
+
+function showHud() {
+  els.overlay.hidden = true;
+  els.hud.hidden = false;
+}
+
+function refreshTrackInfo() {
+  const info = camera.trackInfo();
+  if (!info) return;
+  els.trackinfo.textContent = `${info.width}×${info.height} @ ${Math.round(info.frameRate)}`;
+  els.preview.classList.toggle('mirror', info.facing === 'user');
+  els.torch.hidden = !camera.capabilities().torch;
+  send({ type: 'trackInfo', info });
+  send({ type: 'capabilities', caps: camera.capabilities() });
+}
+
+// ---------------------------------------------------------------------------
+// Control channel
+// ---------------------------------------------------------------------------
+function send(msg: PhoneToDesktop) {
+  if (control?.readyState === 'open') control.send(JSON.stringify(msg));
+}
+
+async function handleControl(msg: DesktopToPhone) {
+  switch (msg.type) {
+    case 'switchCamera':
+      await (msg.facing ? camera.setFacing(msg.facing) : camera.flip());
+      break;
+    case 'setResolution': {
+      const preset = RESOLUTION_PRESETS[msg.preset];
+      if (preset) {
+        els.res.value = msg.preset;
+        await camera.setResolution(preset);
+        refreshTrackInfo();
+      }
+      break;
+    }
+    case 'setTorch':
+      torchOn = (await camera.setTorch(msg.on)) && msg.on;
+      els.torch.classList.toggle('on', torchOn);
+      break;
+    case 'setMirror':
+      // Mirroring is applied on the desktop side; nothing to do on the phone.
+      break;
+    case 'ping':
+      send({ type: 'pong', t: msg.t });
+      break;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// WebRTC session
+// ---------------------------------------------------------------------------
+function preferCodecs(transceiver: RTCRtpTransceiver) {
+  if (!('setCodecPreferences' in transceiver) || !RTCRtpSender.getCapabilities) return;
+  const codecs = RTCRtpSender.getCapabilities('video')?.codecs ?? [];
+  const rank = (c: RTCRtpCodec) => {
+    const m = c.mimeType.toLowerCase();
+    // H.264 is hardware-encoded on every phone; prefer it, then VP9/VP8 as fallbacks.
+    if (m === 'video/h264') return /packetization-mode=1/.test(c.sdpFmtpLine ?? '') ? 0 : 1;
+    if (m === 'video/vp9') return 2;
+    if (m === 'video/vp8') return 3;
+    if (m === 'video/av1') return 4;
+    return 9; // rtx / red / ulpfec stay last
+  };
+  try {
+    transceiver.setCodecPreferences([...codecs].sort((a, b) => rank(a) - rank(b)));
+  } catch {
+    /* not supported on this browser */
+  }
+}
+
+async function tuneSender(s: RTCRtpSender) {
+  try {
+    const params = s.getParameters();
+    if (!params.encodings?.length) params.encodings = [{}];
+    params.encodings[0].maxBitrate = 12_000_000; // LAN: let quality breathe
+    params.encodings[0].maxFramerate = 60;
+    (params as RTCRtpSendParameters & { degradationPreference?: string }).degradationPreference =
+      'maintain-resolution';
+    await s.setParameters(params);
+  } catch {
+    /* Safari rejects some fields; defaults are fine */
+  }
+}
+
+async function connect() {
+  teardownPeer();
+  const track = camera.track;
+  if (!track) throw new Error('camera not started');
+  setStatus(reconnectAttempt ? 'reconnecting' : 'connecting');
+
+  const peer = new RTCPeerConnection({ iceServers: [], bundlePolicy: 'max-bundle' });
+  pc = peer;
+
+  const transceiver = peer.addTransceiver(track, { direction: 'sendonly' });
+  sender = transceiver.sender;
+  preferCodecs(transceiver);
+
+  const ch = peer.createDataChannel(CONTROL_CHANNEL_LABEL, { ordered: true });
+  control = ch;
+  ch.onopen = async () => {
+    send({ type: 'hello', device, cameras: await camera.listCameras() });
+    refreshTrackInfo();
+  };
+  ch.onmessage = (ev) => {
+    try {
+      void handleControl(JSON.parse(ev.data) as DesktopToPhone);
+    } catch {
+      /* ignore malformed */
+    }
+  };
+
+  peer.onconnectionstatechange = () => {
+    if (pc !== peer) return;
+    switch (peer.connectionState) {
+      case 'connected':
+        reconnectAttempt = 0;
+        setStatus('live');
+        void tuneSender(sender!);
+        break;
+      case 'disconnected':
+        setStatus('reconnecting', 'connection lost…');
+        scheduleReconnect(3000);
+        break;
+      case 'failed':
+      case 'closed':
+        scheduleReconnect();
+        break;
+    }
+  };
+
+  const offer = await peer.createOffer();
+  await peer.setLocalDescription(offer);
+  await waitForIceComplete(peer);
+  if (pc !== peer) return; // superseded by a newer attempt
+
+  const answer = await exchangeSdp(token, peer.localDescription!.sdp, device);
+  if (pc !== peer) return;
+  await peer.setRemoteDescription({ type: 'answer', sdp: answer.sdp });
+}
+
+function teardownPeer() {
+  control?.close();
+  control = null;
+  sender = null;
+  if (pc) {
+    pc.onconnectionstatechange = null;
+    pc.close();
+    pc = null;
+  }
+}
+
+function scheduleReconnect(minDelay = 0) {
+  if (!wantConnected || reconnectTimer !== undefined) return;
+  reconnectAttempt++;
+  const delay = Math.max(minDelay, Math.min(10_000, 500 * 2 ** Math.min(reconnectAttempt, 5)));
+  setStatus('reconnecting');
+  reconnectTimer = window.setTimeout(() => {
+    reconnectTimer = undefined;
+    void connect().catch(onConnectError);
+  }, delay);
+}
+
+function onConnectError(err: unknown) {
+  if (err instanceof SignalingError && err.code === 'bad-token') {
+    stopSession('This QR code has expired. Scan the new one on your computer.', true);
+    return;
+  }
+  console.warn('connect failed', err);
+  scheduleReconnect();
+}
+
+// ---------------------------------------------------------------------------
+// Session lifecycle
+// ---------------------------------------------------------------------------
+const NO_TOKEN_MSG = 'Open this page by scanning the QR code in OmniCam on your computer.';
+
+async function startSession() {
+  if (!token) {
+    showOverlay(NO_TOKEN_MSG, true);
+    return;
+  }
+  if (!navigator.mediaDevices?.getUserMedia) {
+    showOverlay('This browser cannot access the camera. Make sure the address starts with https://', true);
+    return;
+  }
+  els.start.disabled = true;
+  showOverlay('Waiting for camera permission…');
+  try {
+    await camera.start('user', RESOLUTION_PRESETS[els.res.value] ?? RESOLUTION_PRESETS['1080p']);
+  } catch (err) {
+    const name = (err as DOMException).name;
+    showOverlay(
+      name === 'NotAllowedError'
+        ? 'Camera permission denied. Allow camera access for this site and tap Start again.'
+        : `Could not start the camera (${name}).`,
+      true,
+    );
+    els.start.disabled = false;
+    return;
+  }
+  wantConnected = true;
+  reconnectAttempt = 0;
+  showHud();
+  await requestWakeLock();
+  refreshTrackInfo();
+  void connect().catch(onConnectError);
+}
+
+function stopSession(message = 'Camera stopped.', isError = false) {
+  wantConnected = false;
+  clearTimeout(reconnectTimer);
+  reconnectTimer = undefined;
+  teardownPeer();
+  camera.stopTracks();
+  els.preview.srcObject = null;
+  void wakeLock?.release();
+  wakeLock = null;
+  els.start.disabled = false;
+  showOverlay(message, isError);
+}
+
+async function requestWakeLock() {
+  try {
+    wakeLock = (await navigator.wakeLock?.request('screen')) ?? null;
+  } catch {
+    /* unsupported or denied — fine */
+  }
+}
+
+camera.onTrackChanged = (track) => {
+  if (track.readyState !== 'live') {
+    // Track died (page was backgrounded). Recover once we are visible again.
+    if (document.visibilityState === 'visible') void recover();
+    return;
+  }
+  els.preview.srcObject = new MediaStream([track]);
+  if (sender && sender.track !== track) void sender.replaceTrack(track);
+  refreshTrackInfo();
+};
+
+async function recover() {
+  if (!wantConnected) return;
+  try {
+    await camera.recoverIfEnded();
+  } catch (err) {
+    console.warn('camera recovery failed', err);
+  }
+  if (pc && pc.connectionState !== 'connected') scheduleReconnect();
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    void requestWakeLock();
+    void recover();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// UI events
+// ---------------------------------------------------------------------------
+els.start.addEventListener('click', () => void startSession());
+els.stop.addEventListener('click', () => stopSession());
+els.flip.addEventListener('click', async () => {
+  els.flip.disabled = true;
+  try {
+    await camera.flip();
+  } catch (err) {
+    console.warn(err);
+  }
+  els.flip.disabled = false;
+});
+els.torch.addEventListener('click', async () => {
+  torchOn = (await camera.setTorch(!torchOn)) && !torchOn;
+  els.torch.classList.toggle('on', torchOn);
+});
+els.res.addEventListener('change', () => {
+  const preset = RESOLUTION_PRESETS[els.res.value];
+  if (preset) void camera.setResolution(preset).then(refreshTrackInfo);
+});
+window.addEventListener('beforeunload', () => teardownPeer());
+
+showOverlay(token ? '' : NO_TOKEN_MSG, !token);
