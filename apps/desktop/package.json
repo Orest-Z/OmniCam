@@ -14,7 +14,8 @@
     "dist": "electron-vite build && electron-builder --win --config electron-builder.yml"
   },
   "dependencies": {
-    "@omnicam/protocol": "*"
+    "@omnicam/protocol": "*",
+    "lucide-react": "^1.45.0"
   },
   "devDependencies": {
     "@types/node": "^24.13.4",
@@ -25,10 +26,12 @@
     "electron": "^44.3.0",
     "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
+    "png-to-ico": "^3.0.2",
     "qrcode": "^1.5.4",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "selfsigned": "^5.5.0",
+    "sharp": "^0.35.4",
     "typescript": "^7.0.2",
     "vite": "^7.3.6"
   }
