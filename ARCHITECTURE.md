@@ -1,4 +1,4 @@
-# OmniCam — project guide for Claude
+# OmniCam — architecture and engineering notes
 
 ## What this is
 
@@ -137,19 +137,9 @@ Numbers from the perf pass on 2026-09-12; re-measure before changing any of thes
   `nocopy` / `nopreview` to bisect the pipeline; `OMNICAM_UI_DEBUG=metrics` logs renderer
   layout/style counters. `scripts`: see `packages/vcam-native/scripts`.
 
-## Git
-
-Commits are authored by the repository owner only — **no `Co-Authored-By` or session trailers**
-in commit messages or PR descriptions.
-
 ## Roadmap (not built yet)
 
 - Windows 11 Media Foundation virtual camera backend (for UWP/MF-only apps).
 - macOS: CoreMediaIO Camera Extension backend (needs Apple signing). Linux: v4l2loopback.
 - "No-warning mode": real domain + per-install certificate (requires internet + a small service).
 - Virtual microphone. Auto-update. Code signing.
-
-## Plan reference
-
-The original implementation plan (milestones M0–M4, verification steps) lives at
-`~/.claude/plans/zippy-greeting-ripple.md`; this file supersedes it for day-to-day context.

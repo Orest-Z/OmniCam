@@ -212,7 +212,7 @@ PHONE (browser)                                DESKTOP
 - Nothing is copied or converted while no app reads the camera; the phone is told to drop to 5 fps to save battery.
 
 Typical cost while streaming 1080p into an app: about a quarter of a CPU core and flat memory over long sessions.
-`CLAUDE.md` has the full architecture and the reasoning behind every design decision.
+`ARCHITECTURE.md` has the full architecture and the reasoning behind every design decision.
 
 ---
 

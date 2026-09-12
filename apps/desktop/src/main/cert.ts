@@ -14,7 +14,7 @@ const TEN_YEARS_MS = 10 * 365 * 24 * 3600 * 1000;
 /**
  * Self-signed server certificate, generated once per install and re-generated when the
  * set of LAN addresses changes. Phones will show a one-time "not private" warning; that is
- * an accepted product constraint (see CLAUDE.md). SANs are still filled in correctly so the
+ * an accepted product constraint (see ARCHITECTURE.md). SANs are still filled in correctly so the
  * warning is the *only* thing standing between the phone and a working camera page.
  */
 export async function loadOrCreateCert(): Promise<TlsMaterial> {
