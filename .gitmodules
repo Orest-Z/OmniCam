@@ -1,0 +1,6 @@
+[submodule "packages/vcam-native/third_party/softcam"]
+	path = packages/vcam-native/third_party/softcam
+	url = https://github.com/tshino/softcam.git
+[submodule "packages/vcam-native/third_party/libyuv"]
+	path = packages/vcam-native/third_party/libyuv
+	url = https://chromium.googlesource.com/libyuv/libyuv
