@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { cpus } from 'node:os';
 import type { AppSettings, DesktopToPhone, PhoneToDesktop } from '@omnicam/protocol';
 import {
   UI_CONTROL,
@@ -11,6 +12,7 @@ import {
   UI_SET_SETTINGS,
   UI_VCAM_ERROR,
   type AppState,
+  type PreviewFrame,
 } from '../shared/ipc';
 import { broadcast, disconnectPhone } from './actions';
 import { loadOrCreateCert } from './cert';
@@ -28,6 +30,12 @@ app.commandLine.appendSwitch('disable-features', 'WebRtcHideLocalIpsWithMdns');
 // Never throttle the hidden engine window.
 app.commandLine.appendSwitch('disable-renderer-backgrounding');
 app.commandLine.appendSwitch('disable-background-timer-throttling');
+// Software video decoding by default. Measured on Electron 44 / Win10: a hardware-decoded 1080p
+// frame costs ~12 ms of GPU readback per VideoFrame.copyTo() and lands as NV12; a software-decoded
+// one costs ~0.4 ms to copy and is already I420. The virtual camera is a CPU consumer, so the GPU
+// round trip is pure overhead until 4K. (Settings must be read before app.whenReady.)
+settings.load();
+if (!settings.get().hardwareDecode) app.commandLine.appendSwitch('disable-accelerated-video-decode');
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -97,7 +105,7 @@ function wireIpc(): void {
     broadcast({ stats: s });
   });
   engine.on('vcam', (v) => broadcast({ vcam: v }));
-  engine.on('preview', (jpeg: Uint8Array) => uiWindow()?.webContents.send(UI_PREVIEW_FRAME, jpeg));
+  engine.on('preview', (frame: PreviewFrame) => uiWindow()?.webContents.send(UI_PREVIEW_FRAME, frame));
   engine.on('phone', (msg: PhoneToDesktop) => {
     if (msg.type === 'error') console.warn('[phone]', msg.message);
   });
@@ -109,13 +117,23 @@ function wireIpc(): void {
 
 async function main(): Promise<void> {
   await app.whenReady();
-  settings.load();
   app.setAppUserModelId('com.omnicam.desktop');
 
   wireIpc();
   engine.create();
   createTray();
   if (!process.argv.includes('--hidden')) createOrShowUiWindow();
+  if (!app.isPackaged) {
+    setTimeout(() => console.log(`[pids] main=${process.pid} engine=${engine.osPid()} ui=${uiWindow()?.webContents.getOSProcessId()}`), 4000);
+  }
+  if (process.env.OMNICAM_DEBUG?.includes('cpu')) {
+    // Dev: per-process CPU every 5 s, the same numbers Task Manager shows.
+    setInterval(async () => {
+      const cores = cpus().length;
+      const rows = (await app.getAppMetrics()).map((m) => `${m.type}${m.name ? ':' + m.name : ''}=${(m.cpu.percentCPUUsage / cores).toFixed(1)}%`);
+      console.log('[cpu]', rows.join(' '));
+    }, 5000);
+  }
 
   try {
     await startServer();

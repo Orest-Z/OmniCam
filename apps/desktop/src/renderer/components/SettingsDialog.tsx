@@ -84,6 +84,16 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, version, on
         </div>
       </div>
 
+      <div className="field">
+        <div className="k">
+          Hardware video decoding
+          <small>Off is faster up to 1080p on most machines (the camera needs frames in system memory anyway). Try On for 4K. Applies after restart.</small>
+        </div>
+        <div className="v">
+          <Switch on={settings.hardwareDecode} onChange={(v) => onSettings({ hardwareDecode: v })} />
+        </div>
+      </div>
+
       <div className="section">Network</div>
       <div className="field">
         <div className="k">
