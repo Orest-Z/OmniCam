@@ -1,0 +1,33 @@
+appId: com.omnicam.desktop
+productName: OmniCam
+copyright: Copyright © 2026 Orest-Z
+directories:
+  output: release
+  buildResources: build
+files:
+  - out/**
+  - package.json
+extraResources:
+  - from: resources/phone
+    to: phone
+  - from: resources/native
+    to: native
+  - from: resources/icons
+    to: icons
+asar: true
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: resources/icons/icon.png
+  requestedExecutionLevel: asInvoker
+nsis:
+  oneClick: false
+  perMachine: true
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  include: build/installer.nsh
+  runAfterFinish: true
+  artifactName: ${productName}-Setup-${version}.${ext}
+  shortcutName: OmniCam
+publish: null
