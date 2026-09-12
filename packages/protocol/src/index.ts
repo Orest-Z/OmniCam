@@ -74,6 +74,8 @@ export type DesktopToPhone =
   | { type: 'setResolution'; preset: keyof typeof RESOLUTION_PRESETS }
   | { type: 'setTorch'; on: boolean }
   | { type: 'setMirror'; on: boolean }
+  /** Nobody is watching on the desktop: encode at a low frame rate to save the phone's battery. */
+  | { type: 'setIdle'; idle: boolean }
   | { type: 'ping'; t: number };
 
 /** Phone -> desktop */
@@ -173,6 +175,12 @@ export interface AppSettings {
   holdLastFrame: boolean;
   closeToTray: boolean;
   launchAtLogin: boolean;
+  /**
+   * Decode the phone's video on the GPU. Off by default: the virtual camera needs frames in
+   * system memory anyway, and the GPU readback costs more than software decoding up to 1080p.
+   * Takes effect after a restart (Chromium command-line switch).
+   */
+  hardwareDecode: boolean;
   /** Last window geometry; restored on launch. */
   windowBounds?: { x: number; y: number; width: number; height: number };
 }
@@ -187,4 +195,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   holdLastFrame: true,
   closeToTray: true,
   launchAtLogin: false,
+  hardwareDecode: false,
 };

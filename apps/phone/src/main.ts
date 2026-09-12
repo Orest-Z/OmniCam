@@ -100,6 +100,7 @@ async function handleControl(msg: DesktopToPhone) {
         els.res.value = msg.preset;
         await camera.setResolution(preset);
         refreshTrackInfo();
+        if (sender) void tuneSender(sender);
       }
       break;
     }
@@ -109,6 +110,10 @@ async function handleControl(msg: DesktopToPhone) {
       break;
     case 'setMirror':
       // Mirroring is applied on the desktop side; nothing to do on the phone.
+      break;
+    case 'setIdle':
+      idleMode = msg.idle;
+      if (sender) void tuneSender(sender);
       break;
     case 'ping':
       send({ type: 'pong', t: msg.t });
@@ -124,11 +129,19 @@ function preferCodecs(transceiver: RTCRtpTransceiver) {
   const codecs = RTCRtpSender.getCapabilities('video')?.codecs ?? [];
   const rank = (c: RTCRtpCodec) => {
     const m = c.mimeType.toLowerCase();
-    // H.264 is hardware-encoded on every phone; prefer it, then VP9/VP8 as fallbacks.
-    if (m === 'video/h264') return /packetization-mode=1/.test(c.sdpFmtpLine ?? '') ? 0 : 1;
-    if (m === 'video/vp9') return 2;
-    if (m === 'video/vp8') return 3;
-    if (m === 'video/av1') return 4;
+    // H.264 is hardware-encoded on every phone. High profile (64xxxx) gives better quality per bit
+    // than constrained baseline (42e0xx); packetization-mode=1 avoids fragment-size limits.
+    if (m === 'video/h264') {
+      const f = c.sdpFmtpLine ?? '';
+      const high = /profile-level-id=64/i.test(f);
+      // High profile only where the encoder is known to be hardware (iOS/iPadOS Safari); Chrome's
+      // software OpenH264 fallback advertises High but stalls on it after a few seconds.
+      const preferHigh = new URLSearchParams(location.search).get('h264') === 'high' || /iPhone|iPad|Macintosh/.test(navigator.userAgent);
+      return (high ? (preferHigh ? 0 : 2) : preferHigh ? 2 : 0) + (/packetization-mode=1/.test(f) ? 0 : 1);
+    }
+    if (m === 'video/vp9') return 4;
+    if (m === 'video/vp8') return 5;
+    if (m === 'video/av1') return 6;
     return 9; // rtx / red / ulpfec stay last
   };
   try {
@@ -138,12 +151,26 @@ function preferCodecs(transceiver: RTCRtpTransceiver) {
   }
 }
 
+let idleMode = false;
+
+/** Bitrate budget for the current capture size: enough for near-lossless motion on a LAN. */
+function bitrateFor(width: number, height: number, fps: number): number {
+  const px = width * height;
+  const base = px >= 3840 * 2160 ? 35_000_000 : px >= 1920 * 1080 ? 12_000_000 : px >= 1280 * 720 ? 6_000_000 : 3_000_000;
+  return fps > 40 ? Math.round(base * 1.5) : base;
+}
+
 async function tuneSender(s: RTCRtpSender) {
   try {
     const params = s.getParameters();
     if (!params.encodings?.length) params.encodings = [{}];
-    params.encodings[0].maxBitrate = 12_000_000; // LAN: let quality breathe
-    params.encodings[0].maxFramerate = 60;
+    const info = camera.trackInfo();
+    const enc = params.encodings[0];
+    enc.maxBitrate = bitrateFor(info?.width ?? 1920, info?.height ?? 1080, info?.frameRate ?? 30);
+    // Idle: nothing on the desktop is consuming frames — trickle at 5 fps to save battery/heat,
+    // keep the resolution so the first frame is sharp when an app opens the camera.
+    enc.maxFramerate = idleMode ? 5 : 60;
+    (enc as RTCRtpEncodingParameters & { networkPriority?: string }).networkPriority = 'high';
     (params as RTCRtpSendParameters & { degradationPreference?: string }).degradationPreference =
       'maintain-resolution';
     await s.setParameters(params);
@@ -304,7 +331,7 @@ camera.onTrackChanged = (track) => {
     return;
   }
   els.preview.srcObject = new MediaStream([track]);
-  if (sender && sender.track !== track) void sender.replaceTrack(track);
+  if (sender && sender.track !== track) void sender.replaceTrack(track).then(() => sender && tuneSender(sender));
   refreshTrackInfo();
 };
 
@@ -345,7 +372,12 @@ els.torch.addEventListener('click', async () => {
 });
 els.res.addEventListener('change', () => {
   const preset = RESOLUTION_PRESETS[els.res.value];
-  if (preset) void camera.setResolution(preset).then(refreshTrackInfo);
+  if (preset) {
+    void camera.setResolution(preset).then(() => {
+      refreshTrackInfo();
+      if (sender) void tuneSender(sender);
+    });
+  }
 });
 window.addEventListener('beforeunload', () => teardownPeer());
 
