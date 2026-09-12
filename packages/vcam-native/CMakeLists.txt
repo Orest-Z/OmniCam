@@ -66,7 +66,7 @@ if(OMNICAM_BUILD_ADDON)
     "${CMAKE_CURRENT_SOURCE_DIR}/node_modules/node-addon-api"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../node_modules/node-addon-api"
     "${LIBYUV_DIR}/include")
-  target_compile_definitions(omnicam_vcam PRIVATE NOMINMAX NAPI_VERSION=8 NAPI_CPP_EXCEPTIONS NODE_ADDON_API_DISABLE_DEPRECATED)
+  target_compile_definitions(omnicam_vcam PRIVATE NOMINMAX _WIN32_WINNT=0x0A00 NAPI_VERSION=8 NAPI_CPP_EXCEPTIONS NODE_ADDON_API_DISABLE_DEPRECATED)
   target_compile_options(omnicam_vcam PRIVATE /EHsc /W4)
   target_link_libraries(omnicam_vcam PRIVATE ${CMAKE_JS_LIB} softcam_core yuv advapi32)
 endif()

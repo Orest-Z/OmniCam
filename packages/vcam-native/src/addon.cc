@@ -72,6 +72,8 @@ Napi::Value PushFrame(const Napi::CallbackInfo& info) {
     }
     fi.width = o.Get("width").ToNumber().Int32Value();
     fi.height = o.Get("height").ToNumber().Int32Value();
+    fi.matrix = o.Has("matrix") && o.Get("matrix").ToString().Utf8Value() == "bt709" ? omnicam::YuvMatrix::BT709 : omnicam::YuvMatrix::BT601;
+    fi.fullRange = o.Has("fullRange") && o.Get("fullRange").ToBoolean().Value();
     Napi::Array layout = o.Get("layout").As<Napi::Array>();
     fi.planeCount = std::min<int>(3, (int)layout.Length());
     for (int i = 0; i < fi.planeCount; i++) {
@@ -125,6 +127,28 @@ Napi::Value SetTransform(const Napi::CallbackInfo& info) {
     return env.Undefined();
 }
 
+// setPreview(enabled, maxWidth, intervalMs)
+Napi::Value SetPreview(const Napi::CallbackInfo& info) {
+    const bool enabled = info.Length() > 0 && info[0].ToBoolean().Value();
+    const int maxWidth = info.Length() > 1 ? info[1].ToNumber().Int32Value() : 640;
+    const int interval = info.Length() > 2 ? info[2].ToNumber().Int32Value() : 80;
+    pipeline().setPreview(enabled, maxWidth, interval);
+    return info.Env().Undefined();
+}
+
+// takePreview() -> { width, height, data: Uint8Array(RGBA) } | null
+Napi::Value TakePreview(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    std::vector<uint8_t> rgba;
+    int w = 0, h = 0;
+    if (!pipeline().takePreview(rgba, w, h)) return env.Null();
+    Napi::Object o = Napi::Object::New(env);
+    o.Set("width", w);
+    o.Set("height", h);
+    o.Set("data", Napi::Buffer<uint8_t>::Copy(env, rgba.data(), rgba.size()));
+    return o;
+}
+
 Napi::Value GetStats(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
     omnicam::PipelineStats s = pipeline().stats();
@@ -137,6 +161,8 @@ Napi::Value GetStats(const Napi::CallbackInfo& info) {
     o.Set("framesRepeated", Napi::Number::New(env, (double)s.framesRepeated));
     o.Set("framesDropped", Napi::Number::New(env, (double)s.framesDropped));
     o.Set("consumers", s.consumers);
+    o.Set("convertUs", Napi::Number::New(env, (double)s.convertUs));
+    o.Set("convertN", Napi::Number::New(env, (double)s.convertN));
     return o;
 }
 
@@ -160,6 +186,8 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
     exports.Set("showPlaceholder", Napi::Function::New(env, ShowPlaceholder));
     exports.Set("setHoldLastFrame", Napi::Function::New(env, SetHoldLastFrame));
     exports.Set("setTransform", Napi::Function::New(env, SetTransform));
+    exports.Set("setPreview", Napi::Function::New(env, SetPreview));
+    exports.Set("takePreview", Napi::Function::New(env, TakePreview));
     exports.Set("getStats", Napi::Function::New(env, GetStats));
     exports.Set("probe", Napi::Function::New(env, Probe));
     // Make sure the worker thread is gone before the runtime tears down.
