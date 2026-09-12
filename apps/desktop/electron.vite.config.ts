@@ -20,6 +20,7 @@ export default defineConfig({
     root: resolve(__dirname, 'src'),
     plugins: [react()],
     build: {
+      minify: 'esbuild',
       rollupOptions: {
         // Two renderer entry points: the visible UI and the hidden media engine.
         input: {
