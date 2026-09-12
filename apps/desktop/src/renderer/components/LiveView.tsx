@@ -1,0 +1,95 @@
+import { Flashlight, FlipHorizontal2, QrCode, RotateCw, Unplug } from 'lucide-react';
+import type { AppSettings, DesktopToPhone, StreamStats, VirtualCamStats } from '@omnicam/protocol';
+import { Preview } from './Preview';
+import { IconButton, Segmented } from './ui';
+
+interface Props {
+  stats: StreamStats;
+  vcam: VirtualCamStats;
+  settings: AppSettings;
+  onSettings: (patch: Partial<AppSettings>) => void;
+  onControl: (msg: DesktopToPhone) => void;
+  onShowQr: () => void;
+}
+
+export function LiveView({ stats, vcam, settings, onSettings, onControl, onShowQr }: Props) {
+  const live = stats.state === 'connected' || stats.state === 'stalled';
+  const facing = stats.trackInfo?.facing ?? 'user';
+  const h = stats.trackInfo?.height ?? 0;
+  const fr = Math.round(stats.trackInfo?.frameRate ?? 0);
+  const preset = h >= 2160 ? '4k' : h >= 1080 ? (fr >= 50 ? '1080p60' : '1080p') : '720p';
+  const phone = stats.device?.platform ?? 'Phone';
+
+  return (
+    <div className="live">
+      <div className="stage">
+        <Preview stats={stats} mirror={settings.mirror} />
+      </div>
+
+      <div className="bar">
+        <div className="group">
+          <Segmented
+            value={facing}
+            disabled={!live}
+            options={[
+              { value: 'user', label: 'Front' },
+              { value: 'environment', label: 'Back' },
+            ]}
+            onChange={(f) => onControl({ type: 'switchCamera', facing: f })}
+          />
+          <Segmented
+            value={preset}
+            disabled={!live}
+            options={[
+              { value: '720p', label: '720p' },
+              { value: '1080p', label: '1080p' },
+              { value: '1080p60', label: '1080p60' },
+              { value: '4k', label: '4K' },
+            ]}
+            onChange={(p) => onControl({ type: 'setResolution', preset: p })}
+          />
+          {stats.caps?.torch && (
+            <IconButton title="Torch" disabled={!live} onClick={() => onControl({ type: 'setTorch', on: true })}>
+              <Flashlight />
+            </IconButton>
+          )}
+        </div>
+
+        <span className="divider" />
+
+        <div className="group">
+          <IconButton title="Mirror" on={settings.mirror} onClick={() => onSettings({ mirror: !settings.mirror })}>
+            <FlipHorizontal2 />
+          </IconButton>
+          <IconButton
+            title={`Rotate (${settings.rotation}°)`}
+            on={settings.rotation !== 0}
+            onClick={() => onSettings({ rotation: ((settings.rotation + 90) % 360) as AppSettings['rotation'] })}
+          >
+            <RotateCw />
+          </IconButton>
+        </div>
+
+        <span className="spacer" />
+
+        <span className={'inuse' + (vcam.consumers > 0 ? ' on' : '')} title="Apps currently reading the OmniCam camera">
+          <i />
+          {vcam.consumers > 0 ? `In use by ${vcam.consumers} app${vcam.consumers > 1 ? 's' : ''}` : 'No app is using the camera yet'}
+        </span>
+
+        <span className="divider" />
+
+        <span className="muted" style={{ fontSize: 12.5 }}>
+          {phone}
+          {stats.trackInfo?.label ? ` · ${facing === 'user' ? 'front' : 'back'} camera` : ''}
+        </span>
+        <IconButton title="Show QR code" onClick={onShowQr}>
+          <QrCode />
+        </IconButton>
+        <IconButton title="Disconnect phone" onClick={() => void window.omnicam.disconnect()}>
+          <Unplug />
+        </IconButton>
+      </div>
+    </div>
+  );
+}

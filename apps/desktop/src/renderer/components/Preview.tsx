@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { StreamStats } from '@omnicam/protocol';
 
 interface Props {
@@ -6,16 +6,33 @@ interface Props {
   mirror: boolean;
 }
 
-/** Live preview fed by JPEG snapshots from the engine (only while this window is open). */
+const CHIP: Record<StreamStats['state'], { text: string; cls: string } | null> = {
+  idle: null,
+  connecting: { text: 'CONNECTING', cls: 'warn' },
+  connected: { text: 'LIVE', cls: '' },
+  stalled: { text: 'PAUSED ON PHONE', cls: 'warn' },
+  disconnected: { text: 'RECONNECTING', cls: 'bad' },
+};
+
+/** Live preview fed by JPEG snapshots from the engine (only while this window is visible). */
 export function Preview({ stats, mirror }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [showStats, setShowStats] = useState(true);
   const live = stats.state === 'connected' || stats.state === 'stalled';
+
+  // Stats are visible for a few seconds after (re)connecting, then only on hover.
+  useEffect(() => {
+    if (stats.state !== 'connected') return;
+    setShowStats(true);
+    const t = setTimeout(() => setShowStats(false), 5000);
+    return () => clearTimeout(t);
+  }, [stats.state]);
 
   useEffect(() => {
     void window.omnicam.setPreview(true);
     let pending: Promise<void> | null = null;
     const off = window.omnicam.onPreviewFrame((buf) => {
-      if (pending) return; // drop if we are behind
+      if (pending) return; // behind: drop this frame
       const canvas = canvasRef.current;
       if (!canvas) return;
       pending = createImageBitmap(new Blob([buf], { type: 'image/jpeg' }))
@@ -41,30 +58,28 @@ export function Preview({ stats, mirror }: Props) {
     };
   }, []);
 
+  const chip = CHIP[stats.state];
+  const res = stats.height >= 2160 ? '4K' : stats.height >= 1080 ? '1080p' : stats.height >= 720 ? '720p' : `${stats.height}p`;
+
   return (
     <div className="preview">
-      <canvas ref={canvasRef} style={{ transform: mirror ? 'scaleX(-1)' : undefined, opacity: live ? 1 : 0.15 }} />
+      <canvas ref={canvasRef} style={{ transform: mirror ? 'scaleX(-1)' : undefined, opacity: live ? 1 : 0.2 }} />
+      {chip && (
+        <span className={`chip ${chip.cls}`}>
+          <i />
+          {chip.text}
+        </span>
+      )}
       {!live && (
         <div className="empty">
-          {stats.state === 'connecting'
-            ? 'Connecting to phone…'
-            : stats.state === 'disconnected'
-              ? 'Phone disconnected — it will reconnect automatically when the page is open.'
-              : 'No phone connected yet. Scan the QR code to start.'}
+          {stats.state === 'connecting' ? 'Connecting to phone…' : 'Phone disconnected — it reconnects automatically while the page is open.'}
         </div>
       )}
-      {live && (
-        <div className="overlay">
-          <span className="tag">
-            {stats.width}×{stats.height}
-          </span>
-          <span className="tag">{stats.fps} fps</span>
-          <span className="tag">{(stats.bitrateKbps / 1000).toFixed(1)} Mbps</span>
-          <span className="tag">{stats.codec || '—'}</span>
-          <span className="tag">{stats.rttMs} ms</span>
-          {stats.packetsLost > 0 && <span className="tag">lost {stats.packetsLost}</span>}
-          {stats.state === 'stalled' && <span className="tag">paused on phone</span>}
-        </div>
+      {live && stats.width > 0 && (
+        <span className={'stats' + (showStats ? ' show' : '')}>
+          {res} · {stats.fps} fps · {(stats.bitrateKbps / 1000).toFixed(1)} Mbps · {stats.codec || '—'} · {stats.rttMs} ms
+          {stats.packetsLost > 0 ? ` · ${stats.packetsLost} lost` : ''}
+        </span>
       )}
     </div>
   );

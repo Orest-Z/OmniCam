@@ -102,6 +102,19 @@ Without the native build the app still runs (QR, phone connection, preview) and 
 - Errors that a user can act on (driver not registered, port busy, firewall) must surface in
   the UI with a concrete instruction, not just in logs.
 
+## Brand & UI
+
+- Assets live in `packages/brand/` (Geist fonts, `mark.svg`, the reference icon sheet). Every icon size
+  is generated from vector geometry by `node apps/desktop/build/icons.mjs` — never hand-crop bitmaps.
+  The same geometry is duplicated in `renderer/components/Mark.tsx`, the phone `index.html` and the
+  engine placeholder (`vcam.ts`); change all four together.
+- Palette/typography are CSS tokens at the top of `renderer/styles.css` (mirrored in the phone
+  `styles.css` and `THEME` in `main/ui-window.ts` for the native title bar). White is the accent;
+  green `#0ad950` means "live" and nothing else.
+- The main window is state-driven: `PairView` (QR + steps) until a phone connects, `LiveView`
+  (preview + controls) afterwards. Settings and the QR-while-live are dialogs, not panels.
+- Icons: `lucide-react` only. Fonts: Geist / Geist Mono, self-hosted (no network on the phone page).
+
 ## Git
 
 Commits are authored by the repository owner only — **no `Co-Authored-By` or session trailers**
