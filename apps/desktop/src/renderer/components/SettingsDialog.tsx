@@ -3,7 +3,7 @@ import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import type { AppSettings, PairingInfo, VirtualCamStats } from '@omnicam/protocol';
 import type { UpdateState } from '../../shared/ipc';
 import { Dialog, Segmented, Switch } from './ui';
-import { updateSummary } from './UpdateDialog';
+import { updateOnOffer, updateSummary } from './UpdateDialog';
 
 interface Props {
   settings: AppSettings;
@@ -158,7 +158,7 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, update, ver
           <small>{updateSummary(update)}</small>
         </div>
         <div className="v">
-          {update.status === 'available' || update.status === 'downloading' || update.status === 'downloaded' || (update.status === 'error' && update.failed === 'download') ? (
+          {updateOnOffer(update) ? (
             <button className="btn primary" onClick={onOpenUpdate}>
               {update.status === 'downloaded' ? 'Restart to update' : `Update to ${update.version}`}
             </button>

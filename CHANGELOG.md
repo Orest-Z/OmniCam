@@ -1,17 +1,19 @@
 # Changelog
 
-## Unreleased
+## 1.1.0 — 2026-10-01
 
 - **Check for updates** in Settings, plus a quiet check at launch and once a day. An *Update available*
   badge in the title bar opens a prompt that downloads the new version, verifies it and restarts
-  OmniCam into it. Nothing is downloaded or installed without a click.
+  OmniCam into it. Nothing is downloaded or installed without a click. A found update stays on
+  offer even if a later check fails.
 - Log file at `%APPDATA%\OmniCam\logs\omnicam.log` with an "Open log folder" button in Settings.
 - The app recovers when one of its renderer processes dies (previously: black window / camera
   silently stopped until a restart).
 - User data moves from `%APPDATA%\@omnicam\desktop` to `%APPDATA%\OmniCam`; settings and the
   certificate are carried over so phones keep their exception.
 - Pairing endpoint: constant-time token check and a per-client rate limit.
-- GitHub Actions build; installer attached to tagged releases.
+- GitHub Actions build; a version bump on `main` publishes a release with the installer,
+  `latest.yml` and the changelog section as its notes.
 
 ## 1.0.0 — 2026-09-12
 

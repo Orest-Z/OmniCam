@@ -6,7 +6,7 @@ import { LiveView } from './components/LiveView';
 import { Mark } from './components/Mark';
 import { PairView } from './components/PairView';
 import { SettingsDialog } from './components/SettingsDialog';
-import { UpdateDialog } from './components/UpdateDialog';
+import { UpdateDialog, updateOnOffer } from './components/UpdateDialog';
 import { Dialog, IconButton } from './components/ui';
 import { useAppState } from './useAppState';
 import { Toasts, useToasts } from './toasts';
@@ -21,11 +21,11 @@ const STATUS: Record<ConnectionState, string> = {
 
 /** Title-bar badge text while an update is on offer; null hides the badge. */
 function updateBadge(u: UpdateState): string | null {
-  if (u.status === 'available') return 'Update available';
   if (u.status === 'downloading') return `Updating ${u.percent ?? 0}%`;
   if (u.status === 'downloaded') return 'Restart to update';
   if (u.status === 'error' && u.failed === 'download') return 'Update failed';
-  return null;
+  // 'available', and also a check that failed while this version was already on offer.
+  return updateOnOffer(u) ? 'Update available' : null;
 }
 
 export function App() {

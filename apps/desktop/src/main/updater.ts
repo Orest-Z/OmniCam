@@ -61,7 +61,9 @@ export async function checkForUpdates(manual: boolean): Promise<void> {
 }
 
 export async function downloadUpdate(): Promise<void> {
-  if (state.status !== 'available' && !(state.status === 'error' && state.failed === 'download')) return;
+  // A version on offer stays downloadable whichever step failed last: a check that failed after the
+  // offer arrived (lost connection, say) must not strand the update with no way to retry it.
+  if (!state.version || busy()) return;
   lastProgressAt = 0;
   set({ status: 'downloading', percent: 0, error: undefined, failed: undefined });
   try {

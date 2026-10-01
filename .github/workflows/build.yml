@@ -17,6 +17,9 @@ jobs:
       - uses: actions/checkout@v5
         with:
           submodules: recursive
+          # Full history and tags: the release steps read them to tell whether this version has
+          # been released yet and to list the commits when CHANGELOG.md has no section for it.
+          fetch-depth: 0
 
       - uses: actions/setup-node@v5
         with:
@@ -28,6 +31,44 @@ jobs:
 
       - name: Typecheck
         run: npm run typecheck
+
+      # The app version lives in apps/desktop/package.json: it names the installer, goes into
+      # latest.yml and is what the in-app updater compares against. Releasing follows it — a build
+      # of main that carries a version with no release yet publishes one (and creates its tag);
+      # pushing a v* tag does the same and must match the file.
+      - name: Version
+        id: version
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = (Get-Content apps/desktop/package.json -Raw | ConvertFrom-Json).version
+          $tag = "v$version"
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+
+          if ($env:GITHUB_REF -like 'refs/tags/*') {
+            $pushed = $env:GITHUB_REF -replace '^refs/tags/', ''
+            if ($pushed -ne $tag) {
+              throw "Tag $pushed does not match apps/desktop/package.json ($version). Bump the version first: the installer and latest.yml would carry $version."
+            }
+          } elseif ($env:GITHUB_REF -ne 'refs/heads/main') {
+            Write-Host "Not main and not a tag - build only."
+            "release=false" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
+
+          gh release view $tag 1>$null 2>$null
+          $released = $LASTEXITCODE -eq 0
+          $global:LASTEXITCODE = 0
+          if ($released) {
+            Write-Host "$tag is already released - build only. Bump the version in apps/desktop/package.json to publish a new one."
+            "release=false" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Host "This build publishes $tag."
+            "release=true" >> $env:GITHUB_OUTPUT
+          }
+          exit 0
 
       # N-API addon (Electron ABI) + DirectShow filter DLLs, x64 and x86. Needs the VS 2022 C++
       # toolset and CMake, both preinstalled on windows-latest.
@@ -41,25 +82,69 @@ jobs:
 
       - uses: actions/upload-artifact@v5
         with:
-          name: OmniCam-Setup
+          name: OmniCam-Setup-${{ steps.version.outputs.version }}
           path: |
             apps/desktop/release/*.exe
             apps/desktop/release/*.blockmap
             apps/desktop/release/latest.yml
           if-no-files-found: error
 
+      # Release notes: the CHANGELOG section for this version, or the commits since the previous
+      # tag if it has none, followed by the download instructions.
+      - name: Release notes
+        if: steps.version.outputs.release == 'true'
+        shell: pwsh
+        run: |
+          $version = '${{ steps.version.outputs.version }}'
+          $tag = '${{ steps.version.outputs.tag }}'
+          $changelog = [regex]::Match(
+            (Get-Content CHANGELOG.md -Raw -Encoding utf8),
+            "(?ms)^##\s+$([regex]::Escape($version))\b.*?(?=^##\s|\z)"
+          )
+          if ($changelog.Success) {
+            # Drop the heading line; the release has its own title.
+            $what = ($changelog.Value -split "`r?`n", 2)[1].Trim()
+          } else {
+            $previous = (git tag --list 'v*' --sort=-v:refname) | Where-Object { $_ -ne $tag } | Select-Object -First 1
+            $range = if ($previous) { "$previous..HEAD" } else { 'HEAD' }
+            Write-Host "No CHANGELOG section for $version - listing commits ($range)."
+            $what = "### Changes`n`n" + ((git log $range --no-merges --pretty='- %s') -join "`n")
+          }
+
+          $notes = @(
+            $what
+            ''
+            '---'
+            ''
+            "**New install:** download **OmniCam-Setup-$version.exe** below and run it. Windows SmartScreen"
+            'may show "Windows protected your PC" (not code-signed yet): click **More info -> Run anyway**.'
+            ''
+            '**Already running OmniCam?** *Settings -> Check for updates* installs this version for you;'
+            'the installer below does the same thing by hand.'
+            ''
+            'Setup, usage and troubleshooting: README.txt below, or the project README.'
+          )
+          Set-Content release-notes.md -Value $notes -Encoding utf8
+          Write-Host ($notes -join "`n")
+
       - name: Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: steps.version.outputs.release == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          draft: true
-          # latest.yml and the blockmap are what the in-app updater reads; keep them next to the .exe.
+          tag_name: ${{ steps.version.outputs.tag }}
+          # Creates the tag at this commit when the release comes from a push to main.
+          target_commitish: ${{ github.sha }}
+          name: OmniCam ${{ steps.version.outputs.version }}
+          body_path: release-notes.md
+          # Published, not a draft: the in-app updater only sees published releases, and only the
+          # newest one it is pointed at. latest.yml and the blockmap are what it reads - they have
+          # to sit next to the .exe.
+          draft: false
+          prerelease: false
+          make_latest: true
+          fail_on_unmatched_files: true
           files: |
             apps/desktop/release/*.exe
             apps/desktop/release/*.blockmap
             apps/desktop/release/latest.yml
             apps/desktop/resources/docs/README.txt
-          body: |
-            Download **OmniCam-Setup-*.exe** and run it. Windows SmartScreen may show
-            "Windows protected your PC" (not code-signed yet): click **More info → Run anyway**.
-            Setup, usage and troubleshooting: README.txt below, or the project README.
