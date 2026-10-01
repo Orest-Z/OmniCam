@@ -106,6 +106,8 @@ Say in the pull request what you tested and on which devices.
 - Add user-visible changes to `CHANGELOG.md` under **Unreleased** (add that heading if the last
   release took it). Those entries become the release notes once the version is bumped.
 - CI must pass. It typechecks and builds the native parts and the installer on Windows.
+- Looking for something to pick up? [ROADMAP.md](ROADMAP.md) lists good first issues with the file they
+  live in, and says which larger items need a Linux box, a Mac or C++.
 
 By submitting a pull request you agree that your contribution is licensed under the
 [MIT License](LICENSE), like the rest of the project.

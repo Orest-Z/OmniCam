@@ -166,6 +166,8 @@ Numbers from the perf pass on 2026-09-12; re-measure before changing any of thes
 
 ## Roadmap (not built yet)
 
+Sizes, reasoning and contribution notes are in [ROADMAP.md](ROADMAP.md); this is the short technical list.
+
 - Windows 11 Media Foundation virtual camera backend (for UWP/MF-only apps).
 - macOS: CoreMediaIO Camera Extension backend (needs Apple signing). Linux: v4l2loopback.
 - "No-warning mode": real domain + per-install certificate (requires internet + a small service).
