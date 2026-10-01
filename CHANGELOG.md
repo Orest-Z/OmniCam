@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Check for updates** in Settings, plus a quiet check at launch and once a day. An *Update available*
+  badge in the title bar opens a prompt that downloads the new version, verifies it and restarts
+  OmniCam into it. Nothing is downloaded or installed without a click.
 - Log file at `%APPDATA%\OmniCam\logs\omnicam.log` with an "Open log folder" button in Settings.
 - The app recovers when one of its renderer processes dies (previously: black window / camera
   silently stopped until a restart).

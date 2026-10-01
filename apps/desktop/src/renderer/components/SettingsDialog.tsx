@@ -1,19 +1,23 @@
 import { useState } from 'react';
 import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import type { AppSettings, PairingInfo, VirtualCamStats } from '@omnicam/protocol';
+import type { UpdateState } from '../../shared/ipc';
 import { Dialog, Segmented, Switch } from './ui';
+import { updateSummary } from './UpdateDialog';
 
 interface Props {
   settings: AppSettings;
   pairing: PairingInfo | null;
   vcam: VirtualCamStats;
   vcamError: string | null;
+  update: UpdateState;
   version: string;
   onSettings: (patch: Partial<AppSettings>) => void;
+  onOpenUpdate: () => void;
   onClose: () => void;
 }
 
-export function SettingsDialog({ settings, pairing, vcam, vcamError, version, onSettings, onClose }: Props) {
+export function SettingsDialog({ settings, pairing, vcam, vcamError, update, version, onSettings, onOpenUpdate, onClose }: Props) {
   const [port, setPort] = useState(String(settings.port));
   const commitPort = () => {
     const n = Number(port);
@@ -150,7 +154,23 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, version, on
       </div>
       <div className="field">
         <div className="k">
-          <span className="muted">OmniCam {version}</span>
+          OmniCam {version}
+          <small>{updateSummary(update)}</small>
+        </div>
+        <div className="v">
+          {update.status === 'available' || update.status === 'downloading' || update.status === 'downloaded' || (update.status === 'error' && update.failed === 'download') ? (
+            <button className="btn primary" onClick={onOpenUpdate}>
+              {update.status === 'downloaded' ? 'Restart to update' : `Update to ${update.version}`}
+            </button>
+          ) : (
+            <button
+              className="btn"
+              disabled={update.status === 'checking' || update.status === 'unsupported'}
+              onClick={() => void window.omnicam.checkForUpdates()}
+            >
+              {update.status === 'checking' ? 'Checking…' : 'Check for updates'}
+            </button>
+          )}
         </div>
       </div>
     </Dialog>

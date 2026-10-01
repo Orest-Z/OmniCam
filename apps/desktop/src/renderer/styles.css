@@ -78,6 +78,12 @@ svg { display: block; }
 .status.connected i { background: var(--live); box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.22); }
 .status.connecting i, .status.stalled i { background: var(--warn); }
 .status.disconnected i { background: var(--danger); }
+/* Update badge in the title bar: same shape as the status pill, but a button. */
+.status.update { color: var(--accent-soft); background: var(--accent-tint); transition: background 0.12s; }
+.status.update:hover { background: rgba(138, 92, 243, 0.24); }
+.status.update i { background: var(--accent); }
+.status.update.failed { color: #f3d39a; background: rgba(233, 179, 90, 0.1); }
+.status.update.failed i { background: var(--warn); }
 
 /* --- primitives -------------------------------------------------------- */
 .btn {
@@ -202,6 +208,17 @@ svg { display: block; }
 .dialog h2 { margin: 0; font-size: 15px; font-weight: 600; }
 .dialog.qr { width: 360px; text-align: center; }
 .dialog.qr img { width: 100%; border-radius: var(--r-md); background: #efe9ff; padding: 10px; margin: 6px 0 12px; }
+.dialog.update { width: min(440px, calc(100vw - 48px)); }
+.dialog.update .lead { margin: 0 0 6px; font-size: 13.5px; }
+.dialog.update .small { font-size: 12.5px; margin: 14px 0 0; }
+.dialog.update .notice { margin-top: 14px; }
+.dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+.link { display: inline-flex; align-items: center; gap: 4px; color: var(--accent-soft); font-size: 12.5px; font-weight: 500; }
+.link:hover { text-decoration: underline; }
+.link svg { width: 13px; height: 13px; }
+.download { display: grid; gap: 7px; margin-top: 16px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.progress { height: 6px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+.progress i { display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: width 0.25s ease-out; }
 .field { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--border); }
 .field:last-child { border-bottom: 0; }
 .field .k { font-size: 13px; }

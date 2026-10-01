@@ -45,6 +45,9 @@ export const UI_DISCONNECT = 'ui:disconnect';
 export const UI_STATE = 'ui:state';
 export const UI_PREVIEW_FRAME = 'ui:preview-frame';
 export const UI_VCAM_ERROR = 'ui:vcam-error';
+export const UI_UPDATE_CHECK = 'ui:update-check';
+export const UI_UPDATE_DOWNLOAD = 'ui:update-download';
+export const UI_UPDATE_INSTALL = 'ui:update-install';
 
 export interface EngineOffer {
   id: string;
@@ -68,12 +71,42 @@ export interface EngineSettings {
   nativeDir: string;
 }
 
+/**
+ * Where the updater is. `unsupported` = not an installed build (dev, or a platform without an
+ * installer); `manual` = the current check was started from the UI, so its result deserves feedback.
+ */
+export type UpdateStatus =
+  | 'unsupported'
+  | 'idle'
+  | 'checking'
+  | 'not-available'
+  | 'available'
+  | 'downloading'
+  | 'downloaded'
+  | 'error';
+
+export interface UpdateState {
+  status: UpdateStatus;
+  manual: boolean;
+  /** Version on offer (set from 'available' on). */
+  version?: string;
+  /** Download progress, 0–100. */
+  percent?: number;
+  /** Short, user-facing reason; the full error goes to the log. */
+  error?: string;
+  /** Which step failed, so the UI knows what "Try again" should do. */
+  failed?: 'check' | 'download';
+  /** Epoch ms of the last finished check. */
+  checkedAt?: number;
+}
+
 export interface AppState {
   pairing: PairingInfo | null;
   settings: AppSettings;
   stats: StreamStats;
   vcam: VirtualCamStats;
   vcamError: string | null;
+  update: UpdateState;
   version: string;
   platform: NodeJS.Platform;
 }
@@ -98,6 +131,12 @@ export interface UiApi {
   openExternal(url: string): Promise<void>;
   /** Opens the folder holding omnicam.log in the file manager. */
   openLogs(): Promise<void>;
+  /** Looks for a newer release; the result arrives as an `update` state patch. */
+  checkForUpdates(): Promise<void>;
+  /** Downloads the release found by the last check. */
+  downloadUpdate(): Promise<void>;
+  /** Quits, runs the downloaded installer and starts the new version. */
+  installUpdate(): Promise<void>;
   onState(cb: (patch: StatePatch) => void): () => void;
   onPreviewFrame(cb: (frame: PreviewFrame) => void): () => void;
   onPhoneMessage(cb: (msg: PhoneToDesktop) => void): () => void;

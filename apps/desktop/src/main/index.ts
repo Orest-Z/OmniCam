@@ -11,6 +11,9 @@ import {
   UI_ROTATE_TOKEN,
   UI_SET_PREVIEW,
   UI_SET_SETTINGS,
+  UI_UPDATE_CHECK,
+  UI_UPDATE_DOWNLOAD,
+  UI_UPDATE_INSTALL,
   UI_VCAM_ERROR,
   type AppState,
   type PreviewFrame,
@@ -25,6 +28,7 @@ import { session } from './session';
 import { settings } from './settings';
 import { createTray, updateTray } from './tray';
 import { createOrShowUiWindow, markQuitting, uiWindow } from './ui-window';
+import { checkForUpdates, downloadUpdate, initUpdater, installUpdate, updateState } from './updater';
 
 // --- Chromium switches: must be set before 'ready' -------------------------------------------
 // The engine's ICE host candidate must be a real LAN IP, not an mDNS name: phones on networks
@@ -58,6 +62,7 @@ async function fullState(): Promise<AppState> {
     stats: engine.stats,
     vcam: engine.vcam,
     vcamError,
+    update: updateState(),
     version: app.getVersion(),
     platform: process.platform,
   };
@@ -107,6 +112,10 @@ function wireIpc(): void {
 
   ipcMain.handle(UI_OPEN_LOGS, () => shell.openPath(logDir()));
 
+  ipcMain.handle(UI_UPDATE_CHECK, () => checkForUpdates(true));
+  ipcMain.handle(UI_UPDATE_DOWNLOAD, () => downloadUpdate());
+  ipcMain.handle(UI_UPDATE_INSTALL, () => installUpdate());
+
   engine.on('stats', (s) => {
     updateTray(s);
     broadcast({ stats: s });
@@ -148,6 +157,8 @@ async function main(): Promise<void> {
   } catch (err) {
     console.error('server failed to start', err);
   }
+
+  initUpdater();
 
   // Re-check LAN addresses periodically: laptops roam between networks.
   setInterval(async () => {

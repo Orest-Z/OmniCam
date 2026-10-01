@@ -45,6 +45,7 @@ jobs:
           path: |
             apps/desktop/release/*.exe
             apps/desktop/release/*.blockmap
+            apps/desktop/release/latest.yml
           if-no-files-found: error
 
       - name: Release
@@ -52,8 +53,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           draft: true
+          # latest.yml and the blockmap are what the in-app updater reads; keep them next to the .exe.
           files: |
             apps/desktop/release/*.exe
+            apps/desktop/release/*.blockmap
+            apps/desktop/release/latest.yml
             apps/desktop/resources/docs/README.txt
           body: |
             Download **OmniCam-Setup-*.exe** and run it. Windows SmartScreen may show

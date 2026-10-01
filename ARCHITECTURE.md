@@ -109,6 +109,13 @@ Without the native build the app still runs (QR, phone connection, preview) and 
   the UI with a concrete instruction, not just in logs.
 - CI (`.github/workflows/build.yml`) typechecks, builds the native pieces and the installer on
   every push; a `v*` tag additionally creates a draft GitHub release with the installer attached.
+- **Updates** (`src/main/updater.ts`): electron-updater against GitHub Releases. Checks quietly 15 s
+  after launch and every 24 h; never downloads or installs without a click. The installer is verified
+  against the sha512 in `latest.yml`, then runs silently (one UAC prompt) and restarts OmniCam.
+  A release is only offered once it is **published** (not a draft) and carries `latest.yml` next to
+  the `.exe`; CI attaches both. Bump the version in `apps/desktop/package.json` before tagging.
+  electron-updater is bundled into the main process like every other dependency (devDependencies,
+  no `node_modules` in the package).
 
 ## Brand & UI
 
@@ -150,4 +157,4 @@ Numbers from the perf pass on 2026-09-12; re-measure before changing any of thes
 - Windows 11 Media Foundation virtual camera backend (for UWP/MF-only apps).
 - macOS: CoreMediaIO Camera Extension backend (needs Apple signing). Linux: v4l2loopback.
 - "No-warning mode": real domain + per-install certificate (requires internet + a small service).
-- Virtual microphone. Auto-update. Code signing.
+- Virtual microphone. Code signing.
