@@ -263,7 +263,9 @@ function onConnectError(err: unknown) {
     return;
   }
   console.warn('connect failed', err);
-  scheduleReconnect();
+  // 'busy' means the desktop is negotiating with another phone or we have tried too often; waiting the
+  // time it asked for recovers sooner than retrying into another refusal.
+  scheduleReconnect(err instanceof SignalingError ? err.retryAfterMs : 0);
 }
 
 // ---------------------------------------------------------------------------

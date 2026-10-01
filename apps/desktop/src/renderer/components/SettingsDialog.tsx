@@ -17,8 +17,18 @@ interface Props {
   onClose: () => void;
 }
 
+/** The port in settings was taken, so the server is somewhere else — shown wherever the port is. */
+export function portFallback(pairing: PairingInfo | null): PairingInfo | null {
+  return pairing && pairing.port !== pairing.requestedPort ? pairing : null;
+}
+
+export function portFallbackMessage(requested: number, actual: number): string {
+  return `Port ${requested} is used by another program, so OmniCam is on ${actual} instead. The QR code already points there, so pairing works; pick a free port if you need a fixed one.`;
+}
+
 export function SettingsDialog({ settings, pairing, vcam, vcamError, update, version, onSettings, onOpenUpdate, onClose }: Props) {
   const [port, setPort] = useState(String(settings.port));
+  const fallback = portFallback(pairing);
   const commitPort = () => {
     const n = Number(port);
     if (Number.isInteger(n) && n > 1024 && n < 65536 && n !== settings.port) onSettings({ port: n });
@@ -124,6 +134,12 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, update, ver
           <input className="input" value={port} onChange={(e) => setPort(e.target.value)} onBlur={commitPort} onKeyDown={(e) => e.key === 'Enter' && commitPort()} />
         </div>
       </div>
+      {fallback && (
+        <div className="notice warn">
+          <AlertTriangle />
+          <span>{portFallbackMessage(fallback.requestedPort, fallback.port)}</span>
+        </div>
+      )}
 
       <div className="section">App</div>
       <div className="field">

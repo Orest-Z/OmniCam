@@ -36,7 +36,15 @@ class SessionManager {
       width: 512,
       color: { dark: '#17151d', light: '#efe9ff' },
     });
-    return { url, token: this.token, port: this.port, ip, addresses: lanAddresses(), qrDataUrl };
+    return {
+      url,
+      token: this.token,
+      port: this.port,
+      requestedPort: settings.get().port,
+      ip,
+      addresses: lanAddresses(),
+      qrDataUrl,
+    };
   }
 }
 

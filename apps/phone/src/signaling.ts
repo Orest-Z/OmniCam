@@ -2,7 +2,12 @@ import { API_SESSION_PATH } from '@omnicam/protocol';
 import type { SessionRequest, SessionResponse, SessionError, DeviceInfo } from '@omnicam/protocol';
 
 export class SignalingError extends Error {
-  constructor(public code: SessionError['error'] | 'network', message: string) {
+  constructor(
+    public code: SessionError['error'] | 'network',
+    message: string,
+    /** How long the desktop asked us to wait, in ms (sent with 'busy'). */
+    public retryAfterMs = 0,
+  ) {
     super(message);
   }
 }
@@ -22,7 +27,10 @@ export async function exchangeSdp(token: string, sdp: string, device: DeviceInfo
     throw new SignalingError('network', `Cannot reach the desktop app (${(err as Error).message})`);
   }
   const json = (await res.json()) as SessionResponse | SessionError;
-  if (!json.ok) throw new SignalingError(json.error, json.message ?? json.error);
+  if (!json.ok) {
+    const retryAfter = json.retryAfterSeconds ?? (Number(res.headers.get('retry-after')) || 0);
+    throw new SignalingError(json.error, json.message ?? json.error, retryAfter * 1000);
+  }
   return json;
 }
 

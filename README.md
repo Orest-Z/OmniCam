@@ -43,7 +43,9 @@ H.264; nothing leaves your network, and there is no account, no cloud and no app
 - **Quality** — 720p, 1080p, 1080p60 or 4K from the phone's camera, hardware H.264, latency on par with a native camera app.
 - **Controls** — front/back camera, torch, resolution, mirror, rotate, Fill/Fit — from the PC or from the phone.
 - **Stays out of the way** — runs from the tray; closing the window keeps the camera live. The phone drops to 5 fps
-  whenever nothing on the PC is using the camera.
+  once no app is using the camera *and* the OmniCam window is closed or hidden.
+- **Costs the phone battery** — the page has to stay open with the screen on, so plan on charging during long
+  sessions. [What it costs the phone](#what-it-costs-the-phone)
 
 ### How it compares
 
@@ -58,6 +60,31 @@ H.264; nothing leaves your network, and there is no account, no cloud and no app
 
 The trade-off for "no app" is a browser security warning the first time (explained below), and USB is not an option
 yet — a phone hotspot or USB tethering with the PC on it works as a stand-in.
+
+### What it costs the phone
+
+Streaming costs the phone about as much as a long video call: the camera, the H.264 encoder and the Wi-Fi radio all
+run the whole time. On top of that, because the phone side is a **web page rather than a native app**, the page has to
+stay in the foreground with the screen on — a native app could keep streaming with the screen off. So expect a warm
+phone and real battery drain, and keep it on a charger for anything long.
+
+What OmniCam does about it: the phone captures at the resolution you pick and nothing more, encoding is always the
+phone's hardware H.264 encoder, and the stream drops to 5 fps once no app on the PC is using the camera and the
+OmniCam window is hidden. That saves battery while you are idle — not while you are actually on a call. It also keeps
+the screen awake where the browser allows it (iOS 16.4+, Android Chrome); where it doesn't, locking the phone pauses
+the camera until you wake it.
+
+### What it doesn't do (yet)
+
+- **No microphone.** Video only — your usual mic keeps working. A virtual mic is on the roadmap.
+- **Windows only.** Windows 10 (1809+) and Windows 11, 64-bit. macOS and Linux are on the roadmap.
+- **DirectShow cameras only.** The Windows Camera app and the new Microsoft Teams use the newer Windows camera stack
+  and will not list OmniCam. Discord, Zoom, Google Meet, Chrome, Firefox, OBS and Slack do.
+- **A browser warning the first time** on each phone, per network — unavoidable without a public certificate, and
+  explained step by step below.
+- **One phone at a time.** Scanning the code with another phone replaces the current one.
+- **The installer isn't code-signed yet**, so SmartScreen asks you to confirm.
+- **No USB path yet** — Wi-Fi, or a hotspot/tethering so both devices share one network.
 
 ---
 
@@ -269,6 +296,12 @@ Without the native build the app still runs (QR, phone connection, preview) and 
 - Code signing
 - Optional "no-warning mode" with a real certificate
 - Virtual microphone
+
+## Contributing
+
+Issues and pull requests are welcome — [CONTRIBUTING.md](CONTRIBUTING.md) covers the build, the house style and what
+to put in a pull request, and [ARCHITECTURE.md](ARCHITECTURE.md) explains why the project is built the way it is.
+Found something security-sensitive? [SECURITY.md](SECURITY.md) says how to report it privately.
 
 ## License
 
