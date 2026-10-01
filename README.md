@@ -297,6 +297,9 @@ Without the native build the app still runs (QR, phone connection, preview) and 
 - Optional "no-warning mode" with a real certificate
 - Virtual microphone
 
+[ROADMAP.md](ROADMAP.md) has the detail: each item sized, what is already decided against and why,
+a list of good first issues, and an honest note on how actively this is maintained.
+
 ## Contributing
 
 Issues and pull requests are welcome — [CONTRIBUTING.md](CONTRIBUTING.md) covers the build, the house style and what
