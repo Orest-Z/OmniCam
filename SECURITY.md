@@ -45,6 +45,8 @@ The parts that matter most:
 - **The native code** (`packages/vcam-native`): memory-safety bugs reachable from frame data, or from
   an application that opens the OmniCam camera.
 - **The installer**: driver registration, the Windows Firewall rule, install paths and permissions.
+- **The updater** (`apps/desktop/src/main/updater.ts`): anything that makes OmniCam download or run
+  something other than an official release.
 
 ## Known and by design
 
@@ -61,7 +63,9 @@ vulnerabilities on their own, but reports that show a *practical* attack buildin
 - **The token lives in the QR code.** Anyone who sees the QR code or its URL can connect while that
   code is valid. Generate a new code from the pairing screen if it has been exposed; restarting
   OmniCam also replaces it.
-- **The installer is not code-signed yet**, so Windows SmartScreen warns before running it.
+- **The installer is not code-signed yet**, so Windows SmartScreen warns before running it. For the
+  same reason, in-app updates are checked against the sha512 published with the GitHub release, not
+  against a code signature.
 
 Video travels phone → PC directly over WebRTC, which encrypts media (DTLS-SRTP). Nothing is sent
 to any server outside your network.

@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Settings as SettingsIcon } from 'lucide-react';
 import type { ConnectionState } from '@omnicam/protocol';
+import type { UpdateState } from '../shared/ipc';
 import { LiveView } from './components/LiveView';
 import { Mark } from './components/Mark';
 import { PairView } from './components/PairView';
 import { SettingsDialog } from './components/SettingsDialog';
+import { UpdateDialog } from './components/UpdateDialog';
 import { Dialog, IconButton } from './components/ui';
 import { useAppState } from './useAppState';
 import { Toasts, useToasts } from './toasts';
@@ -17,12 +19,23 @@ const STATUS: Record<ConnectionState, string> = {
   disconnected: 'Reconnecting',
 };
 
+/** Title-bar badge text while an update is on offer; null hides the badge. */
+function updateBadge(u: UpdateState): string | null {
+  if (u.status === 'available') return 'Update available';
+  if (u.status === 'downloading') return `Updating ${u.percent ?? 0}%`;
+  if (u.status === 'downloaded') return 'Restart to update';
+  if (u.status === 'error' && u.failed === 'download') return 'Update failed';
+  return null;
+}
+
 export function App() {
   const { state, setSettings, control } = useAppState();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [updateOpen, setUpdateOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const { toasts, push } = useToasts();
   const prevState = useRef<ConnectionState>('idle');
+  const prevCheckedAt = useRef<number | null | undefined>(undefined);
 
   // Toasts on meaningful transitions only.
   useEffect(() => {
@@ -35,9 +48,31 @@ export function App() {
     prevState.current = s;
   }, [state?.stats.state, state?.stats.device, push]);
 
+  // A check the user started gets an answer: the prompt if there is an update, a toast if not.
+  // Keyed on checkedAt (set when a check finishes), so it reacts once per finished check.
+  const update = state?.update;
+  const version = state?.version;
+  useEffect(() => {
+    if (!update) return;
+    const seen = prevCheckedAt.current;
+    prevCheckedAt.current = update.checkedAt ?? null;
+    // First state after the window opens: remember where we are, don't replay an old result.
+    if (seen === undefined || update.checkedAt === undefined || update.checkedAt === seen) return;
+    if (!update.manual) return;
+    if (update.status === 'available') {
+      setSettingsOpen(false);
+      setUpdateOpen(true);
+    } else if (update.status === 'not-available') {
+      push(`You're on the latest version (${version})`, 'ok');
+    } else if (update.status === 'error' && update.failed === 'check') {
+      push(`Couldn't check for updates. ${update.error}`, 'bad');
+    }
+  }, [update, version, push]);
+
   if (!state) return <div className="app" />;
-  const { pairing, settings, stats, vcam, vcamError, version } = state;
+  const { pairing, settings, stats, vcam, vcamError } = state;
   const showLive = stats.state !== 'idle';
+  const badge = updateBadge(state.update);
 
   return (
     <div className="app">
@@ -52,6 +87,16 @@ export function App() {
           {showLive && stats.device ? ` · ${stats.device.platform}` : ''}
         </span>
         <div className="spacer" />
+        {badge && (
+          <button
+            className={`status update${state.update.status === 'error' ? ' failed' : ''}`}
+            title="See the update"
+            onClick={() => setUpdateOpen(true)}
+          >
+            <i />
+            {badge}
+          </button>
+        )}
         <IconButton title="Settings" onClick={() => setSettingsOpen(true)}>
           <SettingsIcon />
         </IconButton>
@@ -78,10 +123,18 @@ export function App() {
           pairing={pairing}
           vcam={vcam}
           vcamError={vcamError}
-          version={version}
+          update={state.update}
+          version={state.version}
           onSettings={(p) => void setSettings(p)}
+          onOpenUpdate={() => {
+            setSettingsOpen(false);
+            setUpdateOpen(true);
+          }}
           onClose={() => setSettingsOpen(false)}
         />
+      )}
+      {updateOpen && (
+        <UpdateDialog update={state.update} version={state.version} stats={stats} vcam={vcam} onClose={() => setUpdateOpen(false)} />
       )}
       {qrOpen && pairing && (
         <Dialog className="qr" onClose={() => setQrOpen(false)}>

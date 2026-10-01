@@ -166,6 +166,7 @@ the camera, and it resumes when you come back (the last frame is held meanwhile,
 **App**
 - **Keep running in the tray** — closing the window keeps the camera available.
 - **Start with Windows.**
+- **Check for updates** — OmniCam also checks quietly when it starts and once a day. When a new version is out, an *Update available* badge appears in the title bar; nothing is downloaded or installed until you click.
 
 </td>
     <td width="45%" align="center">
@@ -265,7 +266,7 @@ Without the native build the app still runs (QR, phone connection, preview) and 
 
 - Windows 11 Media Foundation virtual camera (for the Windows Camera app and new Teams)
 - macOS (CoreMediaIO camera extension) and Linux (v4l2loopback)
-- Code signing, auto-update
+- Code signing
 - Optional "no-warning mode" with a real certificate
 - Virtual microphone
 
