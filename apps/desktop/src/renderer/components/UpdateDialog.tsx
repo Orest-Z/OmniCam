@@ -13,15 +13,22 @@ interface Props {
   onClose: () => void;
 }
 
+/**
+ * A version is on offer until it is installed — including when a later check fails, which leaves the
+ * state on that error without taking the offer back.
+ */
+export function updateOnOffer(update: UpdateState): boolean {
+  return update.version !== undefined;
+}
+
 /** The update prompt: offer → download progress → restart. Opened from the title-bar badge or Settings. */
 export function UpdateDialog({ update, version, stats, vcam, onClose }: Props) {
   const next = update.version;
-  const downloadFailed = update.status === 'error' && update.failed === 'download';
+  const failed = update.status === 'error' ? update.failed : undefined;
   const cameraBusy = vcam.consumers > 0 || stats.state === 'connected' || stats.state === 'stalled';
   const download = () => void window.omnicam.downloadUpdate();
 
-  const offering = update.status === 'available' || update.status === 'downloading' || update.status === 'downloaded';
-  if (!next || (!offering && !downloadFailed)) {
+  if (!next) {
     return (
       <Dialog title="Updates" className="update" onClose={onClose}>
         <p className="muted">You're on the latest version (OmniCam {version}).</p>
@@ -65,10 +72,10 @@ export function UpdateDialog({ update, version, stats, vcam, onClose }: Props) {
         </div>
       )}
 
-      {downloadFailed && (
+      {failed && (
         <div className="notice bad">
           <AlertTriangle />
-          <span>The download didn't finish. {update.error}</span>
+          <span>{failed === 'download' ? `The download didn't finish. ${update.error}` : update.error}</span>
         </div>
       )}
 
@@ -82,16 +89,21 @@ export function UpdateDialog({ update, version, stats, vcam, onClose }: Props) {
         <button className="btn ghost" onClick={onClose}>
           {update.status === 'downloading' ? 'Hide' : 'Later'}
         </button>
-        {update.status === 'available' && (
+        {(update.status === 'available' || failed === 'check') && (
           <button className="btn primary" onClick={download}>
             <Download />
             Download and install
           </button>
         )}
-        {downloadFailed && (
+        {failed === 'download' && (
           <button className="btn primary" onClick={download}>
             <RotateCcw />
             Try again
+          </button>
+        )}
+        {update.status === 'checking' && (
+          <button className="btn primary" disabled>
+            Checking…
           </button>
         )}
         {update.status === 'downloading' && (
