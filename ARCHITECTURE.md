@@ -113,9 +113,21 @@ Without the native build the app still runs (QR, phone connection, preview) and 
   after launch and every 24 h; never downloads or installs without a click. The installer is verified
   against the sha512 in `latest.yml`, then runs silently (one UAC prompt) and restarts OmniCam.
   A release is only offered once it is **published** (not a draft) and carries `latest.yml` next to
-  the `.exe`; CI attaches both. Bump the version in `apps/desktop/package.json` before tagging.
-  electron-updater is bundled into the main process like every other dependency (devDependencies,
-  no `node_modules` in the package).
+  the `.exe`; CI attaches both. electron-updater is bundled into the main process like every other
+  dependency (devDependencies, no `node_modules` in the package).
+- **The in-app check cannot reach this feed while the repository is private**, which it stays: the
+  GitHub provider requests releases unauthenticated, so a private repo answers 404 and the UI
+  reports "No published release was found". Published releases are still the distribution channel —
+  they are just readable only by accounts with access to the repo. Making the check work for other
+  people needs a public feed that is not this repository: a releases-only public repo (point
+  `publish.owner/repo` in `electron-builder.yml` at it and give CI a token for it) or
+  `provider: generic` against a static host. Neither changes what the app does with the feed.
+- **Releasing** is driven by the version in `apps/desktop/package.json` (it names the installer and
+  fills `latest.yml`). Bump it, rename the `CHANGELOG.md` **Unreleased** heading to the new version,
+  merge to `main`: CI builds, then publishes a release tagged `v<version>` whose notes are that
+  changelog section (commit subjects since the previous tag if there is none). A build whose version
+  is already released publishes nothing, so ordinary commits to `main` only build. Pushing a `v*`
+  tag publishes the same way and fails the build if the tag and the version disagree.
 
 ## Brand & UI
 

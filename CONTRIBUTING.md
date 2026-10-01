@@ -103,7 +103,8 @@ Say in the pull request what you tested and on which devices.
 - Branch from `main` and keep each pull request to one topic.
 - Write commit messages as a short imperative summary, with an area prefix when it helps:
   `Engine: …`, `Phone: …`, `Native: …`, `README: …`.
-- Add user-visible changes to `CHANGELOG.md` under **Unreleased**.
+- Add user-visible changes to `CHANGELOG.md` under **Unreleased** (add that heading if the last
+  release took it). Those entries become the release notes once the version is bumped.
 - CI must pass. It typechecks and builds the native parts and the installer on Windows.
 
 By submitting a pull request you agree that your contribution is licensed under the

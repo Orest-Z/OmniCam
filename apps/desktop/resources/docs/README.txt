@@ -1,5 +1,5 @@
-OmniCam 1.0.0
-=============
+OmniCam
+=======
 
 Use your phone's camera as a webcam on this PC. Nothing to install on the phone.
 Created by Orest Zogju - https://github.com/Orest-Z/OmniCam
