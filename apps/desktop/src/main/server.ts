@@ -81,21 +81,43 @@ function serveStatic(res: ServerResponse, urlPath: string) {
   createReadStream(file).pipe(res);
 }
 
-// One negotiation at a time and a modest budget per client: a misbehaving device on the LAN
-// cannot keep the engine busy renegotiating (each attempt tears down the current phone).
-const SESSION_BURST = 6;
+// One negotiation at a time and a budget per client: a misbehaving device on the LAN cannot keep the
+// engine busy renegotiating (each attempt tears down the current phone). The budget has to stay well
+// clear of legitimate traffic — a phone whose Wi-Fi drops retries every 10 s at the end of its
+// backoff, and several phones can share one address behind a router.
+const SESSION_BURST = 20;
 const SESSION_WINDOW_MS = 60_000;
+const SESSION_RETRY_AFTER_S = 5;
+const REJECT_LOG_INTERVAL_MS = 5_000;
 const attempts = new Map<string, number[]>();
 let negotiating = false;
+let lastRejectLogAt = 0;
 
 function sessionAllowed(ip: string): boolean {
   const now = Date.now();
-  const list = (attempts.get(ip) ?? []).filter((t) => now - t < SESSION_WINDOW_MS);
+  const fresh = (list: number[]) => list.filter((t) => now - t < SESSION_WINDOW_MS);
+  // Drop clients whose attempts have all aged out, so the map cannot grow without bound. Evicting by
+  // age (not by insertion order) means cycling through addresses cannot clear anyone else's budget.
+  if (attempts.size > 64) {
+    for (const [key, list] of attempts) if (fresh(list).length === 0) attempts.delete(key);
+  }
+  const list = fresh(attempts.get(ip) ?? []);
   if (list.length >= SESSION_BURST) return false;
   list.push(now);
   attempts.set(ip, list);
-  if (attempts.size > 64) attempts.delete(attempts.keys().next().value as string);
   return true;
+}
+
+/**
+ * A rejected pairing attempt is otherwise invisible: the phone shows "Reconnecting…" and the log says
+ * nothing, which makes it impossible to explain after the fact. Rate-limited, so a device that hammers
+ * the endpoint cannot fill the log either.
+ */
+function logRejected(ip: string, reason: string) {
+  const now = Date.now();
+  if (now - lastRejectLogAt < REJECT_LOG_INTERVAL_MS) return;
+  lastRejectLogAt = now;
+  console.warn(`session: refused ${ip} (${reason}); the phone will retry`);
 }
 
 async function handle(req: IncomingMessage, res: ServerResponse) {
@@ -121,9 +143,11 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       const e: SessionError = { ok: false, error: 'bad-token' };
       return json(res, 403, e);
     }
-    if (negotiating || !sessionAllowed(req.socket.remoteAddress ?? '?')) {
-      const e: SessionError = { ok: false, error: 'busy' };
-      res.setHeader('retry-after', '5');
+    const ip = req.socket.remoteAddress ?? '?';
+    if (negotiating || !sessionAllowed(ip)) {
+      logRejected(ip, negotiating ? 'another phone is negotiating' : `more than ${SESSION_BURST} attempts a minute`);
+      const e: SessionError = { ok: false, error: 'busy', retryAfterSeconds: SESSION_RETRY_AFTER_S };
+      res.setHeader('retry-after', String(SESSION_RETRY_AFTER_S));
       return json(res, 429, e);
     }
     negotiating = true;

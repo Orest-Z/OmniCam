@@ -32,6 +32,8 @@ export interface SessionError {
   ok: false;
   error: 'bad-token' | 'bad-request' | 'engine-unavailable' | 'timeout' | 'internal' | 'busy';
   message?: string;
+  /** For 'busy': how long the phone should wait before trying again. Mirrors the retry-after header. */
+  retryAfterSeconds?: number;
 }
 
 export interface HealthResponse {
@@ -148,7 +150,10 @@ export interface VirtualCamStats {
 export interface PairingInfo {
   url: string;
   token: string;
+  /** Port the server actually listens on. */
   port: number;
+  /** Port from settings. Differs from `port` when that one was taken and OmniCam fell back. */
+  requestedPort: number;
   ip: string;
   /** All candidate LAN IPs; the user can pick a different one in settings. */
   addresses: NetworkAddress[];

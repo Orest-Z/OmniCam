@@ -5,7 +5,7 @@ import type { UpdateState } from '../shared/ipc';
 import { LiveView } from './components/LiveView';
 import { Mark } from './components/Mark';
 import { PairView } from './components/PairView';
-import { SettingsDialog } from './components/SettingsDialog';
+import { SettingsDialog, portFallback, portFallbackMessage } from './components/SettingsDialog';
 import { UpdateDialog, updateOnOffer } from './components/UpdateDialog';
 import { Dialog, IconButton } from './components/ui';
 import { useAppState } from './useAppState';
@@ -36,6 +36,7 @@ export function App() {
   const { toasts, push } = useToasts();
   const prevState = useRef<ConnectionState>('idle');
   const prevCheckedAt = useRef<number | null | undefined>(undefined);
+  const prevPortFallback = useRef<string | null>(null);
 
   // Toasts on meaningful transitions only.
   useEffect(() => {
@@ -47,6 +48,16 @@ export function App() {
     if (s === 'idle' && prevState.current !== 'idle') setQrOpen(false);
     prevState.current = s;
   }, [state?.stats.state, state?.stats.device, push]);
+
+  // The server ended up on a different port than the one in settings: say so once, here rather than
+  // only in Settings, because someone who set a port may never open that dialog again.
+  const fallback = portFallback(state?.pairing ?? null);
+  useEffect(() => {
+    const key = fallback ? `${fallback.requestedPort}->${fallback.port}` : null;
+    if (key === prevPortFallback.current) return;
+    prevPortFallback.current = key;
+    if (fallback) push(portFallbackMessage(fallback.requestedPort, fallback.port), 'warn');
+  }, [fallback, push]);
 
   // A check the user started gets an answer: the prompt if there is an update, a toast if not.
   // Keyed on checkedAt (set when a check finishes), so it reacts once per finished check.

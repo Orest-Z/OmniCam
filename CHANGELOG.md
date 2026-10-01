@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- A busy port no longer moves OmniCam quietly. When the port in Settings is taken, the app says which
+  port it is using instead — in a notice next to the setting and once in the window. Pairing always
+  worked (the QR code carries the real port), but nothing admitted the setting was being ignored.
+- Refused pairing attempts are written to the log and tell the phone how long to wait, and the budget
+  per device is high enough for a phone that keeps losing Wi-Fi and for several phones sharing one
+  router address. A phone stuck on *Reconnecting…* used to leave no trace anywhere.
+- The certificate is only re-issued when a network address turns up that it does not already cover,
+  and it keeps the addresses it had. Moving between networks, or a VPN going up and down, no longer
+  asks every phone to accept the warning again.
+
 ## 1.1.0 — 2026-10-01
 
 - **Check for updates** in Settings, plus a quiet check at launch and once a day. An *Update available*
