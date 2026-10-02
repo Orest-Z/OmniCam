@@ -2,6 +2,15 @@
 ; Registers the DirectShow filter DLLs (x64 + x86) and opens the firewall for the app.
 ; Runs elevated because the installer is perMachine.
 
+; First page: say what the installer changes on the system before it asks for administrator rights.
+; Skipped on in-app updates (silent) and when run with --updated.
+!macro customWelcomePage
+  !insertmacro skipPageIfUpdated
+  !define MUI_WELCOMEPAGE_TITLE "Install OmniCam"
+  !define MUI_WELCOMEPAGE_TEXT "OmniCam turns your phone's camera into a webcam for this PC.$\r$\n$\r$\nBesides copying its files, the installer makes two system changes, both removed again when you uninstall:$\r$\n$\r$\n  - registers the $\"OmniCam$\" camera device (a DirectShow filter, 64- and 32-bit), so apps can list it;$\r$\n  - adds a Windows Firewall rule that lets your phone reach OmniCam on your local network.$\r$\n$\r$\nThese need administrator rights, so Windows will ask.$\r$\n$\r$\nOmniCam has no account and no telemetry. Video goes from your phone to this PC over your own network."
+  !insertmacro MUI_PAGE_WELCOME
+!macroend
+
 !macro customInstall
   DetailPrint "Registering OmniCam virtual camera (x64)..."
   nsExec::ExecToLog '"$SYSDIR\regsvr32.exe" /s "$INSTDIR\resources\native\omnicam_vcam.dll"'

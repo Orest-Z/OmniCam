@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SignPath artifact configuration "installer": the NSIS installer built from the signed app directory,
+  uploaded by CI as a zip holding the single OmniCam-Setup-<version>.exe.
+  Paste into SignPath: Project > Artifact configurations > installer. Keep this copy in sync.
+-->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <pe-file-set>
+      <include path="OmniCam-Setup-*.exe" min-matches="1" max-matches="1" product-name="OmniCam" />
+      <for-each>
+        <authenticode-sign />
+      </for-each>
+    </pe-file-set>
+  </zip-file>
+</artifact-configuration>

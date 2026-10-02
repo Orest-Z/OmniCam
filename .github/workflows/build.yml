@@ -9,6 +9,8 @@ on:
 
 permissions:
   contents: write
+  # SignPath reads the workflow run and its artifacts to verify where the signed files came from.
+  actions: read
 
 jobs:
   windows:
@@ -75,10 +77,103 @@ jobs:
       - name: Native build
         run: npm run native:build
 
+      # Releases are code-signed through SignPath (free certificate for open source, key held on their
+      # HSM) once the repository variable SIGNPATH_ORGANIZATION_ID is set; every other build, and every
+      # build before that, is unsigned. Signing needs a manual approval in SignPath for each request.
+      - name: Signing
+        id: signing
+        shell: pwsh
+        run: |
+          $enabled = '${{ steps.version.outputs.release }}' -eq 'true' -and '${{ vars.SIGNPATH_ORGANIZATION_ID }}' -ne ''
+          "enabled=$($enabled.ToString().ToLower())" >> $env:GITHUB_OUTPUT
+          if ($enabled) { Write-Host 'This release is signed: approve both requests in SignPath when they appear.' }
+
       - name: Installer
+        if: steps.signing.outputs.enabled != 'true'
         run: npm run dist
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      # Signed installer, inside out: sign the app's own binaries, build the installer from the signed
+      # directory, sign the installer, then rewrite latest.yml and the blockmap (they describe the file
+      # the updater downloads, and signing changed it). See apps/desktop/build/signing.mjs.
+      - name: Package app (signed build)
+        if: steps.signing.outputs.enabled == 'true'
+        run: |
+          npm run build
+          cd apps/desktop
+          npx electron-builder --win dir --config electron-builder.yml --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Upload app for signing
+        if: steps.signing.outputs.enabled == 'true'
+        id: unsigned-app
+        uses: actions/upload-artifact@v5
+        with:
+          name: unsigned-app
+          path: apps/desktop/release/win-unpacked
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Sign app
+        if: steps.signing.outputs.enabled == 'true'
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG }}
+          artifact-configuration-slug: app
+          github-artifact-id: ${{ steps.unsigned-app.outputs.artifact-id }}
+          wait-for-completion: true
+          # Waits for the manual approval in SignPath.
+          wait-for-completion-timeout-in-seconds: 7200
+          output-artifact-directory: apps/desktop/release/signed-app
+
+      - name: Build installer from the signed app
+        if: steps.signing.outputs.enabled == 'true'
+        working-directory: apps/desktop
+        run: |
+          node build/signing.mjs app-update-yml release/signed-app
+          npx electron-builder --win nsis --prepackaged release/signed-app --config electron-builder.yml --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Upload installer for signing
+        if: steps.signing.outputs.enabled == 'true'
+        id: unsigned-installer
+        uses: actions/upload-artifact@v5
+        with:
+          name: unsigned-installer
+          path: apps/desktop/release/*.exe
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Sign installer
+        if: steps.signing.outputs.enabled == 'true'
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG }}
+          artifact-configuration-slug: installer
+          github-artifact-id: ${{ steps.unsigned-installer.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 7200
+          output-artifact-directory: apps/desktop/release/signed-installer
+
+      - name: Use the signed installer
+        if: steps.signing.outputs.enabled == 'true'
+        shell: pwsh
+        working-directory: apps/desktop
+        run: |
+          Get-ChildItem release/signed-installer/*.exe | Copy-Item -Destination release -Force
+          node build/signing.mjs refresh-latest release
+          $sig = Get-AuthenticodeSignature (Get-ChildItem release/OmniCam-Setup-*.exe)
+          if ($sig.Status -ne 'Valid') { throw "Installer signature is $($sig.Status): $($sig.StatusMessage)" }
+          Write-Host "Signed by: $($sig.SignerCertificate.Subject)"
 
       - uses: actions/upload-artifact@v5
         with:
@@ -111,13 +206,19 @@ jobs:
             $what = "### Changes`n`n" + ((git log $range --no-merges --pretty='- %s') -join "`n")
           }
 
+          $smartScreen = if ('${{ steps.signing.outputs.enabled }}' -eq 'true') {
+            'The installer is code-signed (free code signing provided by SignPath.io, certificate by SignPath Foundation).' +
+            ' While the certificate builds reputation, SmartScreen may still ask: click **More info -> Run anyway**.'
+          } else {
+            'Windows SmartScreen may show "Windows protected your PC" (not code-signed yet): click **More info -> Run anyway**.'
+          }
           $notes = @(
             $what
             ''
             '---'
             ''
-            "**New install:** download **OmniCam-Setup-$version.exe** below and run it. Windows SmartScreen"
-            'may show "Windows protected your PC" (not code-signed yet): click **More info -> Run anyway**.'
+            "**New install:** download **OmniCam-Setup-$version.exe** below and run it."
+            $smartScreen
             ''
             '**Already running OmniCam?** *Settings -> Check for updates* installs this version for you;'
             'the installer below does the same thing by hand.'
