@@ -1,29 +1,36 @@
 # Changelog
 
-## Unreleased
+## 1.2.0 — 2026-10-02
 
-- A pairing request whose token had the right length but non-ASCII characters got a server error
-  instead of being refused; it is now refused like any other wrong token.
-- The phone page server only ever serves regular files inside its own folder, checked on a path
-  boundary rather than a string prefix.
-- First automated tests (`npm test`, Node's built-in runner, no new dependencies) for the pairing
-  token check, the phone page's file resolution and the pairing rate limit. CI runs them on every build.
-- **Check for updates automatically** can be turned off in Settings. The update check is the only
-  connection OmniCam makes beyond your network; *Check for updates* still works on demand.
+### Fixes
+- **Moving between networks no longer asks every phone to accept the warning again.** The certificate
+  is only re-issued when a network address turns up that it does not already cover, and it keeps the
+  addresses it had, so a VPN going up and down or a different Wi-Fi leaves phones' exceptions intact.
+- **A busy port is no longer changed silently.** When the port in Settings is taken, OmniCam says which
+  port it is using instead, next to the setting and once in the window. Pairing always worked (the QR
+  code carries the real port), but nothing admitted the setting was being ignored.
+- **A phone stuck on *Reconnecting…* now leaves a trace.** Refused pairing attempts are written to the
+  log and tell the phone how long to wait, and the per-device budget is high enough for a phone that
+  keeps losing Wi-Fi and for several phones sharing one router address.
+- A pairing request with a token of the right length but non-ASCII characters got a server error; it
+  is now refused like any other wrong token.
+
+### Privacy and trust
+- **Settings → Check for updates automatically** can be turned off. The update check is the only
+  connection OmniCam makes beyond your network; *Check for updates* still works when you click it.
 - The installer's first page says what it changes on the system (the camera device and a firewall
   rule) before Windows asks for administrator rights.
-- The native files carry product name and version, and release builds are ready for code signing
-  through SignPath Foundation. See CODE_SIGNING.md and PRIVACY.md.
+- Each release lists the installer's SHA-256 and carries a signed build provenance attestation, so
+  anyone can check it was built by this repository's GitHub Actions from the tagged commit.
+- [PRIVACY.md](https://github.com/Orest-Z/OmniCam/blob/main/PRIVACY.md) lists every connection the app makes; [CODE_SIGNING.md](https://github.com/Orest-Z/OmniCam/blob/main/CODE_SIGNING.md)
+  describes the code signing being set up through SignPath Foundation. This release is not signed yet.
 
-- A busy port no longer moves OmniCam quietly. When the port in Settings is taken, the app says which
-  port it is using instead — in a notice next to the setting and once in the window. Pairing always
-  worked (the QR code carries the real port), but nothing admitted the setting was being ignored.
-- Refused pairing attempts are written to the log and tell the phone how long to wait, and the budget
-  per device is high enough for a phone that keeps losing Wi-Fi and for several phones sharing one
-  router address. A phone stuck on *Reconnecting…* used to leave no trace anywhere.
-- The certificate is only re-issued when a network address turns up that it does not already cover,
-  and it keeps the addresses it had. Moving between networks, or a VPN going up and down, no longer
-  asks every phone to accept the warning again.
+### Under the hood
+- Electron 44.5.0 (from 44.3.0).
+- The phone page server only serves regular files inside its own folder, checked on a path boundary.
+- The native files carry product name and version information.
+- First automated tests, run on every build; CodeQL code scanning and Dependabot updates.
+- A project website: https://orest-z.github.io/OmniCam/
 
 ## 1.1.0 — 2026-10-01
 
