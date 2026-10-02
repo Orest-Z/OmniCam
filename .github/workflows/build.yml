@@ -19,14 +19,14 @@ jobs:
   windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
           # Full history and tags: the release steps read them to tell whether this version has
           # been released yet and to list the commits when CHANGELOG.md has no section for it.
           fetch-depth: 0
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -115,7 +115,7 @@ jobs:
       - name: Upload app for signing
         if: steps.signing.outputs.enabled == 'true'
         id: unsigned-app
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: unsigned-app
           path: apps/desktop/release/win-unpacked
@@ -149,7 +149,7 @@ jobs:
       - name: Upload installer for signing
         if: steps.signing.outputs.enabled == 'true'
         id: unsigned-installer
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: unsigned-installer
           path: apps/desktop/release/*.exe
@@ -181,7 +181,7 @@ jobs:
           if ($sig.Status -ne 'Valid') { throw "Installer signature is $($sig.Status): $($sig.StatusMessage)" }
           Write-Host "Signed by: $($sig.SignerCertificate.Subject)"
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: OmniCam-Setup-${{ steps.version.outputs.version }}
           path: |
@@ -253,7 +253,7 @@ jobs:
 
       - name: Release
         if: steps.version.outputs.release == 'true'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           # Creates the tag at this commit when the release comes from a push to main.
