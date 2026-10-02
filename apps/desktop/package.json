@@ -20,7 +20,7 @@
   },
   "devDependencies": {
     "@omnicam/protocol": "*",
-    "@types/node": "^24.13.4",
+    "@types/node": "^26.6.3",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
