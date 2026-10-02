@@ -87,6 +87,7 @@ npm run native:build        # builds omnicam_vcam.node + omnicam_vcam.dll (x64, 
 npm run native:register     # one-time, needs admin: regsvr32 both DLLs
 npm run dev                 # builds phone page, starts Electron with HMR
 npm run typecheck
+npm test                    # node --test, no extra dependencies (apps/desktop/test)
 npm run dist                # NSIS installer (registers DLLs + firewall rule)
 ```
 
@@ -107,8 +108,13 @@ Without the native build the app still runs (QR, phone connection, preview) and 
   libyuv's "RGB24" is B,G,R in memory — that *is* DirectShow RGB24; don't "fix" it.
 - Errors that a user can act on (driver not registered, port busy, firewall) must surface in
   the UI with a concrete instruction, not just in logs.
-- CI (`.github/workflows/build.yml`) typechecks, builds the native pieces and the installer on
-  every push, and publishes a release when the version is new (see **Releasing**).
+- CI (`.github/workflows/build.yml`) typechecks, runs the tests, builds the native pieces and the
+  installer on every push, and publishes a release when the version is new (see **Releasing**), with a
+  build provenance attestation and the installer's SHA-256 in the notes. CodeQL scans TypeScript and
+  C++ (`codeql.yml`); Dependabot opens weekly grouped updates (Electron majors excluded).
+- **Tests** run on Node's built-in runner with type stripping, so a tested module must not import
+  Electron and must use erasable TypeScript only (no enums, no parameter properties). Security checks
+  that the LAN can reach live in `src/main/pairing-guard.ts` for that reason.
 - **Updates** (`src/main/updater.ts`): electron-updater against GitHub Releases. Checks quietly 15 s
   after launch and every 24 h; never downloads or installs without a click. The installer is verified
   against the sha512 in `latest.yml`, then runs silently (one UAC prompt) and restarts OmniCam.

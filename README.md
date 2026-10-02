@@ -105,6 +105,10 @@ the camera until you wake it.
 
 Windows 10 (1809 or newer) and Windows 11, 64-bit.
 
+Want to check what you downloaded? Each release lists the installer's SHA-256, and every installer
+carries a signed attestation that it was built by this repository's GitHub Actions from the tagged
+commit: `gh attestation verify OmniCam-Setup-x.y.z.exe --repo Orest-Z/OmniCam`.
+
 ---
 
 ## Set up your phone

@@ -1,0 +1,26 @@
+# Weekly dependency updates as pull requests; CI builds and tests each one before anything merges.
+# Minor and patch bumps arrive grouped, one PR per ecosystem, so they stay reviewable.
+# The native submodules (softcam, libyuv) are pinned on purpose and not tracked here.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # Electron majors change the native addon ABI and the measured performance notes in
+      # ARCHITECTURE.md; they are upgraded deliberately, not by a bot.
+      - dependency-name: electron
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']

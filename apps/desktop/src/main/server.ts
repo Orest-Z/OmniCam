@@ -2,7 +2,7 @@ import { app } from 'electron';
 import { createServer, type Server } from 'node:https';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createReadStream, statSync } from 'node:fs';
-import { join, normalize, extname } from 'node:path';
+import { join, extname } from 'node:path';
 import type { AddressInfo } from 'node:net';
 import {
   API_HEALTH_PATH,
@@ -14,6 +14,7 @@ import {
 } from '@omnicam/protocol';
 import type { TlsMaterial } from './cert';
 import { session } from './session';
+import { AttemptBudget, resolvePhoneFile } from './pairing-guard';
 import { engine } from './engine-bridge';
 
 const MIME: Record<string, string> = {
@@ -57,25 +58,14 @@ async function readJson(req: IncomingMessage, limit = 256 * 1024): Promise<unkno
 }
 
 function serveStatic(res: ServerResponse, urlPath: string) {
-  const root = phoneRoot();
-  const rel = normalize(urlPath === '/' ? '/index.html' : urlPath);
-  const file = join(root, rel);
-  if (!file.startsWith(root)) {
-    res.writeHead(403).end();
-    return;
-  }
-  let stat;
-  try {
-    stat = statSync(file);
-  } catch {
-    // Unknown extension-less path: fall back to the page so odd deep links still work.
-    if (extname(rel) === '') return serveStatic(res, '/');
+  const file = resolvePhoneFile(phoneRoot(), urlPath);
+  if (!file) {
     res.writeHead(404).end('not found');
     return;
   }
   res.writeHead(200, {
     'content-type': MIME[extname(file)] ?? 'application/octet-stream',
-    'content-length': stat.size,
+    'content-length': statSync(file).size,
     'cache-control': 'no-cache',
   });
   createReadStream(file).pipe(res);
@@ -89,24 +79,9 @@ const SESSION_BURST = 20;
 const SESSION_WINDOW_MS = 60_000;
 const SESSION_RETRY_AFTER_S = 5;
 const REJECT_LOG_INTERVAL_MS = 5_000;
-const attempts = new Map<string, number[]>();
+const budget = new AttemptBudget(SESSION_BURST, SESSION_WINDOW_MS);
 let negotiating = false;
 let lastRejectLogAt = 0;
-
-function sessionAllowed(ip: string): boolean {
-  const now = Date.now();
-  const fresh = (list: number[]) => list.filter((t) => now - t < SESSION_WINDOW_MS);
-  // Drop clients whose attempts have all aged out, so the map cannot grow without bound. Evicting by
-  // age (not by insertion order) means cycling through addresses cannot clear anyone else's budget.
-  if (attempts.size > 64) {
-    for (const [key, list] of attempts) if (fresh(list).length === 0) attempts.delete(key);
-  }
-  const list = fresh(attempts.get(ip) ?? []);
-  if (list.length >= SESSION_BURST) return false;
-  list.push(now);
-  attempts.set(ip, list);
-  return true;
-}
 
 /**
  * A rejected pairing attempt is otherwise invisible: the phone shows "Reconnecting…" and the log says
@@ -144,7 +119,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       return json(res, 403, e);
     }
     const ip = req.socket.remoteAddress ?? '?';
-    if (negotiating || !sessionAllowed(ip)) {
+    if (negotiating || !budget.allow(ip)) {
       logRejected(ip, negotiating ? 'another phone is negotiating' : `more than ${SESSION_BURST} attempts a minute`);
       const e: SessionError = { ok: false, error: 'busy', retryAfterSeconds: SESSION_RETRY_AFTER_S };
       res.setHeader('retry-after', String(SESSION_RETRY_AFTER_S));

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- A pairing request whose token had the right length but non-ASCII characters got a server error
+  instead of being refused; it is now refused like any other wrong token.
+- The phone page server only ever serves regular files inside its own folder, checked on a path
+  boundary rather than a string prefix.
+- First automated tests (`npm test`, Node's built-in runner, no new dependencies) for the pairing
+  token check, the phone page's file resolution and the pairing rate limit. CI runs them on every build.
 - **Check for updates automatically** can be turned off in Settings. The update check is the only
   connection OmniCam makes beyond your network; *Check for updates* still works on demand.
 - The installer's first page says what it changes on the system (the camera device and a firewall

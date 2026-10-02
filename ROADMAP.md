@@ -162,10 +162,6 @@ revisiting once v4l2loopback works.
 
 Small, verified, and each one has a known home in the code.
 
-- **`validate()` answers 500 instead of 403** for a token of matching length containing non-ASCII
-  characters: the length check counts UTF-16 units while `timingSafeEqual` compares UTF-8 bytes, and
-  throws. `apps/desktop/src/main/session.ts` — compare byte lengths. *(S, anyone; also a natural first
-  test.)*
 - **The camera advertises the wrong frame rate.** `backend/win_softcam.cc` passes framerate `0.0` to
   softcam ("send immediately" — the pipeline owns the clock), so the filter advertises its default and
   Chrome reports 60 fps for a device paced at 30. The output fps setting looks ignored in any app that
@@ -178,9 +174,6 @@ Small, verified, and each one has a known home in the code.
 - **No retry after a failed virtual-camera start.** If `vcam.start()` throws — a stale OmniCam process
   still holding the shared memory, say — nothing retries until the output format changes, so restarting
   the app is the only way out. `apps/desktop/src/engine/engine.ts`, in `applySettings`. *(S.)*
-- **`serveStatic` checks `file.startsWith(root)`**, a prefix rather than a path boundary. Safe today
-  because `join(root, …)` always yields `root` plus a separator, but `root + sep` is the form that stays
-  safe. `apps/desktop/src/main/server.ts`. *(S.)*
 - **Documentation and translation.** The phone page is the only part of OmniCam a phone user ever sees,
   and it is English-only. The strings are few and live in one file.
 
