@@ -297,8 +297,28 @@ Without the native build the app still runs (QR, phone connection, preview) and 
 - Optional "no-warning mode" with a real certificate
 - Virtual microphone
 
-[ROADMAP.md](ROADMAP.md) has the detail: each item sized, what is already decided against and why,
-a list of good first issues, and an honest note on how actively this is maintained.
+## AI involvement
+
+I built OmniCam, and I used AI assistance (Claude Code) along the way. Since people ask, here is the
+honest split.
+
+**Mine:** the idea and the product constraints, the architecture and every design decision recorded in
+[ARCHITECTURE.md](ARCHITECTURE.md), the choice of stack, the signalling and WebRTC design, the native
+frame pipeline, the UI and UX, and the debugging it took to make all of it work on real phones.
+
+**Where AI helped:** parts of the implementation and refactoring, documentation, the release pipeline,
+and most usefully, testing and review. A QA pass drove a packaged build end to end with a browser
+standing in for the phone (the `auto=1` hook on the phone page exists for that), then went at the
+pairing endpoint with wrong tokens, malformed SDP, oversized bodies, path-traversal attempts and
+rate-limit probing, and checked how the app behaves when the certificate's network changes or its port
+is already taken. That pass found real bugs, and the fixes shipped: a pairing budget low enough to lock
+out a phone that had done nothing wrong, refused pairings that left no trace in the log, a port
+fallback the UI never admitted to, and a certificate that was re-issued on every network change, so
+phones had to accept the warning again and again.
+
+**What that is not:** a security audit, or a guarantee. OmniCam opens a port on your network and
+installs a camera driver. The threat model, the deliberate trade-offs and how to report something
+privately are in [SECURITY.md](SECURITY.md). If you find a hole, I want to hear about it.
 
 ## Contributing
 
