@@ -37,7 +37,7 @@
     "selfsigned": "^5.5.0",
     "sharp": "^0.35.4",
     "typescript": "^7.0.2",
-    "vite": "^7.3.6"
+    "vite": "^8.3.1"
   },
   "homepage": "https://github.com/Orest-Z/OmniCam"
 }
