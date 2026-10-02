@@ -12,6 +12,7 @@
     "build": "npm run build -w @omnicam/phone && npm run build -w @omnicam/desktop",
     "dist": "npm run build -w @omnicam/phone && npm run dist -w @omnicam/desktop",
     "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
     "native:build": "npm run build -w @omnicam/vcam-native",
     "native:register": "npm run register -w @omnicam/vcam-native",
     "native:unregister": "npm run unregister -w @omnicam/vcam-native"
