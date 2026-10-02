@@ -16,6 +16,9 @@ updates:
       # ARCHITECTURE.md; they are upgraded deliberately, not by a bot.
       - dependency-name: electron
         update-types: [version-update:semver-major]
+      # Types must match the Node version the code runs on (Electron's and CI's), not the newest one.
+      - dependency-name: '@types/node'
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: github-actions
     directory: /
