@@ -12,7 +12,7 @@
     "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true});require('node:fs').rmSync('build-x86',{recursive:true,force:true})\""
   },
   "devDependencies": {
-    "cmake-js": "^7.3.0",
+    "cmake-js": "^8.0.0",
     "node-addon-api": "^8.3.0"
   }
 }
