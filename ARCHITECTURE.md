@@ -108,20 +108,36 @@ Without the native build the app still runs (QR, phone connection, preview) and 
 - Errors that a user can act on (driver not registered, port busy, firewall) must surface in
   the UI with a concrete instruction, not just in logs.
 - CI (`.github/workflows/build.yml`) typechecks, builds the native pieces and the installer on
-  every push; a `v*` tag additionally creates a draft GitHub release with the installer attached.
+  every push, and publishes a release when the version is new (see **Releasing**).
 - **Updates** (`src/main/updater.ts`): electron-updater against GitHub Releases. Checks quietly 15 s
   after launch and every 24 h; never downloads or installs without a click. The installer is verified
   against the sha512 in `latest.yml`, then runs silently (one UAC prompt) and restarts OmniCam.
   A release is only offered once it is **published** (not a draft) and carries `latest.yml` next to
   the `.exe`; CI attaches both. electron-updater is bundled into the main process like every other
   dependency (devDependencies, no `node_modules` in the package).
-- **The in-app check cannot reach this feed while the repository is private**, which it stays: the
-  GitHub provider requests releases unauthenticated, so a private repo answers 404 and the UI
-  reports "No published release was found". Published releases are still the distribution channel —
-  they are just readable only by accounts with access to the repo. Making the check work for other
-  people needs a public feed that is not this repository: a releases-only public repo (point
-  `publish.owner/repo` in `electron-builder.yml` at it and give CI a token for it) or
-  `provider: generic` against a static host. Neither changes what the app does with the feed.
+- **The feed is this repository's public Releases.** The GitHub provider requests releases
+  unauthenticated, so the check only works while the repository is public; a private repo answers
+  404 and the UI reports "No published release was found". Installs from before the repository went
+  public (1.0.0) find the feed now with no change on their side. To move the feed elsewhere later,
+  point `publish.owner/repo` in `electron-builder.yml` at a releases-only repo (and give CI a token
+  for it), or use `provider: generic` against a static host. Neither changes what the app does with
+  the feed. Every check downloads `latest.yml`, so its download count on a release is a rough measure
+  of running installs (checks, not unique users); OmniCam has no telemetry.
+- **Code signing** (SignPath Foundation, [CODE_SIGNING.md](CODE_SIGNING.md)): the CI steps run only for a
+  release build and only once the repository variable `SIGNPATH_ORGANIZATION_ID` is set (plus
+  `SIGNPATH_PROJECT_SLUG`, `SIGNPATH_POLICY_SLUG` and the secret `SIGNPATH_API_TOKEN`). Inside out: the
+  `win-unpacked` directory is signed (artifact configuration `app`), the installer is built from it with
+  `--prepackaged` and signed (`installer`), then `build/signing.mjs` rewrites `latest.yml` and the blockmap
+  for the signed bytes and writes the `app-update.yml` a prepackaged build skips. Both configurations live
+  in `.signpath/artifact-configurations/`; SignPath holds the copies it uses. Every request waits for a
+  manual approval in SignPath. Only our own binaries are signed, never Electron's, and every one carries a
+  version resource (`packages/vcam-native/src/version.rc.in`). Do not set `win.publisherName` until a
+  signed release has shown the exact certificate subject: once set, the updater rejects any installer not
+  signed by that name.
+- **Website**: `docs/index.html` (+ `site.css`, `site.js`; static, no build step) uses the README's own
+  images in `docs/gifs` and `docs/screenshots`, so opening the file locally shows the real page.
+  `.github/workflows/pages.yml` publishes `docs/` to GitHub Pages with the Geist fonts copied in from
+  `packages/brand/fonts`. It links to GitHub Releases for downloads and hosts no binaries.
 - **Releasing** is driven by the version in `apps/desktop/package.json` (it names the installer and
   fills `latest.yml`). Bump it, rename the `CHANGELOG.md` **Unreleased** heading to the new version,
   merge to `main`: CI builds, then publishes a release tagged `v<version>` whose notes are that
@@ -171,4 +187,4 @@ Sizes, reasoning and contribution notes are in [ROADMAP.md](ROADMAP.md); this is
 - Windows 11 Media Foundation virtual camera backend (for UWP/MF-only apps).
 - macOS: CoreMediaIO Camera Extension backend (needs Apple signing). Linux: v4l2loopback.
 - "No-warning mode": real domain + per-install certificate (requires internet + a small service).
-- Virtual microphone. Code signing.
+- Virtual microphone. Code signing (in progress, SignPath).

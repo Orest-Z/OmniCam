@@ -13,6 +13,13 @@
 </p>
 
 <p align="center">
+  <a href="https://orest-z.github.io/OmniCam/">Website</a> ·
+  <a href="PRIVACY.md">Privacy</a> ·
+  <a href="CODE_SIGNING.md">Code signing</a> ·
+  <a href="SECURITY.md">Security</a>
+</p>
+
+<p align="center">
   <a href="https://github.com/Orest-Z/OmniCam/actions/workflows/build.yml"><img alt="Build" src="https://github.com/Orest-Z/OmniCam/actions/workflows/build.yml/badge.svg"></a>
   <img alt="Windows 10 / 11, 64-bit" src="https://img.shields.io/badge/Windows-10%20%2F%2011%20·%2064--bit-3b3552?style=flat-square">
   <img alt="Phone: no app needed" src="https://img.shields.io/badge/Phone-no%20app%20needed-3b3552?style=flat-square">
@@ -83,7 +90,8 @@ the camera until you wake it.
 - **A browser warning the first time** on each phone, per network — unavoidable without a public certificate, and
   explained step by step below.
 - **One phone at a time.** Scanning the code with another phone replaces the current one.
-- **The installer isn't code-signed yet**, so SmartScreen asks you to confirm.
+- **The installer isn't code-signed yet**, so SmartScreen asks you to confirm. Signing through SignPath
+  Foundation is being set up; [CODE_SIGNING.md](CODE_SIGNING.md) has the policy.
 - **No USB path yet** — Wi-Fi, or a hotspot/tethering so both devices share one network.
 
 ---
@@ -193,7 +201,8 @@ the camera, and it resumes when you come back (the last frame is held meanwhile,
 **App**
 - **Keep running in the tray** — closing the window keeps the camera available.
 - **Start with Windows.**
-- **Check for updates** — OmniCam also checks quietly when it starts and once a day. When a new version is out, an *Update available* badge appears in the title bar; nothing is downloaded or installed until you click.
+- **Check for updates** — OmniCam also checks quietly when it starts and once a day, unless you turn off
+  *Check for updates automatically*; that check is the only connection it makes beyond your network ([PRIVACY.md](PRIVACY.md)). When a new version is out, an *Update available* badge appears in the title bar; nothing is downloaded or installed until you click.
 
 </td>
     <td width="45%" align="center">
@@ -293,7 +302,7 @@ Without the native build the app still runs (QR, phone connection, preview) and 
 
 - Windows 11 Media Foundation virtual camera (for the Windows Camera app and new Teams)
 - macOS (CoreMediaIO camera extension) and Linux (v4l2loopback)
-- Code signing
+- Code signing (in progress, through SignPath Foundation)
 - Optional "no-warning mode" with a real certificate
 - Virtual microphone
 
@@ -325,6 +334,8 @@ privately are in [SECURITY.md](SECURITY.md). If you find a hole, I want to hear 
 Issues and pull requests are welcome — [CONTRIBUTING.md](CONTRIBUTING.md) covers the build, the house style and what
 to put in a pull request, and [ARCHITECTURE.md](ARCHITECTURE.md) explains why the project is built the way it is.
 Found something security-sensitive? [SECURITY.md](SECURITY.md) says how to report it privately.
+[PRIVACY.md](PRIVACY.md) lists every connection the app makes, and [CODE_SIGNING.md](CODE_SIGNING.md) what gets
+signed and by whom.
 
 ## License
 
