@@ -17,6 +17,26 @@ if(NOT EXISTS "${SOFTCAM_DIR}/softcamcore/SenderAPI.cpp" OR NOT EXISTS "${LIBYUV
   message(FATAL_ERROR "Submodules missing. Run: git submodule update --init --recursive")
 endif()
 
+# --- Version resource: product name + version on every binary (required for code signing) ---
+set(OMNICAM_APP_PACKAGE "${CMAKE_CURRENT_SOURCE_DIR}/../../apps/desktop/package.json")
+file(READ "${OMNICAM_APP_PACKAGE}" OMNICAM_APP_PACKAGE_JSON)
+string(JSON OMNICAM_VERSION GET "${OMNICAM_APP_PACKAGE_JSON}" version)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${OMNICAM_APP_PACKAGE}")
+if(NOT OMNICAM_VERSION MATCHES "^([0-9]+)\\.([0-9]+)\\.([0-9]+)")
+  message(FATAL_ERROR "apps/desktop/package.json: version '${OMNICAM_VERSION}' is not x.y.z")
+endif()
+set(OMNICAM_VERSION_MAJOR ${CMAKE_MATCH_1})
+set(OMNICAM_VERSION_MINOR ${CMAKE_MATCH_2})
+set(OMNICAM_VERSION_PATCH ${CMAKE_MATCH_3})
+
+function(omnicam_version_resource target file_name description)
+  set(OMNICAM_FILE_NAME "${file_name}")
+  set(OMNICAM_FILE_DESCRIPTION "${description}")
+  set(rc "${CMAKE_CURRENT_BINARY_DIR}/${target}_version.rc")
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/version.rc.in" "${rc}" @ONLY)
+  target_sources(${target} PRIVATE "${rc}")
+endfunction()
+
 # No NOMINMAX here: the DirectShow base classes rely on the min/max macros.
 add_compile_definitions(WIN32 _WINDOWS _CRT_SECURE_NO_WARNINGS UNICODE _UNICODE)
 
@@ -43,6 +63,7 @@ if(OMNICAM_BUILD_FILTER)
     src/filter/omnicam_filter.def
     "${SOFTCAM_DIR}/softcamcore/DShowSoftcam.cpp")
   set_target_properties(omnicam_vcam_filter PROPERTIES OUTPUT_NAME "omnicam_vcam" PREFIX "")
+  omnicam_version_resource(omnicam_vcam_filter "omnicam_vcam.dll" "OmniCam virtual camera (DirectShow filter)")
   target_include_directories(omnicam_vcam_filter PRIVATE "${SOFTCAM_DIR}")
   target_link_libraries(omnicam_vcam_filter PRIVATE softcam_core softcam_baseclasses
     strmiids ole32 oleaut32 uuid advapi32 user32 gdi32 winmm)
@@ -61,6 +82,7 @@ if(OMNICAM_BUILD_ADDON)
     src/backend/win_softcam.cc
     ${CMAKE_JS_SRC})
   set_target_properties(omnicam_vcam PROPERTIES PREFIX "" SUFFIX ".node")
+  omnicam_version_resource(omnicam_vcam "omnicam_vcam.node" "OmniCam frame pipeline (Node addon)")
   target_include_directories(omnicam_vcam PRIVATE
     ${CMAKE_JS_INC}
     "${CMAKE_CURRENT_SOURCE_DIR}/node_modules/node-addon-api"

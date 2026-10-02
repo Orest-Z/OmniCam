@@ -2,6 +2,7 @@ import { app } from 'electron';
 import { autoUpdater, type ProgressInfo, type UpdateInfo } from 'electron-updater';
 import type { UpdateState } from '../shared/ipc';
 import { broadcast } from './actions';
+import { settings } from './settings';
 import { markQuitting } from './ui-window';
 
 /**
@@ -115,8 +116,12 @@ export function initUpdater(): void {
     set({ status: 'downloaded', version: info.version, percent: 100 });
   });
 
-  setTimeout(() => void checkForUpdates(false), FIRST_CHECK_DELAY_MS);
+  // Quiet checks follow the setting at the time they fire, so switching it on or off needs no rescheduling.
+  setTimeout(() => {
+    if (settings.get().autoUpdateCheck) void checkForUpdates(false);
+  }, FIRST_CHECK_DELAY_MS);
   setInterval(() => {
+    if (!settings.get().autoUpdateCheck) return;
     if (state.status === 'idle' || state.status === 'not-available' || (state.status === 'error' && state.failed === 'check')) {
       void checkForUpdates(false);
     }

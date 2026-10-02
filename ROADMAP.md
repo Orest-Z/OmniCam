@@ -145,8 +145,10 @@ the local path has to keep working untouched.
 
 ### 9 · Code signing — S, *costs money*
 
-An OV or EV certificate removes the SmartScreen warning on the installer. Pure cost and paperwork, no
-engineering. Worth it once there are enough downloads to justify it.
+In progress, and free: SignPath Foundation signs open-source releases from a verified GitHub Actions build,
+and CI already has the steps, switched off until the project is accepted ([CODE_SIGNING.md](CODE_SIGNING.md)).
+Signing shows a verified publisher at once; the SmartScreen prompt fades as the certificate gathers
+reputation. Left after that: signing the uninstaller, and `publisherName` so updates must be signed.
 
 ### 10 · PipeWire camera node on Linux — M, *hardware*
 

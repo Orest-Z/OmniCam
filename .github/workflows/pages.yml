@@ -1,0 +1,43 @@
+name: Site
+
+# Publishes docs/ (index.html, next to the README's screenshots and GIFs) to GitHub Pages, plus the
+# brand fonts, which stay in packages/brand so there is one copy of each in the repository.
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/**
+      - packages/brand/fonts/**
+      - .github/workflows/pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Assemble
+        run: |
+          mkdir -p _site/fonts
+          cp -r docs/. _site/
+          cp packages/brand/fonts/*.woff2 _site/fonts/
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

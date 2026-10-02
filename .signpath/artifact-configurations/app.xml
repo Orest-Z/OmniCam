@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SignPath artifact configuration "app": the packaged app directory (electron-builder win-unpacked),
+  uploaded by CI as a zip. Signs only binaries built from this repository; Electron's own DLLs
+  (ffmpeg.dll, libEGL.dll...) are upstream binaries and stay as they are.
+  Paste into SignPath: Project > Artifact configurations > app. Keep this copy in sync.
+-->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <pe-file path="OmniCam.exe" product-name="OmniCam">
+      <authenticode-sign />
+    </pe-file>
+    <pe-file path="resources/native/omnicam_vcam.node" product-name="OmniCam">
+      <authenticode-sign />
+    </pe-file>
+    <pe-file path="resources/native/omnicam_vcam.dll" product-name="OmniCam">
+      <authenticode-sign />
+    </pe-file>
+    <pe-file path="resources/native/x86/omnicam_vcam.dll" product-name="OmniCam">
+      <authenticode-sign />
+    </pe-file>
+  </zip-file>
+</artifact-configuration>

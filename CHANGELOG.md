@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Check for updates automatically** can be turned off in Settings. The update check is the only
+  connection OmniCam makes beyond your network; *Check for updates* still works on demand.
+- The installer's first page says what it changes on the system (the camera device and a firewall
+  rule) before Windows asks for administrator rights.
+- The native files carry product name and version, and release builds are ready for code signing
+  through SignPath Foundation. See CODE_SIGNING.md and PRIVACY.md.
+
 - A busy port no longer moves OmniCam quietly. When the port in Settings is taken, the app says which
   port it is using instead — in a notice next to the setting and once in the window. Pairing always
   worked (the QR code carries the real port), but nothing admitted the setting was being ignored.
