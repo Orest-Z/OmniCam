@@ -95,6 +95,13 @@ function logRejected(ip: string, reason: string) {
   console.warn(`session: refused ${ip} (${reason}); the phone will retry`);
 }
 
+// Fixed texts for the phone; the underlying error is logged on the desktop, never sent.
+const NEGOTIATION_ERRORS: Partial<Record<SessionError['error'], string>> = {
+  timeout: 'The desktop app took too long to answer.',
+  'engine-unavailable': 'The desktop app is not ready yet.',
+  internal: 'The desktop app could not start the connection.',
+};
+
 async function handle(req: IncomingMessage, res: ServerResponse) {
   const url = new URL(req.url ?? '/', 'https://localhost');
   res.setHeader('x-content-type-options', 'nosniff');
@@ -111,7 +118,9 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       body = (await readJson(req)) as SessionRequest;
       if (typeof body.sdp !== 'string' || !body.sdp.startsWith('v=0')) throw new Error('bad sdp');
     } catch (err) {
-      const e: SessionError = { ok: false, error: 'bad-request', message: String(err) };
+      // Details stay in the log: this answer goes to anyone on the LAN, before the token is checked.
+      console.warn(`session: bad request from ${req.socket.remoteAddress ?? '?'}: ${String(err)}`);
+      const e: SessionError = { ok: false, error: 'bad-request', message: 'Malformed session request.' };
       return json(res, 400, e);
     }
     if (!session.validate(body.token)) {
@@ -132,13 +141,14 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       const ok: SessionResponse = { ok: true, ...result };
       return json(res, 200, ok);
     } catch (err) {
-      const message = (err as Error).message;
-      const error: SessionError['error'] = /timeout/i.test(message)
+      const detail = (err as Error).message;
+      console.error('session: negotiation failed', err);
+      const error: SessionError['error'] = /timeout/i.test(detail)
         ? 'timeout'
-        : /engine/i.test(message)
+        : /engine/i.test(detail)
           ? 'engine-unavailable'
           : 'internal';
-      const e: SessionError = { ok: false, error, message };
+      const e: SessionError = { ok: false, error, message: NEGOTIATION_ERRORS[error] };
       return json(res, 503, e);
     } finally {
       negotiating = false;
