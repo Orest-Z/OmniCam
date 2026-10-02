@@ -11,6 +11,9 @@ permissions:
   contents: write
   # SignPath reads the workflow run and its artifacts to verify where the signed files came from.
   actions: read
+  # Build provenance: a signed attestation that the installer was built here, from this commit.
+  id-token: write
+  attestations: write
 
 jobs:
   windows:
@@ -33,6 +36,9 @@ jobs:
 
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Test
+        run: npm test
 
       # The app version lives in apps/desktop/package.json: it names the installer, goes into
       # latest.yml and is what the in-app updater compares against. Releasing follows it — a build
@@ -184,6 +190,14 @@ jobs:
             apps/desktop/release/latest.yml
           if-no-files-found: error
 
+      # Anyone can check that a downloaded installer came from this workflow and commit:
+      #   gh attestation verify OmniCam-Setup-<version>.exe --repo Orest-Z/OmniCam
+      - name: Attest build provenance
+        if: steps.version.outputs.release == 'true'
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: apps/desktop/release/OmniCam-Setup-*.exe
+
       # Release notes: the CHANGELOG section for this version, or the commits since the previous
       # tag if it has none, followed by the download instructions.
       - name: Release notes
@@ -212,6 +226,8 @@ jobs:
           } else {
             'Windows SmartScreen may show "Windows protected your PC" (not code-signed yet): click **More info -> Run anyway**.'
           }
+          $installer = Get-ChildItem apps/desktop/release/OmniCam-Setup-*.exe
+          $sha256 = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLower()
           $notes = @(
             $what
             ''
@@ -224,6 +240,13 @@ jobs:
             'the installer below does the same thing by hand.'
             ''
             'Setup, usage and troubleshooting: README.txt below, or the project README.'
+            ''
+            '**Verify the download** (optional):'
+            ''
+            "- SHA-256 of ``$($installer.Name)``: ``$sha256``"
+            "  PowerShell: ``Get-FileHash .\$($installer.Name)``"
+            '- Built by this repository''s GitHub Actions from the tagged commit, with a signed provenance attestation:'
+            "  ``gh attestation verify $($installer.Name) --repo Orest-Z/OmniCam``"
           )
           Set-Content release-notes.md -Value $notes -Encoding utf8
           Write-Host ($notes -join "`n")

@@ -89,7 +89,7 @@ The layout and the reasoning behind it are in [ARCHITECTURE.md](ARCHITECTURE.md)
 There are no automated tests yet; unit tests for `packages/protocol` and
 `apps/desktop/src/engine/sdp.ts` would be a great first contribution. Until then:
 
-- `npm run typecheck` must pass.
+- `npm run typecheck` and `npm test` must pass.
 - If your change touches streaming, test with at least one phone (iPhone Safari or Android Chrome)
   and at least one app that uses the camera (OBS, Discord, or a browser camera test page).
 - For UI changes, add a screenshot to the pull request.

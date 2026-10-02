@@ -1,0 +1,37 @@
+name: CodeQL
+
+# GitHub's code scanning for the TypeScript (desktop, phone, protocol) and the C++ (native addon and
+# DirectShow filter). Results appear under Security > Code scanning. C++ is analysed without a build
+# (build-mode: none), so it needs neither the Electron headers nor MSVC.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '17 4 * * 1'
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript, c-cpp]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          config: |
+            paths-ignore:
+              - packages/vcam-native/third_party
+              - '**/node_modules'
+              - apps/desktop/resources
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ matrix.language }}
