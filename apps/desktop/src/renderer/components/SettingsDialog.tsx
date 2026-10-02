@@ -170,6 +170,15 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, update, ver
       </div>
       <div className="field">
         <div className="k">
+          Check for updates automatically
+          <small>Asks GitHub for a newer version at launch and once a day. Nothing is downloaded until you click.</small>
+        </div>
+        <div className="v">
+          <Switch on={settings.autoUpdateCheck} onChange={(v) => onSettings({ autoUpdateCheck: v })} />
+        </div>
+      </div>
+      <div className="field">
+        <div className="k">
           OmniCam {version}
           <small>{updateSummary(update)}</small>
         </div>

@@ -188,6 +188,11 @@ export interface AppSettings {
    * Takes effect after a restart (Chromium command-line switch).
    */
   hardwareDecode: boolean;
+  /**
+   * Ask GitHub for a newer release at launch and once a day. Off = only when the user clicks
+   * "Check for updates". The only connection OmniCam makes beyond the local network.
+   */
+  autoUpdateCheck: boolean;
   /** Last window geometry; restored on launch. */
   windowBounds?: { x: number; y: number; width: number; height: number };
 }
@@ -204,4 +209,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   closeToTray: true,
   launchAtLogin: false,
   hardwareDecode: false,
+  autoUpdateCheck: true,
 };
