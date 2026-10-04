@@ -76,6 +76,11 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, stats, upda
             options={[
               { value: '720p', label: '720p' },
               { value: '1080p', label: '1080p' },
+              {
+                value: '4k',
+                label: '4K',
+                title: 'For OBS or recording. Discord, Zoom and Teams send at most 1080p, and 4K costs much more CPU.',
+              },
             ]}
             onChange={(v) => onSettings({ outputPreset: v })}
           />

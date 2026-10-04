@@ -179,7 +179,7 @@ export interface AppSettings {
   /** Preferred LAN IP for the QR; empty = auto. */
   preferredIp: string;
   /** Fixed output format of the virtual camera. */
-  outputPreset: '720p' | '1080p';
+  outputPreset: '720p' | '1080p' | '4k';
   outputFps: 30 | 60;
   mirror: boolean;
   rotation: 0 | 90 | 180 | 270;
