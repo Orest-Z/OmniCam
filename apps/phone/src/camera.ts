@@ -16,6 +16,11 @@ export class CameraController {
   get currentFacing(): Facing {
     return this.facing;
   }
+  /** Which high-fps attempts the browser turned down, and over which constraint. */
+  fpsNote = '';
+  get wantedFrameRate(): number {
+    return this.preset.frameRate;
+  }
 
   async start(facing: Facing = this.facing, preset = this.preset): Promise<MediaStreamTrack> {
     // Android generally refuses to open a second camera while one is open: stop first.
@@ -23,17 +28,17 @@ export class CameraController {
     this.facing = facing;
     this.preset = preset;
 
-    const constraints: MediaStreamConstraints = {
-      audio: false,
-      video: {
-        facingMode: { ideal: facing },
-        width: { ideal: preset.width },
-        height: { ideal: preset.height },
-        frameRate: { ideal: preset.frameRate },
-      },
+    const fps = preset.frameRate;
+    const ideal: MediaTrackConstraints = {
+      facingMode: { ideal: facing },
+      width: { ideal: preset.width },
+      height: { ideal: preset.height },
+      frameRate: { ideal: fps },
     };
+    this.fpsNote = '';
     try {
-      this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+      if (fps > 30) this.stream = await this.openHighFps(facing, preset);
+      this.stream ??= await navigator.mediaDevices.getUserMedia({ audio: false, video: ideal });
     } catch (err) {
       // Fall back to "any camera" so the user at least gets a picture.
       if ((err as DOMException).name === 'OverconstrainedError') {
@@ -52,6 +57,40 @@ export class CameraController {
     track.addEventListener('ended', () => this.onTrackChanged?.(track));
     this.onTrackChanged?.(track);
     return track;
+  }
+
+  /**
+   * WebKit (Safari and every iOS browser) accepts a 60 fps request, then may still run the camera
+   * at 30 (its 60 fps modes stop below 1080p). So the camera is opened, the rate it actually runs
+   * at is checked, and if it falls short it is reopened at whatever size reaches the preset's rate.
+   * Returns null when none does; `fpsNote` records what each size gave.
+   */
+  private async openHighFps(facing: Facing, preset: ResolutionPreset): Promise<MediaStream | null> {
+    const fps = preset.frameRate;
+    const sizes: [string, MediaTrackConstraints | null][] = [
+      [`${preset.height}p`, { width: { ideal: preset.width }, height: { ideal: preset.height } }],
+      ['any', null], // whatever size the camera can do it at
+    ];
+    for (const [label, size] of sizes) {
+      let stream: MediaStream | null = null;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { facingMode: { ideal: facing }, ...size, frameRate: { min: fps - 5, ideal: fps } },
+        });
+        const track = stream.getVideoTracks()[0];
+        if ((track.getSettings().frameRate ?? 0) < fps - 5) {
+          await track.applyConstraints({ ...size, frameRate: { exact: fps } }).catch(() => {});
+        }
+        const got = Math.round(track.getSettings().frameRate ?? 0);
+        if (got >= fps - 5) return stream;
+        this.fpsNote += ` ${label}→${got}`;
+      } catch (err) {
+        this.fpsNote += ` ${label}:${(err as DOMException & { constraint?: string }).constraint || (err as Error).name}`;
+      }
+      stream?.getTracks().forEach((t) => t.stop());
+    }
+    return null;
   }
 
   async flip(): Promise<MediaStreamTrack> {
@@ -82,9 +121,12 @@ export class CameraController {
       });
       const s = track.getSettings();
       const close = (a = 0, b = 0) => Math.abs(a - b) < 64;
-      if (close(s.width, preset.width) || close(s.height, preset.height)) return;
+      // 720p -> 720p60 keeps the size, so the frame rate has to be checked too. A browser that
+      // doesn't report it gets the benefit of the doubt; the measured rate on screen tells the truth.
+      const fpsOk = Math.abs((s.frameRate ?? preset.frameRate) - preset.frameRate) < 5;
+      if ((close(s.width, preset.width) || close(s.height, preset.height)) && fpsOk) return;
     } catch { /* fall through to a full restart */ }
-    // Safari often ignores applyConstraints for resolution; reopen the camera.
+    // Safari often ignores applyConstraints for resolution and frame rate; reopen the camera.
     await this.start(this.facing, preset);
   }
 

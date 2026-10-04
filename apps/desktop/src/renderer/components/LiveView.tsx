@@ -15,9 +15,10 @@ interface Props {
 export function LiveView({ stats, vcam, settings, onSettings, onControl, onShowQr }: Props) {
   const live = stats.state === 'connected' || stats.state === 'stalled';
   const facing = stats.trackInfo?.facing ?? 'user';
-  const h = stats.trackInfo?.height ?? 0;
+  // Short side, so a phone held upright (1080×1920) still reads as 1080p.
+  const h = Math.min(stats.trackInfo?.width ?? 0, stats.trackInfo?.height ?? 0);
   const fr = Math.round(stats.trackInfo?.frameRate ?? 0);
-  const preset = h >= 2160 ? '4k' : h >= 1080 ? (fr >= 50 ? '1080p60' : '1080p') : '720p';
+  const preset = h >= 2160 ? '4k' : h >= 1080 ? '1080p' : fr >= 50 ? '720p60' : '720p';
   const phone = stats.device?.platform ?? 'Phone';
 
   return (
@@ -42,8 +43,12 @@ export function LiveView({ stats, vcam, settings, onSettings, onControl, onShowQ
             disabled={!live}
             options={[
               { value: '720p', label: '720p' },
+              {
+                value: '720p60',
+                label: '720p60',
+                title: '60 fps for smoother motion. Phone browsers only allow 60 fps up to 720p, so 1080p stays at 30 fps.',
+              },
               { value: '1080p', label: '1080p' },
-              { value: '1080p60', label: '1080p60' },
               { value: '4k', label: '4K' },
             ]}
             onChange={(p) => onControl({ type: 'setResolution', preset: p })}

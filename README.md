@@ -47,7 +47,7 @@ Chrome, OBS — anything that lists webcams. Video goes phone → PC directly ov
 H.264; nothing leaves your network, and there is no account, no cloud and no app store.
 
 - **Phone side** — any modern browser: iPhone (Safari) or Android (Chrome). It's just a web page served by your PC.
-- **Quality** — 720p, 1080p, 1080p60 or 4K from the phone's camera, hardware H.264, latency on par with a native camera app.
+- **Quality** — 720p, 720p60, 1080p or 4K from the phone's camera, hardware H.264, latency on par with a native camera app.
 - **Controls** — front/back camera, torch, resolution, mirror, rotate, Fill/Fit — from the PC or from the phone.
 - **Stays out of the way** — runs from the tray; closing the window keeps the camera live. The phone drops to 5 fps
   once no app is using the camera *and* the OmniCam window is closed or hidden.
@@ -176,7 +176,7 @@ with live stats: resolution, fps, bitrate, codec and network round-trip time.
 | Control              | What it does                                                                                       |
 | -------------------- | -------------------------------------------------------------------------------------------------- |
 | **Front / Back**     | Switch the phone's camera.                                                                         |
-| **720p · 1080p · 1080p60 · 4K** | Capture resolution on the phone. Bitrate follows automatically.                         |
+| **720p · 720p60 · 1080p · 4K** | Capture resolution on the phone. Bitrate follows automatically. 60 fps is 720p: phone browsers only offer it below 1080p. |
 | **Torch**            | Phone flashlight (back camera, where the browser supports it).                                     |
 | **Mirror · Rotate**  | Fix the orientation for how you hold the phone.                                                    |
 | **Fill / Fit**       | *Fill* (default) crops a portrait phone into a proper 16:9 picture; *Fit* shows everything with bars. |

@@ -179,6 +179,30 @@ async function tuneSender(s: RTCRtpSender) {
   }
 }
 
+/**
+ * Replaces the requested size/fps on screen with what is actually being sent: browsers report the
+ * constraints they accepted, and a phone asked for 60 fps may still deliver 30.
+ */
+async function showMeasuredRate() {
+  if (!sender || !wantConnected) return;
+  const stats = await sender.getStats().catch(() => null);
+  stats?.forEach((r) => {
+    if (r.type !== 'outbound-rtp' || r.kind !== 'video' || !r.frameWidth) return;
+    const fps = Math.round(r.framesPerSecond ?? 0);
+    // Short of the preset's rate: show what the camera itself runs at and allows, so it's clear
+    // whether the camera or the encoder is holding it back.
+    let why = '';
+    if (camera.track && fps < camera.wantedFrameRate - 5) {
+      const max = (camera.track.getCapabilities?.() as MediaTrackCapabilities | undefined)?.frameRate?.max;
+      why = ` (camera ${Math.round(camera.track.getSettings().frameRate ?? 0)}${max ? `, max ${Math.round(max)}` : ''}${camera.fpsNote ? ',' + camera.fpsNote : ''})`;
+    }
+    els.trackinfo.textContent = idleMode
+      ? `${r.frameWidth}×${r.frameHeight} · standby`
+      : `${r.frameWidth}×${r.frameHeight} · ${fps} fps${why}`;
+  });
+}
+setInterval(() => void showMeasuredRate(), 2000);
+
 async function connect() {
   teardownPeer();
   const track = camera.track;

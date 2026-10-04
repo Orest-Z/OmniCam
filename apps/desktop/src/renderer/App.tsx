@@ -134,9 +134,11 @@ export function App() {
           pairing={pairing}
           vcam={vcam}
           vcamError={vcamError}
+          stats={stats}
           update={state.update}
           version={state.version}
           onSettings={(p) => void setSettings(p)}
+          onControl={(m) => void control(m)}
           onOpenUpdate={() => {
             setSettingsOpen(false);
             setUpdateOpen(true);
