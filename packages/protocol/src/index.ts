@@ -185,6 +185,8 @@ export interface AppSettings {
   scaleMode: 'fit' | 'fill';
   /** When the phone stalls, hold the last frame instead of showing the placeholder. */
   holdLastFrame: boolean;
+  /** Stream numbers over the preview: always, or only while hovered. */
+  streamDetails: 'always' | 'hover';
   closeToTray: boolean;
   launchAtLogin: boolean;
   /**
@@ -211,6 +213,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   rotation: 0,
   scaleMode: 'fill',
   holdLastFrame: true,
+  streamDetails: 'always',
   closeToTray: true,
   launchAtLogin: false,
   hardwareDecode: false,

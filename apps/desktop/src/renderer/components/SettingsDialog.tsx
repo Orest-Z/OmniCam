@@ -113,6 +113,23 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, stats, upda
         </div>
       </div>
 
+      <div className="field">
+        <div className="k">
+          Stream details
+          <small>Resolution, real fps and bitrate over the preview. The preview itself is a reduced 10 fps snapshot; apps get the full stream.</small>
+        </div>
+        <div className="v">
+          <Segmented
+            value={settings.streamDetails}
+            options={[
+              { value: 'always', label: 'Always' },
+              { value: 'hover', label: 'On hover' },
+            ]}
+            onChange={(v) => onSettings({ streamDetails: v })}
+          />
+        </div>
+      </div>
+
       <div className="section">Phone camera</div>
       <div className="field">
         <div className="k">

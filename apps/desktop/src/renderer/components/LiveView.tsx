@@ -24,7 +24,7 @@ export function LiveView({ stats, vcam, settings, onSettings, onControl, onShowQ
   return (
     <div className="live">
       <div className="stage">
-        <Preview stats={stats} />
+        <Preview stats={stats} alwaysShowStats={settings.streamDetails === 'always'} />
       </div>
 
       <div className="bar">
