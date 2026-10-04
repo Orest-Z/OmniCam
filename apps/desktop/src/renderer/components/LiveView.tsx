@@ -1,5 +1,6 @@
 import { Flashlight, FlipHorizontal2, QrCode, RotateCw, Unplug } from 'lucide-react';
 import type { AppSettings, DesktopToPhone, StreamStats, VirtualCamStats } from '@omnicam/protocol';
+import { activePreset } from '../../shared/stream-format';
 import { Preview } from './Preview';
 import { IconButton, Segmented } from './ui';
 
@@ -15,10 +16,7 @@ interface Props {
 export function LiveView({ stats, vcam, settings, onSettings, onControl, onShowQr }: Props) {
   const live = stats.state === 'connected' || stats.state === 'stalled';
   const facing = stats.trackInfo?.facing ?? 'user';
-  // Short side, so a phone held upright (1080×1920) still reads as 1080p.
-  const h = Math.min(stats.trackInfo?.width ?? 0, stats.trackInfo?.height ?? 0);
-  const fr = Math.round(stats.trackInfo?.frameRate ?? 0);
-  const preset = h >= 2160 ? '4k' : h >= 1080 ? '1080p' : fr >= 50 ? '720p60' : '720p';
+  const preset = activePreset(stats.trackInfo);
   const phone = stats.device?.platform ?? 'Phone';
 
   return (

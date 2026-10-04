@@ -29,6 +29,7 @@ import { settings } from './settings';
 import { createTray, updateTray } from './tray';
 import { applyTheme, createOrShowUiWindow, markQuitting, uiWindow } from './ui-window';
 import { checkForUpdates, downloadUpdate, initUpdater, installUpdate, updateState } from './updater';
+import { outputFpsFor } from '../shared/stream-format';
 
 // --- Chromium switches: must be set before 'ready' -------------------------------------------
 // The engine's ICE host candidate must be a real LAN IP, not an mDNS name: phones on networks
@@ -131,7 +132,7 @@ function wireIpc(): void {
     // runs at, whichever side changed the resolution: 720p60 reaches Zoom at 60, and a phone that
     // only managed 30 doesn't get its frames doubled. Only on a change: it restarts the device.
     if (msg.type === 'trackInfo') {
-      const fps = msg.info.frameRate > 45 ? 60 : 30;
+      const fps = outputFpsFor(msg.info.frameRate);
       if (fps !== settings.get().outputFps) void changeSettings({ outputFps: fps });
     }
   });
