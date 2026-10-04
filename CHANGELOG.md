@@ -14,7 +14,8 @@ torch, Disconnect and closing the window.
   sends: 60 for 720p60, 30 otherwise, whichever side changed the resolution. Before, the camera stayed
   at 30 and Discord or Zoom got half the frames.
 - **1080p at 60 fps, beta, Android only** — *Settings → Phone camera → Try 1080p60*. Some Android phones
-  reach it in the browser; others drop to a smaller size at 60. Tell us how yours does.
+  reach it in the browser; others drop to a smaller size at 60. [Tell us how yours
+  does](https://github.com/Orest-Z/OmniCam/discussions/20).
 - **Light theme.** *Settings → Appearance*: Dark (still the default), Light or System, which follows
   Windows. The sun/moon button next to Settings switches it in one click.
 - **A light for the front camera.** Front cameras have no flashlight, so the torch button now turns the
