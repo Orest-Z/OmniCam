@@ -2,8 +2,9 @@
 // (lens ring + aperture dot + two signal arcs), so all sizes stay pixel-crisp.
 //
 //   apps/desktop/resources/icons/  icon.png (1024)  icon.ico  tray.ico  tray-live.ico
-//                                  tray.png tray@2x.png tray-live.png tray-live@2x.png  mark.svg
+//                                  tray.png tray@2x.png tray-live.png tray-live@2x.png
 //   apps/phone/public/             apple-touch-icon.png icon-192.png icon-512.png favicon.svg
+//   assets/brand/                  mark.svg  contact-sheet.png (reference sheet for eyeballing small sizes)
 //
 // Usage: node build/icons.mjs
 import sharp from 'sharp';
@@ -15,6 +16,7 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const iconsDir = resolve(here, '..', 'resources', 'icons');
 const phoneDir = resolve(here, '..', '..', 'phone', 'public');
+const brandDir = resolve(here, '..', '..', '..', 'assets', 'brand');
 mkdirSync(iconsDir, { recursive: true });
 mkdirSync(phoneDir, { recursive: true });
 
@@ -95,7 +97,7 @@ async function main() {
   const icoSizes = [16, 24, 32, 48, 64, 128, 256];
   const icoPngs = await Promise.all(icoSizes.map((s) => png(appIconSvg(s), s)));
   writeFileSync(join(iconsDir, 'icon.ico'), await pngToIco(icoPngs));
-  writeFileSync(join(iconsDir, 'mark.svg'), svg(256, mark()));
+  writeFileSync(join(brandDir, 'mark.svg'), svg(256, mark()));
 
   // --- tray icons (Windows uses the .ico; the PNG pairs serve macOS/Linux later) ---
   for (const live of [false, true]) {
@@ -125,9 +127,9 @@ async function main() {
   await sharp({ create: { width: 440, height: 920, channels: 4, background: '#2A2D33' } })
     .composite(sheetTiles)
     .png()
-    .toFile(join(iconsDir, 'contact-sheet.png'));
+    .toFile(join(brandDir, 'contact-sheet.png'));
 
-  console.log('icons written to', iconsDir, 'and', phoneDir);
+  console.log('icons written to', iconsDir, phoneDir, 'and', brandDir);
 }
 
 main().catch((err) => {
