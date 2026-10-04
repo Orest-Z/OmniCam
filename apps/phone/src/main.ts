@@ -216,7 +216,8 @@ async function showMeasuredRate() {
     // Short of the preset's rate: show what the camera itself runs at and allows, so it's clear
     // whether the camera or the encoder is holding it back.
     let why = '';
-    if (camera.track && fps < camera.wantedFrameRate - 5) {
+    // Only for 60 fps presets: a 30 fps preset dipping to 24 in dim light is normal, not a fault.
+    if (camera.track && camera.wantedFrameRate > 30 && fps < camera.wantedFrameRate - 5) {
       const max = (camera.track.getCapabilities?.() as MediaTrackCapabilities | undefined)?.frameRate?.max;
       why = ` (camera ${Math.round(camera.track.getSettings().frameRate ?? 0)}${max ? `, max ${Math.round(max)}` : ''}${camera.fpsNote ? ',' + camera.fpsNote : ''})`;
     }
