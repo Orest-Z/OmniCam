@@ -107,9 +107,13 @@ export function createOrShowUiWindow(): BrowserWindow {
 
   win.on('close', (e) => {
     // Closing the window must not kill the camera: hide to tray instead.
-    if (!quitting && settings.get().closeToTray) {
+    if (quitting) return;
+    if (settings.get().closeToTray) {
       e.preventDefault();
       win?.hide();
+    } else {
+      // The hidden engine window keeps 'window-all-closed' from ever firing, so quit explicitly.
+      app.quit();
     }
   });
   win.on('closed', () => {
