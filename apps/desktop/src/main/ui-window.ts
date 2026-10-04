@@ -23,7 +23,8 @@ let themeWired = false;
  * window background are repainted here.
  */
 export function applyTheme(theme: AppSettings['theme']): void {
-  nativeTheme.themeSource = theme;
+  // settings.json is read unchecked; an unknown value would make Electron throw before any window.
+  nativeTheme.themeSource = theme === 'light' || theme === 'system' ? theme : 'dark';
   if (themeWired) return;
   themeWired = true;
   nativeTheme.on('updated', () => {
