@@ -78,23 +78,25 @@ async function startServer(): Promise<void> {
   broadcast({ pairing: info });
 }
 
+async function changeSettings(patch: Partial<AppSettings>): Promise<AppSettings> {
+  const prev = settings.get();
+  const next = settings.update(patch);
+  if (next.port !== prev.port || next.preferredIp !== prev.preferredIp) {
+    await startServer();
+  }
+  engine.applySettings(next);
+  if (next.theme !== prev.theme) applyTheme(next.theme);
+  if (next.launchAtLogin !== prev.launchAtLogin) {
+    app.setLoginItemSettings({ openAtLogin: next.launchAtLogin, args: ['--hidden'] });
+  }
+  broadcast({ settings: next });
+  return next;
+}
+
 function wireIpc(): void {
   ipcMain.handle(UI_GET_STATE, () => fullState());
 
-  ipcMain.handle(UI_SET_SETTINGS, async (_e, patch: Partial<AppSettings>) => {
-    const prev = settings.get();
-    const next = settings.update(patch);
-    if (next.port !== prev.port || next.preferredIp !== prev.preferredIp) {
-      await startServer();
-    }
-    engine.applySettings(next);
-    if (next.theme !== prev.theme) applyTheme(next.theme);
-    if (next.launchAtLogin !== prev.launchAtLogin) {
-      app.setLoginItemSettings({ openAtLogin: next.launchAtLogin, args: ['--hidden'] });
-    }
-    broadcast({ settings: next });
-    return next;
-  });
+  ipcMain.handle(UI_SET_SETTINGS, (_e, patch: Partial<AppSettings>) => changeSettings(patch));
 
   ipcMain.handle(UI_CONTROL, (_e, msg: DesktopToPhone) => engine.control(msg));
 
@@ -125,6 +127,13 @@ function wireIpc(): void {
   engine.on('preview', (frame: PreviewFrame) => uiWindow()?.webContents.send(UI_PREVIEW_FRAME, frame));
   engine.on('phone', (msg: PhoneToDesktop) => {
     if (msg.type === 'error') console.warn('[phone]', msg.message);
+    // Apps get exactly the virtual camera's rate, so it follows the rate the phone's camera really
+    // runs at, whichever side changed the resolution: 720p60 reaches Zoom at 60, and a phone that
+    // only managed 30 doesn't get its frames doubled. Only on a change: it restarts the device.
+    if (msg.type === 'trackInfo') {
+      const fps = msg.info.frameRate > 45 ? 60 : 30;
+      if (fps !== settings.get().outputFps) void changeSettings({ outputFps: fps });
+    }
   });
   engine.on('vcam-error', (message: string) => {
     vcamError = message;

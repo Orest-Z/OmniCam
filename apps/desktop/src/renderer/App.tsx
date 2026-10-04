@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Moon, Settings as SettingsIcon, Sun } from 'lucide-react';
-import { RESOLUTION_PRESETS, type ConnectionState, type DesktopToPhone } from '@omnicam/protocol';
+import type { ConnectionState } from '@omnicam/protocol';
 import type { UpdateState } from '../shared/ipc';
 import { LiveView } from './components/LiveView';
 import { Mark } from './components/Mark';
@@ -86,15 +86,6 @@ export function App() {
   const badge = updateBadge(state.update);
   // What is on screen now ('system' resolves through Windows); the toggle picks the other one.
   const dark = settings.theme === 'system' ? matchMedia('(prefers-color-scheme: dark)').matches : settings.theme === 'dark';
-  // Resolution presets also set the virtual camera's rate: apps get exactly the output fps, so a
-  // 60 fps phone preset behind a 30 fps output would reach them at 30. Restarts the device on change.
-  const sendControl = (m: DesktopToPhone) => {
-    if (m.type === 'setResolution') {
-      const fps = (RESOLUTION_PRESETS[m.preset]?.frameRate ?? 30) > 30 ? 60 : 30;
-      if (fps !== settings.outputFps) void setSettings({ outputFps: fps });
-    }
-    void control(m);
-  };
 
   return (
     <div className="app">
@@ -134,7 +125,7 @@ export function App() {
             vcam={vcam}
             settings={settings}
             onSettings={(p) => void setSettings(p)}
-            onControl={sendControl}
+            onControl={(m) => void control(m)}
             onShowQr={() => setQrOpen(true)}
           />
         ) : (
@@ -152,7 +143,7 @@ export function App() {
           update={state.update}
           version={state.version}
           onSettings={(p) => void setSettings(p)}
-          onControl={sendControl}
+          onControl={(m) => void control(m)}
           onOpenUpdate={() => {
             setSettingsOpen(false);
             setUpdateOpen(true);

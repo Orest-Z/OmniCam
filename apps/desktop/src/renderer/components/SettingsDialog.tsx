@@ -66,8 +66,8 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, stats, upda
         <div className="k">
           Output resolution
           <small>
-            The "OmniCam" camera Discord, Zoom… see, phone or not. Apps get exactly this frame rate; the resolution buttons set it to match (60
-            for 720p60). Changing it restarts the device.
+            The "OmniCam" camera Discord, Zoom… see, phone or not. Apps get exactly this frame rate, so it follows the phone's camera (60 for
+            720p60). Changing it restarts the device.
           </small>
         </div>
         <div className="v">
