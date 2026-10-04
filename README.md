@@ -200,7 +200,7 @@ the camera, and it resumes when you come back (the last frame is held meanwhile,
 - **Stream details** — the resolution, real fps and bitrate over the preview: always (default) or on hover. The preview itself is a reduced 10 fps snapshot; apps get the full stream.
 
 **Phone camera**
-- **1080p at 60 fps (beta, Android only)** — some Android phones reach 60 fps at 1080p in the browser; others drop to a smaller size at 60. iPhones can't: every iPhone browser runs on Safari's engine, which only gives 60 fps up to 720p.
+- **1080p at 60 fps (beta, Android only)** — some Android phones reach 60 fps at 1080p in the browser; others drop to a smaller size at 60. iPhones can't: every iPhone browser runs on Safari's engine, which only gives 60 fps up to 720p. [Share how your phone did.](https://github.com/Orest-Z/OmniCam/discussions/20)
 
 **Network**
 - **Network interface** — the address embedded in the QR code. Pick your Wi-Fi adapter if you have VPNs or virtual adapters.
@@ -215,7 +215,8 @@ the camera, and it resumes when you come back (the last frame is held meanwhile,
 
 </td>
     <td width="45%" align="center">
-      <img src="docs/media/screenshots/desktop-settings.webp" width="380" alt="Settings dialog">
+      <img src="docs/media/screenshots/desktop-settings.webp" width="380" alt="Settings dialog: camera device and phone camera">
+      <img src="docs/media/screenshots/desktop-settings-2.webp" width="380" alt="Settings dialog: network and app">
     </td>
   </tr>
 </table>

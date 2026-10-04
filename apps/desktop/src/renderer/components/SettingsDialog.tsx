@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, ArrowUpRight, CheckCircle2 } from 'lucide-react';
 import type { AppSettings, DesktopToPhone, PairingInfo, StreamStats, VirtualCamStats } from '@omnicam/protocol';
 import type { UpdateState } from '../../shared/ipc';
 import { Dialog, Segmented, Switch } from './ui';
@@ -18,6 +18,9 @@ interface Props {
   onOpenUpdate: () => void;
   onClose: () => void;
 }
+
+/** Where Android testers report how the 1080p60 beta did on their phone. */
+const BETA_FEEDBACK_URL = 'https://github.com/Orest-Z/OmniCam/discussions/20';
 
 /** The port in settings was taken, so the server is somewhere else — shown wherever the port is. */
 export function portFallback(pairing: PairingInfo | null): PairingInfo | null {
@@ -147,6 +150,10 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, stats, upda
             reaches 60. Not on iPhone: every iPhone browser runs on Safari's engine, which only gives 60 fps up to 720p, so use 720p60 there.
             {live && track ? ` Phone is sending ${track.width}×${track.height} @ ${Math.round(track.frameRate)} fps.` : ''}
           </small>
+          <button className="link" onClick={() => void window.omnicam.openExternal(BETA_FEEDBACK_URL)}>
+            Share your result
+            <ArrowUpRight />
+          </button>
         </div>
         <div className="v">
           <button
