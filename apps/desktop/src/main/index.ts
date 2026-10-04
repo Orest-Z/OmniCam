@@ -27,7 +27,7 @@ import { phoneServer } from './server';
 import { session } from './session';
 import { settings } from './settings';
 import { createTray, updateTray } from './tray';
-import { createOrShowUiWindow, markQuitting, uiWindow } from './ui-window';
+import { applyTheme, createOrShowUiWindow, markQuitting, uiWindow } from './ui-window';
 import { checkForUpdates, downloadUpdate, initUpdater, installUpdate, updateState } from './updater';
 
 // --- Chromium switches: must be set before 'ready' -------------------------------------------
@@ -88,6 +88,7 @@ function wireIpc(): void {
       await startServer();
     }
     engine.applySettings(next);
+    if (next.theme !== prev.theme) applyTheme(next.theme);
     if (next.launchAtLogin !== prev.launchAtLogin) {
       app.setLoginItemSettings({ openAtLogin: next.launchAtLogin, args: ['--hidden'] });
     }
@@ -136,6 +137,7 @@ async function main(): Promise<void> {
   await app.whenReady();
   app.setAppUserModelId('com.omnicam.desktop');
 
+  applyTheme(settings.get().theme);
   wireIpc();
   engine.create();
   createTray();

@@ -1,4 +1,5 @@
-import { app, BrowserWindow, screen, shell } from 'electron';
+import { app, BrowserWindow, nativeTheme, screen, shell } from 'electron';
+import type { AppSettings } from '@omnicam/protocol';
 import { join } from 'node:path';
 import { restartBudget } from './engine-bridge';
 import { settings } from './settings';
@@ -7,8 +8,30 @@ let win: BrowserWindow | null = null;
 let quitting = false;
 const restarts: number[] = [];
 
-// Must match the CSS tokens in renderer/styles.css.
-export const THEME = { bg: '#0a0a0d', symbol: '#9d99ab', titlebarHeight: 40 };
+// Must match --bg / --text-2 in renderer/styles.css, for each theme.
+export const THEME = {
+  dark: { bg: '#0a0a0d', symbol: '#9d99ab' },
+  light: { bg: '#f7f5fc', symbol: '#5f5a70' },
+  titlebarHeight: 40,
+};
+const themeColors = () => (nativeTheme.shouldUseDarkColors ? THEME.dark : THEME.light);
+
+let themeWired = false;
+/**
+ * Dark / light / follow Windows. Electron's themeSource also drives the page's
+ * prefers-color-scheme, which is what the CSS switches on; the native caption buttons and the
+ * window background are repainted here.
+ */
+export function applyTheme(theme: AppSettings['theme']): void {
+  nativeTheme.themeSource = theme;
+  if (themeWired) return;
+  themeWired = true;
+  nativeTheme.on('updated', () => {
+    const c = themeColors();
+    win?.setBackgroundColor(c.bg);
+    win?.setTitleBarOverlay({ color: c.bg, symbolColor: c.symbol, height: THEME.titlebarHeight });
+  });
+}
 
 export function markQuitting(): void {
   quitting = true;
@@ -49,12 +72,12 @@ export function createOrShowUiWindow(): BrowserWindow {
     ...restoredBounds(),
     show: false,
     title: 'OmniCam',
-    backgroundColor: THEME.bg,
+    backgroundColor: themeColors().bg,
     autoHideMenuBar: true,
     icon: iconPath('icon.ico'),
     // Native caption buttons drawn over our own header (see renderer .titlebar).
     titleBarStyle: 'hidden',
-    titleBarOverlay: { color: THEME.bg, symbolColor: THEME.symbol, height: THEME.titlebarHeight },
+    titleBarOverlay: { color: themeColors().bg, symbolColor: themeColors().symbol, height: THEME.titlebarHeight },
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: true,

@@ -30,6 +30,35 @@
   --shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 12px 32px rgba(0, 0, 0, 0.45);
 }
 
+/* Light theme (Settings > Appearance; Electron's themeSource drives prefers-color-scheme). Same
+   violet brand on lavender-white surfaces; purple text is darker so it reads on light tints.
+   Keep --bg / --text-2 in sync with THEME.light in main/ui-window.ts (caption buttons). */
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f7f5fc;
+    --surface: #ffffff;
+    --surface-2: #f2eefb;
+    --surface-3: #e9e3f7;
+    --border: #e6e0f3;
+    --border-strong: #d6cdeb;
+    --text: #1e1b29;
+    --text-2: #5f5a70;
+    --text-3: #7b7690;
+    --accent: #8a5cf3;
+    --accent-hover: #9b74f7;
+    --accent-soft: #6a42d8;
+    --accent-tint: rgba(155, 116, 247, 0.14);
+    --live: #9b74f7;
+    --warn: #c98a1e;
+    --danger: #d64560;
+    --shadow: 0 1px 2px rgba(60, 40, 120, 0.06), 0 12px 32px rgba(60, 40, 120, 0.12);
+  }
+  .status.update.failed, .notice.warn { color: #8a5a0f; background: rgba(201, 138, 30, 0.12); }
+  .notice.bad { color: #a8243c; background: rgba(214, 69, 96, 0.1); }
+  .backdrop { background: rgba(40, 28, 80, 0.28); }
+  .preview { box-shadow: 0 0 0 1px rgba(138, 92, 243, 0.12), 0 24px 60px rgba(60, 40, 120, 0.18); }
+}
+
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }
 body {
@@ -180,7 +209,7 @@ svg { display: block; }
 .preview .chip {
   position: absolute; top: 12px; left: 12px; display: inline-flex; align-items: center; gap: 7px;
   height: 26px; padding: 0 10px 0 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.02em;
-  background: rgba(10, 10, 11, 0.7); backdrop-filter: blur(10px); color: var(--text);
+  background: rgba(10, 10, 11, 0.7); backdrop-filter: blur(10px); color: #e8e6ef; /* on the video: same in both themes */
 }
 .preview .chip i { width: 7px; height: 7px; border-radius: 50%; background: var(--live); box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.25); }
 .preview .chip.warn i { background: var(--warn); }
@@ -188,10 +217,10 @@ svg { display: block; }
 .preview .stats {
   position: absolute; right: 12px; bottom: 12px; padding: 5px 9px; border-radius: 7px;
   background: rgba(10, 10, 11, 0.7); backdrop-filter: blur(10px);
-  font: 11.5px var(--mono); color: var(--text-2); opacity: 0; transition: opacity 0.25s;
+  font: 11.5px var(--mono); color: #b9b5c6; opacity: 0; transition: opacity 0.25s;
 }
 .preview:hover .stats, .preview .stats.show { opacity: 1; }
-.preview .empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--text-2); font-size: 13px; text-align: center; padding: 24px; }
+.preview .empty { position: absolute; inset: 0; display: grid; place-items: center; color: #9d99ab; font-size: 13px; text-align: center; padding: 24px; }
 
 .bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .bar .group { display: inline-flex; align-items: center; gap: 6px; }

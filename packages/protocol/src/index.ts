@@ -189,6 +189,8 @@ export interface AppSettings {
   holdLastFrame: boolean;
   /** Stream numbers over the preview: always, or only while hovered. */
   streamDetails: 'always' | 'hover';
+  /** Desktop app colours; 'system' follows the Windows light/dark setting. */
+  theme: 'dark' | 'light' | 'system';
   closeToTray: boolean;
   launchAtLogin: boolean;
   /**
@@ -216,6 +218,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   scaleMode: 'fill',
   holdLastFrame: true,
   streamDetails: 'always',
+  theme: 'dark',
   closeToTray: true,
   launchAtLogin: false,
   hardwareDecode: false,

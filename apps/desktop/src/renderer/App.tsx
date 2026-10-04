@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Settings as SettingsIcon } from 'lucide-react';
+import { Moon, Settings as SettingsIcon, Sun } from 'lucide-react';
 import type { ConnectionState } from '@omnicam/protocol';
 import type { UpdateState } from '../shared/ipc';
 import { LiveView } from './components/LiveView';
@@ -84,6 +84,8 @@ export function App() {
   const { pairing, settings, stats, vcam, vcamError } = state;
   const showLive = stats.state !== 'idle';
   const badge = updateBadge(state.update);
+  // What is on screen now ('system' resolves through Windows); the toggle picks the other one.
+  const dark = settings.theme === 'system' ? matchMedia('(prefers-color-scheme: dark)').matches : settings.theme === 'dark';
 
   return (
     <div className="app">
@@ -108,6 +110,9 @@ export function App() {
             {badge}
           </button>
         )}
+        <IconButton title={dark ? 'Switch to light mode' : 'Switch to dark mode'} onClick={() => void setSettings({ theme: dark ? 'light' : 'dark' })}>
+          {dark ? <Sun /> : <Moon />}
+        </IconButton>
         <IconButton title="Settings" onClick={() => setSettingsOpen(true)}>
           <SettingsIcon />
         </IconButton>

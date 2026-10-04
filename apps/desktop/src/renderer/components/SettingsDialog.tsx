@@ -188,6 +188,23 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, stats, upda
       <div className="section">App</div>
       <div className="field">
         <div className="k">
+          Appearance
+          <small>System follows the Windows light/dark setting.</small>
+        </div>
+        <div className="v">
+          <Segmented
+            value={settings.theme}
+            options={[
+              { value: 'dark', label: 'Dark' },
+              { value: 'light', label: 'Light' },
+              { value: 'system', label: 'System' },
+            ]}
+            onChange={(v) => onSettings({ theme: v })}
+          />
+        </div>
+      </div>
+      <div className="field">
+        <div className="k">
           Keep running in the tray
           <small>Closing the window keeps the camera available.</small>
         </div>
