@@ -27,6 +27,7 @@ const els = {
   flip: $<HTMLButtonElement>('flip'),
   stop: $<HTMLButtonElement>('stop'),
   torch: $<HTMLButtonElement>('torch'),
+  screenlight: $<HTMLDivElement>('screenlight'),
   res: $<HTMLSelectElement>('res'),
 };
 
@@ -77,9 +78,28 @@ function refreshTrackInfo() {
   if (!info) return;
   els.trackinfo.textContent = `${info.width}×${info.height} @ ${Math.round(info.frameRate)}`;
   els.preview.classList.toggle('mirror', info.facing === 'user');
-  els.torch.hidden = !camera.capabilities().torch;
+  els.torch.hidden = !hasLight();
   send({ type: 'trackInfo', info });
-  send({ type: 'capabilities', caps: camera.capabilities() });
+  showTorch(torchOn);
+}
+
+/**
+ * The camera's own torch, or for a front camera without one, the screen turned white. A web page
+ * can't raise the screen brightness, so the white screen asks the user to.
+ */
+const screenLight = () => !camera.capabilities().torch && camera.currentFacing === 'user';
+const hasLight = () => camera.capabilities().torch || screenLight();
+
+async function setLight(on: boolean) {
+  showTorch(screenLight() ? on : (await camera.setTorch(on)) && on);
+}
+
+/** Torch state goes to both the phone's button and the desktop's, whichever side changed it. */
+function showTorch(on: boolean) {
+  torchOn = on;
+  els.torch.classList.toggle('on', on);
+  els.screenlight.hidden = !(on && screenLight());
+  send({ type: 'capabilities', caps: { ...camera.capabilities(), torch: hasLight(), torchOn: on } });
 }
 
 // ---------------------------------------------------------------------------
@@ -105,8 +125,7 @@ async function handleControl(msg: DesktopToPhone) {
       break;
     }
     case 'setTorch':
-      torchOn = (await camera.setTorch(msg.on)) && msg.on;
-      els.torch.classList.toggle('on', torchOn);
+      await setLight(msg.on);
       break;
     case 'setMirror':
       // Mirroring is applied on the desktop side; nothing to do on the phone.
@@ -339,6 +358,8 @@ function stopSession(message = 'Camera stopped.', isError = false) {
   void wakeLock?.release();
   wakeLock = null;
   els.start.disabled = false;
+  torchOn = false;
+  els.screenlight.hidden = true;
   showOverlay(message, isError);
 }
 
@@ -357,6 +378,7 @@ camera.onTrackChanged = (track) => {
     return;
   }
   els.preview.srcObject = new MediaStream([track]);
+  torchOn = false; // a reopened camera starts with the torch off
   if (sender && sender.track !== track) void sender.replaceTrack(track).then(() => sender && tuneSender(sender));
   refreshTrackInfo();
 };
@@ -392,10 +414,8 @@ els.flip.addEventListener('click', async () => {
   }
   els.flip.disabled = false;
 });
-els.torch.addEventListener('click', async () => {
-  torchOn = (await camera.setTorch(!torchOn)) && !torchOn;
-  els.torch.classList.toggle('on', torchOn);
-});
+els.torch.addEventListener('click', () => void setLight(!torchOn));
+els.screenlight.addEventListener('click', () => void setLight(false));
 els.res.addEventListener('change', () => {
   const preset = RESOLUTION_PRESETS[els.res.value];
   if (preset) {

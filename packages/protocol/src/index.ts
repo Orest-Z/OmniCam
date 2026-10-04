@@ -108,6 +108,8 @@ export interface TrackInfo {
 
 export interface PhoneCapabilities {
   torch: boolean;
+  /** Torch is lit right now (the desktop button toggles from this). */
+  torchOn?: boolean;
   zoom: boolean;
   facingModes: Facing[];
 }

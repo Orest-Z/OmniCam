@@ -54,7 +54,12 @@ export function LiveView({ stats, vcam, settings, onSettings, onControl, onShowQ
             onChange={(p) => onControl({ type: 'setResolution', preset: p })}
           />
           {stats.caps?.torch && (
-            <IconButton title="Torch" disabled={!live} onClick={() => onControl({ type: 'setTorch', on: true })}>
+            <IconButton
+              title="Torch"
+              on={Boolean(stats.caps.torchOn)}
+              disabled={!live}
+              onClick={() => onControl({ type: 'setTorch', on: !stats.caps?.torchOn })}
+            >
               <Flashlight />
             </IconButton>
           )}
