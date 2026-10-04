@@ -185,7 +185,7 @@ class EngineBridge extends EventEmitter {
     });
 
     if (!app.isPackaged && process.env.ELECTRON_RENDERER_URL) {
-      void win.loadURL(`${process.env.ELECTRON_RENDERER_URL}/engine/index.html`);
+      void win.loadURL(`${process.env.ELECTRON_RENDERER_URL}/engine/index.html?dbg=${encodeURIComponent(process.env.OMNICAM_DEBUG ?? '')}`);
     } else {
       void win.loadFile(join(__dirname, '../renderer/engine/index.html'), { query: { dbg: process.env.OMNICAM_DEBUG ?? '' } });
     }
