@@ -140,10 +140,11 @@ Without the native build the app still runs (QR, phone connection, preview) and 
   version resource (`packages/vcam-native/src/version.rc.in`). Do not set `win.publisherName` until a
   signed release has shown the exact certificate subject: once set, the updater rejects any installer not
   signed by that name.
-- **Website**: `docs/index.html` (+ `site.css`, `site.js`; static, no build step) uses the README's own
-  images in `docs/gifs` and `docs/screenshots`, so opening the file locally shows the real page.
-  `.github/workflows/pages.yml` publishes `docs/` to GitHub Pages with the Geist fonts copied in from
-  `packages/brand/fonts`. It links to GitHub Releases for downloads and hosts no binaries.
+- **Website**: `website/index.html` (+ `site.css`, `site.js`; static, no build step) uses the README's own
+  images in `docs/media`, so opening the file locally shows the real page.
+  `.github/workflows/pages.yml` publishes `website/` to GitHub Pages with `docs/media` flattened into the
+  site root and the Geist fonts copied in from `assets/brand/fonts`. Download and star counts are read
+  live from GitHub's API by `site.js`, so the page never shows a stale hard-coded number. It links to GitHub Releases for downloads and hosts no binaries.
 - **Releasing** is driven by the version in `apps/desktop/package.json` (it names the installer and
   fills `latest.yml`). Bump it, rename the `CHANGELOG.md` **Unreleased** heading to the new version,
   merge to `main`: CI builds, then publishes a release tagged `v<version>` whose notes are that
@@ -153,7 +154,7 @@ Without the native build the app still runs (QR, phone connection, preview) and 
 
 ## Brand & UI
 
-- Assets live in `packages/brand/` (Geist fonts, `mark.svg`, the reference icon sheet). Every icon size
+- Assets live in `assets/brand/` (Geist fonts, `mark.svg`, the reference icon sheet). Every icon size
   is generated from vector geometry by `node apps/desktop/build/icons.mjs` — never hand-crop bitmaps.
   The same geometry is duplicated in `renderer/components/Mark.tsx`, the phone `index.html` and the
   engine placeholder (`vcam.ts`); change all four together.

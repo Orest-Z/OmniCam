@@ -1,5 +1,5 @@
-import geistSans from '../../../packages/brand/fonts/Geist-Variable.woff2?url';
-import geistMono from '../../../packages/brand/fonts/GeistMono-Variable.woff2?url';
+import geistSans from '../../../assets/brand/fonts/Geist-Variable.woff2?url';
+import geistMono from '../../../assets/brand/fonts/GeistMono-Variable.woff2?url';
 
 /** Self-hosted Geist: the phone is on a LAN page and must not depend on the internet. */
 export function installFonts(): void {

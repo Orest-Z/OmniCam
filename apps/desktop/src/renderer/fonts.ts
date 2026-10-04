@@ -1,5 +1,5 @@
-import geistSans from '../../../../packages/brand/fonts/Geist-Variable.woff2?url';
-import geistMono from '../../../../packages/brand/fonts/GeistMono-Variable.woff2?url';
+import geistSans from '../../../../assets/brand/fonts/Geist-Variable.woff2?url';
+import geistMono from '../../../../assets/brand/fonts/GeistMono-Variable.woff2?url';
 
 /** Injects self-hosted Geist so the app never depends on system fonts or the network. */
 export function installFonts(): void {

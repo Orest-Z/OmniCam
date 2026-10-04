@@ -30,10 +30,10 @@
 <table align="center">
   <tr>
     <td align="center" valign="middle" width="640">
-      <img src="docs/gifs/desktop-demo.gif" width="640" alt="Desktop: OmniCam shows a QR code, then switches to the live preview once the phone connects">
+      <img src="docs/media/gifs/desktop-demo.gif" width="640" alt="Desktop: OmniCam shows a QR code, then switches to the live preview once the phone connects">
     </td>
     <td align="center" valign="middle" width="190">
-      <img src="docs/gifs/phone-demo.gif" width="190" alt="Phone: scan the QR code, accept the one-time warning, tap Start camera">
+      <img src="docs/media/gifs/phone-demo.gif" width="190" alt="Phone: scan the QR code, accept the one-time warning, tap Start camera">
     </td>
   </tr>
   <tr>
@@ -118,7 +118,7 @@ Takes about thirty seconds, once. After that the phone just needs to scan the co
 ### 1 · Open OmniCam and scan the QR code
 
 <p align="center">
-  <img src="docs/screenshots/desktop-pair.webp" width="900" alt="OmniCam pairing screen with the QR code and the four steps">
+  <img src="docs/media/screenshots/desktop-pair.webp" width="900" alt="OmniCam pairing screen with the QR code and the four steps">
 </p>
 
 Your phone and PC must be on the **same Wi-Fi**. Point the phone's camera app at the code and open the link it shows.
@@ -141,10 +141,10 @@ Here's exactly what to tap on an iPhone:
     <th align="center" width="25%">④ You're live</th>
   </tr>
   <tr>
-    <td align="center"><img src="docs/screenshots/phone-1-warning.webp" width="220" alt="Safari: This Connection Is Not Private — tap Show Details"></td>
-    <td align="center"><img src="docs/screenshots/phone-2-details.webp" width="220" alt="Safari details page — tap 'visit this website'"></td>
-    <td align="center"><img src="docs/screenshots/phone-3-start.webp" width="220" alt="OmniCam phone page with the Start camera button"></td>
-    <td align="center"><img src="docs/screenshots/phone-4-live.webp" width="220" alt="Phone streaming live; the desktop preview is visible on the laptop"></td>
+    <td align="center"><img src="docs/media/screenshots/phone-1-warning.webp" width="220" alt="Safari: This Connection Is Not Private — tap Show Details"></td>
+    <td align="center"><img src="docs/media/screenshots/phone-2-details.webp" width="220" alt="Safari details page — tap 'visit this website'"></td>
+    <td align="center"><img src="docs/media/screenshots/phone-3-start.webp" width="220" alt="OmniCam phone page with the Start camera button"></td>
+    <td align="center"><img src="docs/media/screenshots/phone-4-live.webp" width="220" alt="Phone streaming live; the desktop preview is visible on the laptop"></td>
   </tr>
   <tr>
     <td align="center"><sub>Tap <b>Show Details</b>, not Close Page.</sub></td>
@@ -167,7 +167,7 @@ Apps list cameras when they start, so restart an app that was already open.
 ## While you're live
 
 <p align="center">
-  <img src="docs/screenshots/desktop-live.webp" width="900" alt="Live view: 1080p preview with the control bar">
+  <img src="docs/media/screenshots/desktop-live.webp" width="900" alt="Live view: 1080p preview with the control bar">
 </p>
 
 The desktop window shows exactly what the camera device outputs (WYSIWYG, including Fill/Fit and rotation)
@@ -210,7 +210,7 @@ the camera, and it resumes when you come back (the last frame is held meanwhile,
 
 </td>
     <td width="45%" align="center">
-      <img src="docs/screenshots/desktop-settings.webp" width="380" alt="Settings dialog">
+      <img src="docs/media/screenshots/desktop-settings.webp" width="380" alt="Settings dialog">
     </td>
   </tr>
 </table>

@@ -2,13 +2,13 @@
 @font-face {
   font-family: 'Geist';
   /* fonts/ is copied in when the site is deployed; the second URL serves a local preview from the repo. */
-  src: url('fonts/Geist-Variable.woff2') format('woff2'), url('../packages/brand/fonts/Geist-Variable.woff2') format('woff2');
+  src: url('fonts/Geist-Variable.woff2') format('woff2'), url('../assets/brand/fonts/Geist-Variable.woff2') format('woff2');
   font-weight: 100 900;
   font-display: swap;
 }
 @font-face {
   font-family: 'Geist Mono';
-  src: url('fonts/GeistMono-Variable.woff2') format('woff2'), url('../packages/brand/fonts/GeistMono-Variable.woff2') format('woff2');
+  src: url('fonts/GeistMono-Variable.woff2') format('woff2'), url('../assets/brand/fonts/GeistMono-Variable.woff2') format('woff2');
   font-weight: 100 900;
   font-display: swap;
 }
@@ -98,6 +98,26 @@ h1 span { color: var(--text-2); }
 }
 .recordings { display: grid; grid-template-columns: minmax(0, 4.07fr) minmax(0, 1fr); gap: 16px; align-items: center; /* equal heights for 800x426 and 480x1039 */ }
 .recordings img { border-radius: var(--r-lg); border: 1px solid var(--border-strong); }
+
+/* --- live numbers ---------------------------------------------------- */
+.stats { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (min-width: 820px) { .stats { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.stats a { display: block; height: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 18px 20px; }
+.stats a:hover { text-decoration: none; border-color: var(--border-strong); background: var(--surface-2); }
+.stats b { display: block; color: var(--text); font-size: clamp(26px, 3.6vw, 34px); font-weight: 650; letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.stats span { color: var(--text-2); font-size: 14px; }
+.stats[hidden] { display: none; }
+.stats[hidden] + .reddit { margin-top: 0; }
+.reddit {
+  display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; margin-top: 12px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px 20px;
+  color: var(--text-2); font-size: 15px;
+}
+.reddit:hover { text-decoration: none; border-color: var(--border-strong); background: var(--surface-2); }
+.reddit b { color: var(--text); font-weight: 600; }
+.reddit i { color: var(--text-3); font-style: normal; font-size: 13px; }
+.facts { color: var(--text-3); font-size: 14px; margin: 16px 0 0; }
+main section.stats-band { padding-top: 32px; padding-bottom: 32px; }
 
 /* --- sections -------------------------------------------------------- */
 main section.wrap { padding-top: 56px; padding-bottom: 56px; border-top: 1px solid var(--border); }

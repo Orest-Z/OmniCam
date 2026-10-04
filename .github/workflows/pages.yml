@@ -1,13 +1,14 @@
 name: Site
 
-# Publishes docs/ (index.html, next to the README's screenshots and GIFs) to GitHub Pages, plus the
-# brand fonts, which stay in packages/brand so there is one copy of each in the repository.
+# Publishes website/ to GitHub Pages, plus the README's screenshots and GIFs (docs/media) and the brand
+# fonts (assets/brand), which stay where they are so there is one copy of each in the repository.
 on:
   push:
     branches: [main]
     paths:
-      - docs/**
-      - packages/brand/fonts/**
+      - website/**
+      - docs/media/**
+      - assets/brand/fonts/**
       - .github/workflows/pages.yml
   workflow_dispatch:
 
@@ -32,8 +33,11 @@ jobs:
       - name: Assemble
         run: |
           mkdir -p _site/fonts
-          cp -r docs/. _site/
-          cp packages/brand/fonts/*.woff2 _site/fonts/
+          cp -r website/. _site/
+          cp -r docs/media/. _site/
+          cp assets/brand/fonts/*.woff2 _site/fonts/
+          # index.html points at ../docs/media/ for a local preview; on the site the media sits beside it.
+          sed -i 's#\.\./docs/media/##g' _site/index.html
 
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
