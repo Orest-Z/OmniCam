@@ -15,7 +15,7 @@ namespace {
 
 using clock = std::chrono::steady_clock;
 
-constexpr auto kStaleAfter = std::chrono::milliseconds(3000);
+constexpr auto kStaleAfter = std::chrono::milliseconds(1000);
 // Keepalive cadence while nobody reads the camera: a newly opened app still gets a frame quickly.
 constexpr auto kKeepaliveIdle = std::chrono::milliseconds(500);
 constexpr auto kConsumerPoll = std::chrono::milliseconds(250);

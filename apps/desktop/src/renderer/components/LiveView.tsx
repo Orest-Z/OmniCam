@@ -1,5 +1,6 @@
 import { Flashlight, FlipHorizontal2, QrCode, RotateCw, Unplug } from 'lucide-react';
 import type { AppSettings, DesktopToPhone, StreamStats, VirtualCamStats } from '@omnicam/protocol';
+import { activePreset } from '../../shared/stream-format';
 import { Preview } from './Preview';
 import { IconButton, Segmented } from './ui';
 
@@ -15,15 +16,13 @@ interface Props {
 export function LiveView({ stats, vcam, settings, onSettings, onControl, onShowQr }: Props) {
   const live = stats.state === 'connected' || stats.state === 'stalled';
   const facing = stats.trackInfo?.facing ?? 'user';
-  const h = stats.trackInfo?.height ?? 0;
-  const fr = Math.round(stats.trackInfo?.frameRate ?? 0);
-  const preset = h >= 2160 ? '4k' : h >= 1080 ? (fr >= 50 ? '1080p60' : '1080p') : '720p';
+  const preset = activePreset(stats.trackInfo);
   const phone = stats.device?.platform ?? 'Phone';
 
   return (
     <div className="live">
       <div className="stage">
-        <Preview stats={stats} />
+        <Preview stats={stats} alwaysShowStats={settings.streamDetails === 'always'} />
       </div>
 
       <div className="bar">
@@ -42,14 +41,23 @@ export function LiveView({ stats, vcam, settings, onSettings, onControl, onShowQ
             disabled={!live}
             options={[
               { value: '720p', label: '720p' },
+              {
+                value: '720p60',
+                label: '720p60',
+                title: '60 fps for smoother motion. Phone browsers only allow 60 fps up to 720p, so 1080p stays at 30 fps.',
+              },
               { value: '1080p', label: '1080p' },
-              { value: '1080p60', label: '1080p60' },
               { value: '4k', label: '4K' },
             ]}
             onChange={(p) => onControl({ type: 'setResolution', preset: p })}
           />
           {stats.caps?.torch && (
-            <IconButton title="Torch" disabled={!live} onClick={() => onControl({ type: 'setTorch', on: true })}>
+            <IconButton
+              title="Torch"
+              on={Boolean(stats.caps.torchOn)}
+              disabled={!live}
+              onClick={() => onControl({ type: 'setTorch', on: !stats.caps?.torchOn })}
+            >
               <Flashlight />
             </IconButton>
           )}

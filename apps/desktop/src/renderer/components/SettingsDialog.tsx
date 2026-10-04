@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AlertTriangle, CheckCircle2 } from 'lucide-react';
-import type { AppSettings, PairingInfo, VirtualCamStats } from '@omnicam/protocol';
+import type { AppSettings, DesktopToPhone, PairingInfo, StreamStats, VirtualCamStats } from '@omnicam/protocol';
 import type { UpdateState } from '../../shared/ipc';
 import { Dialog, Segmented, Switch } from './ui';
 import { updateOnOffer, updateSummary } from './UpdateDialog';
@@ -10,9 +10,11 @@ interface Props {
   pairing: PairingInfo | null;
   vcam: VirtualCamStats;
   vcamError: string | null;
+  stats: StreamStats;
   update: UpdateState;
   version: string;
   onSettings: (patch: Partial<AppSettings>) => void;
+  onControl: (msg: DesktopToPhone) => void;
   onOpenUpdate: () => void;
   onClose: () => void;
 }
@@ -26,8 +28,11 @@ export function portFallbackMessage(requested: number, actual: number): string {
   return `Port ${requested} is used by another program, so OmniCam is on ${actual} instead. The QR code already points there, so pairing works; pick a free port if you need a fixed one.`;
 }
 
-export function SettingsDialog({ settings, pairing, vcam, vcamError, update, version, onSettings, onOpenUpdate, onClose }: Props) {
+export function SettingsDialog({ settings, pairing, vcam, vcamError, stats, update, version, onSettings, onControl, onOpenUpdate, onClose }: Props) {
   const [port, setPort] = useState(String(settings.port));
+  const live = stats.state === 'connected' || stats.state === 'stalled';
+  const android = live && stats.device?.platform === 'Android';
+  const track = stats.trackInfo;
   const fallback = portFallback(pairing);
   const commitPort = () => {
     const n = Number(port);
@@ -60,7 +65,10 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, update, ver
       <div className="field">
         <div className="k">
           Output resolution
-          <small>What Discord, Zoom… receive. Changing it restarts the device.</small>
+          <small>
+            The "OmniCam" camera Discord, Zoom… see, phone or not. Apps get exactly this frame rate, so it follows the phone's camera (60 for
+            720p60). Changing it restarts the device.
+          </small>
         </div>
         <div className="v">
           <Segmented
@@ -68,6 +76,11 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, update, ver
             options={[
               { value: '720p', label: '720p' },
               { value: '1080p', label: '1080p' },
+              {
+                value: '4k',
+                label: '4K',
+                title: 'For OBS or recording. Discord, Zoom and Teams send at most 1080p, and 4K costs much more CPU.',
+              },
             ]}
             onChange={(v) => onSettings({ outputPreset: v })}
           />
@@ -108,6 +121,45 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, update, ver
         </div>
       </div>
 
+      <div className="field">
+        <div className="k">
+          Stream details
+          <small>Resolution, real fps and bitrate over the preview. The preview itself is a reduced 10 fps snapshot; apps get the full stream.</small>
+        </div>
+        <div className="v">
+          <Segmented
+            value={settings.streamDetails}
+            options={[
+              { value: 'always', label: 'Always' },
+              { value: 'hover', label: 'On hover' },
+            ]}
+            onChange={(v) => onSettings({ streamDetails: v })}
+          />
+        </div>
+      </div>
+
+      <div className="section">Phone camera</div>
+      <div className="field">
+        <div className="k">
+          1080p at 60 fps (beta, Android only)
+          <small>
+            Works on Android phones whose maker lets the browser use 60 fps at 1080p. Otherwise the phone drops to the largest size that
+            reaches 60. Not on iPhone: every iPhone browser runs on Safari's engine, which only gives 60 fps up to 720p, so use 720p60 there.
+            {live && track ? ` Phone is sending ${track.width}×${track.height} @ ${Math.round(track.frameRate)} fps.` : ''}
+          </small>
+        </div>
+        <div className="v">
+          <button
+            className="btn"
+            disabled={!android}
+            title={android ? '' : live ? 'Only for Android phones' : 'Connect an Android phone first'}
+            onClick={() => onControl({ type: 'setResolution', preset: '1080p60' })}
+          >
+            Try 1080p60
+          </button>
+        </div>
+      </div>
+
       <div className="section">Network</div>
       <div className="field">
         <div className="k">
@@ -142,6 +194,23 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, update, ver
       )}
 
       <div className="section">App</div>
+      <div className="field">
+        <div className="k">
+          Appearance
+          <small>System follows the Windows light/dark setting.</small>
+        </div>
+        <div className="v">
+          <Segmented
+            value={settings.theme}
+            options={[
+              { value: 'dark', label: 'Dark' },
+              { value: 'light', label: 'Light' },
+              { value: 'system', label: 'System' },
+            ]}
+            onChange={(v) => onSettings({ theme: v })}
+          />
+        </div>
+      </div>
       <div className="field">
         <div className="k">
           Keep running in the tray

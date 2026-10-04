@@ -27,6 +27,7 @@ const els = {
   flip: $<HTMLButtonElement>('flip'),
   stop: $<HTMLButtonElement>('stop'),
   torch: $<HTMLButtonElement>('torch'),
+  screenlight: $<HTMLDivElement>('screenlight'),
   res: $<HTMLSelectElement>('res'),
 };
 
@@ -77,9 +78,28 @@ function refreshTrackInfo() {
   if (!info) return;
   els.trackinfo.textContent = `${info.width}×${info.height} @ ${Math.round(info.frameRate)}`;
   els.preview.classList.toggle('mirror', info.facing === 'user');
-  els.torch.hidden = !camera.capabilities().torch;
+  els.torch.hidden = !hasLight();
   send({ type: 'trackInfo', info });
-  send({ type: 'capabilities', caps: camera.capabilities() });
+  showTorch(torchOn);
+}
+
+/**
+ * The camera's own torch, or for a front camera without one, the screen turned white. A web page
+ * can't raise the screen brightness, so the white screen asks the user to.
+ */
+const screenLight = () => !camera.capabilities().torch && camera.currentFacing === 'user';
+const hasLight = () => camera.capabilities().torch || screenLight();
+
+async function setLight(on: boolean) {
+  showTorch(screenLight() ? on : (await camera.setTorch(on)) && on);
+}
+
+/** Torch state goes to both the phone's button and the desktop's, whichever side changed it. */
+function showTorch(on: boolean) {
+  torchOn = on;
+  els.torch.classList.toggle('on', on);
+  els.screenlight.hidden = !(on && screenLight());
+  send({ type: 'capabilities', caps: { ...camera.capabilities(), torch: hasLight(), torchOn: on } });
 }
 
 // ---------------------------------------------------------------------------
@@ -105,8 +125,7 @@ async function handleControl(msg: DesktopToPhone) {
       break;
     }
     case 'setTorch':
-      torchOn = (await camera.setTorch(msg.on)) && msg.on;
-      els.torch.classList.toggle('on', torchOn);
+      await setLight(msg.on);
       break;
     case 'setMirror':
       // Mirroring is applied on the desktop side; nothing to do on the phone.
@@ -114,6 +133,11 @@ async function handleControl(msg: DesktopToPhone) {
     case 'setIdle':
       idleMode = msg.idle;
       if (sender) void tuneSender(sender);
+      break;
+    case 'disconnect':
+      stopSession(DISCONNECTED_MSG);
+      // The old pairing code is dead, so Start would only fail: point to the new QR instead.
+      els.start.hidden = true;
       break;
     case 'ping':
       send({ type: 'pong', t: msg.t });
@@ -178,6 +202,31 @@ async function tuneSender(s: RTCRtpSender) {
     /* Safari rejects some fields; defaults are fine */
   }
 }
+
+/**
+ * Replaces the requested size/fps on screen with what is actually being sent: browsers report the
+ * constraints they accepted, and a phone asked for 60 fps may still deliver 30.
+ */
+async function showMeasuredRate() {
+  if (!sender || !wantConnected) return;
+  const stats = await sender.getStats().catch(() => null);
+  stats?.forEach((r) => {
+    if (r.type !== 'outbound-rtp' || r.kind !== 'video' || !r.frameWidth) return;
+    const fps = Math.round(r.framesPerSecond ?? 0);
+    // Short of the preset's rate: show what the camera itself runs at and allows, so it's clear
+    // whether the camera or the encoder is holding it back.
+    let why = '';
+    // Only for 60 fps presets: a 30 fps preset dipping to 24 in dim light is normal, not a fault.
+    if (camera.track && camera.wantedFrameRate > 30 && fps < camera.wantedFrameRate - 5) {
+      const max = (camera.track.getCapabilities?.() as MediaTrackCapabilities | undefined)?.frameRate?.max;
+      why = ` (camera ${Math.round(camera.track.getSettings().frameRate ?? 0)}${max ? `, max ${Math.round(max)}` : ''}${camera.fpsNote ? ',' + camera.fpsNote : ''})`;
+    }
+    els.trackinfo.textContent = idleMode
+      ? `${r.frameWidth}×${r.frameHeight} · standby`
+      : `${r.frameWidth}×${r.frameHeight} · ${fps} fps${why}`;
+  });
+}
+setInterval(() => void showMeasuredRate(), 2000);
 
 async function connect() {
   teardownPeer();
@@ -272,6 +321,10 @@ function onConnectError(err: unknown) {
 // Session lifecycle
 // ---------------------------------------------------------------------------
 const NO_TOKEN_MSG = 'Open this page by scanning the QR code in OmniCam on your computer.';
+const DISCONNECTED_MSG =
+  'Disconnected from your computer.\n' +
+  'Disconnect was pressed in OmniCam on the computer, so the camera stopped and this QR code no longer works.\n' +
+  'To connect again, scan the new QR code shown in OmniCam.';
 
 async function startSession() {
   if (!token) {
@@ -315,6 +368,8 @@ function stopSession(message = 'Camera stopped.', isError = false) {
   void wakeLock?.release();
   wakeLock = null;
   els.start.disabled = false;
+  torchOn = false;
+  els.screenlight.hidden = true;
   showOverlay(message, isError);
 }
 
@@ -333,6 +388,7 @@ camera.onTrackChanged = (track) => {
     return;
   }
   els.preview.srcObject = new MediaStream([track]);
+  torchOn = false; // a reopened camera starts with the torch off
   if (sender && sender.track !== track) void sender.replaceTrack(track).then(() => sender && tuneSender(sender));
   refreshTrackInfo();
 };
@@ -368,10 +424,8 @@ els.flip.addEventListener('click', async () => {
   }
   els.flip.disabled = false;
 });
-els.torch.addEventListener('click', async () => {
-  torchOn = (await camera.setTorch(!torchOn)) && !torchOn;
-  els.torch.classList.toggle('on', torchOn);
-});
+els.torch.addEventListener('click', () => void setLight(!torchOn));
+els.screenlight.addEventListener('click', () => void setLight(false));
 els.res.addEventListener('change', () => {
   const preset = RESOLUTION_PRESETS[els.res.value];
   if (preset) {

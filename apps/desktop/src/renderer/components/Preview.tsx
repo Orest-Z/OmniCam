@@ -3,6 +3,8 @@ import type { StreamStats } from '@omnicam/protocol';
 
 interface Props {
   stats: StreamStats;
+  /** Keep the stream numbers on screen instead of only on hover. */
+  alwaysShowStats: boolean;
 }
 
 const CHIP: Record<StreamStats['state'], { text: string; cls: string } | null> = {
@@ -18,7 +20,7 @@ const CHIP: Record<StreamStats['state'], { text: string; cls: string } | null> =
  * blitted with putImageData on a software canvas. Deliberately no ImageBitmap / blob <img> /
  * accelerated canvas: each of those was measured to grow Chromium's GPU process without bound.
  */
-export function Preview({ stats }: Props) {
+export function Preview({ stats, alwaysShowStats }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [showStats, setShowStats] = useState(true);
   const live = stats.state === 'connected' || stats.state === 'stalled';
@@ -75,7 +77,10 @@ export function Preview({ stats }: Props) {
         </div>
       )}
       {live && stats.width > 0 && (
-        <span className={'stats' + (showStats ? ' show' : '')}>
+        <span
+          className={'stats' + (showStats || alwaysShowStats ? ' show' : '')}
+          title="What the phone is actually sending. This preview is a reduced 10 fps snapshot to save CPU; apps using the OmniCam camera get the full stream."
+        >
           {res} · {stats.fps} fps · {(stats.bitrateKbps / 1000).toFixed(1)} Mbps · {stats.codec || '—'} · {stats.rttMs} ms
           {stats.packetsLost > 0 ? ` · ${stats.packetsLost} lost` : ''}
         </span>

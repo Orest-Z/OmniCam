@@ -27,8 +27,9 @@ import { phoneServer } from './server';
 import { session } from './session';
 import { settings } from './settings';
 import { createTray, updateTray } from './tray';
-import { createOrShowUiWindow, markQuitting, uiWindow } from './ui-window';
+import { applyTheme, createOrShowUiWindow, markQuitting, uiWindow } from './ui-window';
 import { checkForUpdates, downloadUpdate, initUpdater, installUpdate, updateState } from './updater';
+import { outputFpsFor } from '../shared/stream-format';
 
 // --- Chromium switches: must be set before 'ready' -------------------------------------------
 // The engine's ICE host candidate must be a real LAN IP, not an mDNS name: phones on networks
@@ -78,22 +79,25 @@ async function startServer(): Promise<void> {
   broadcast({ pairing: info });
 }
 
+async function changeSettings(patch: Partial<AppSettings>): Promise<AppSettings> {
+  const prev = settings.get();
+  const next = settings.update(patch);
+  if (next.port !== prev.port || next.preferredIp !== prev.preferredIp) {
+    await startServer();
+  }
+  engine.applySettings(next);
+  if (next.theme !== prev.theme) applyTheme(next.theme);
+  if (next.launchAtLogin !== prev.launchAtLogin) {
+    app.setLoginItemSettings({ openAtLogin: next.launchAtLogin, args: ['--hidden'] });
+  }
+  broadcast({ settings: next });
+  return next;
+}
+
 function wireIpc(): void {
   ipcMain.handle(UI_GET_STATE, () => fullState());
 
-  ipcMain.handle(UI_SET_SETTINGS, async (_e, patch: Partial<AppSettings>) => {
-    const prev = settings.get();
-    const next = settings.update(patch);
-    if (next.port !== prev.port || next.preferredIp !== prev.preferredIp) {
-      await startServer();
-    }
-    engine.applySettings(next);
-    if (next.launchAtLogin !== prev.launchAtLogin) {
-      app.setLoginItemSettings({ openAtLogin: next.launchAtLogin, args: ['--hidden'] });
-    }
-    broadcast({ settings: next });
-    return next;
-  });
+  ipcMain.handle(UI_SET_SETTINGS, (_e, patch: Partial<AppSettings>) => changeSettings(patch));
 
   ipcMain.handle(UI_CONTROL, (_e, msg: DesktopToPhone) => engine.control(msg));
 
@@ -124,6 +128,13 @@ function wireIpc(): void {
   engine.on('preview', (frame: PreviewFrame) => uiWindow()?.webContents.send(UI_PREVIEW_FRAME, frame));
   engine.on('phone', (msg: PhoneToDesktop) => {
     if (msg.type === 'error') console.warn('[phone]', msg.message);
+    // Apps get exactly the virtual camera's rate, so it follows the rate the phone's camera really
+    // runs at, whichever side changed the resolution: 720p60 reaches Zoom at 60, and a phone that
+    // only managed 30 doesn't get its frames doubled. Only on a change: it restarts the device.
+    if (msg.type === 'trackInfo') {
+      const fps = outputFpsFor(msg.info.frameRate);
+      if (fps !== settings.get().outputFps) void changeSettings({ outputFps: fps });
+    }
   });
   engine.on('vcam-error', (message: string) => {
     vcamError = message;
@@ -136,6 +147,7 @@ async function main(): Promise<void> {
   await app.whenReady();
   app.setAppUserModelId('com.omnicam.desktop');
 
+  applyTheme(settings.get().theme);
   wireIpc();
   engine.create();
   createTray();
@@ -144,10 +156,24 @@ async function main(): Promise<void> {
     setTimeout(() => console.log(`[pids] main=${process.pid} engine=${engine.osPid()} ui=${uiWindow()?.webContents.getOSProcessId()}`), 4000);
   }
   if (process.env.OMNICAM_DEBUG?.includes('cpu')) {
-    // Dev: per-process CPU every 5 s, the same numbers Task Manager shows.
-    setInterval(async () => {
-      const cores = cpus().length;
-      const rows = (await app.getAppMetrics()).map((m) => `${m.type}${m.name ? ':' + m.name : ''}=${(m.cpu.percentCPUUsage / cores).toFixed(1)}%`);
+    // Dev: per-process CPU every 5 s, the same numbers Task Manager shows. Computed from cumulative
+    // CPU seconds: percentCPUUsage read 0 for every process on Electron 44 / Win10.
+    const cores = cpus().length;
+    let prev = new Map<number, number>();
+    let prevAt = performance.now();
+    setInterval(() => {
+      const now = performance.now();
+      const secs = (now - prevAt) / 1000;
+      const next = new Map<number, number>();
+      const names: Record<number, string> = { [engine.osPid() ?? -1]: 'engine', [uiWindow()?.webContents.getOSProcessId() ?? -1]: 'ui' };
+      const rows = app.getAppMetrics().map((m) => {
+        const total = m.cpu.cumulativeCPUUsage ?? 0;
+        next.set(m.pid, total);
+        const pct = prev.has(m.pid) ? ((total - prev.get(m.pid)!) / secs / cores) * 100 : 0;
+        return `${names[m.pid] ?? m.type + (m.name ? ':' + m.name : '')}=${pct.toFixed(1)}%`;
+      });
+      prev = next;
+      prevAt = now;
       console.log('[cpu]', rows.join(' '));
     }, 5000);
   }

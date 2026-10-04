@@ -47,8 +47,8 @@ Chrome, OBS — anything that lists webcams. Video goes phone → PC directly ov
 H.264; nothing leaves your network, and there is no account, no cloud and no app store.
 
 - **Phone side** — any modern browser: iPhone (Safari) or Android (Chrome). It's just a web page served by your PC.
-- **Quality** — 720p, 1080p, 1080p60 or 4K from the phone's camera, hardware H.264, latency on par with a native camera app.
-- **Controls** — front/back camera, torch, resolution, mirror, rotate, Fill/Fit — from the PC or from the phone.
+- **Quality** — 720p, 720p60, 1080p or 4K from the phone's camera, hardware H.264, latency on par with a native camera app.
+- **Controls** — front/back camera, torch (a screen light on the front camera), resolution, mirror, rotate, Fill/Fit — from the PC or from the phone. Light or dark desktop app.
 - **Stays out of the way** — runs from the tray; closing the window keeps the camera live. The phone drops to 5 fps
   once no app is using the camera *and* the OmniCam window is closed or hidden.
 - **Costs the phone battery** — the page has to stay open with the screen on, so plan on charging during long
@@ -176,11 +176,11 @@ with live stats: resolution, fps, bitrate, codec and network round-trip time.
 | Control              | What it does                                                                                       |
 | -------------------- | -------------------------------------------------------------------------------------------------- |
 | **Front / Back**     | Switch the phone's camera.                                                                         |
-| **720p · 1080p · 1080p60 · 4K** | Capture resolution on the phone. Bitrate follows automatically.                         |
-| **Torch**            | Phone flashlight (back camera, where the browser supports it).                                     |
+| **720p · 720p60 · 1080p · 4K** | Capture resolution on the phone. Bitrate follows automatically. 60 fps is 720p: phone browsers only offer it below 1080p. |
+| **Torch**            | Phone flashlight, on and off from either side. On the front camera the phone screen turns white to light your face (turn its brightness up: a web page can't). |
 | **Mirror · Rotate**  | Fix the orientation for how you hold the phone.                                                    |
 | **Fill / Fit**       | *Fill* (default) crops a portrait phone into a proper 16:9 picture; *Fit* shows everything with bars. |
-| **QR · Disconnect**  | Bring the QR code back while live, or drop the phone.                                              |
+| **QR · Disconnect**  | Bring the QR code back while live, or drop the phone: it stops, says why, and a new QR code is ready. |
 
 Hold the phone in landscape for the best picture. Keep the page open — locking the phone or switching apps pauses
 the camera, and it resumes when you come back (the last frame is held meanwhile, or a placeholder if you prefer).
@@ -194,16 +194,21 @@ the camera, and it resumes when you come back (the last frame is held meanwhile,
     <td width="55%" valign="top">
 
 **Camera device**
-- **Output resolution** — what Discord, Zoom… receive: 720p or 1080p at 30 or 60 fps. Consumer apps negotiate a format once, so this is fixed while they run; the phone picture is scaled into it.
+- **Output resolution** — what Discord, Zoom… receive: 720p, 1080p or 4K at 30 or 60 fps. The frame rate follows the phone (60 for 720p60). 4K is for OBS and recording; Discord, Zoom and Teams send at most 1080p. Consumer apps negotiate a format once, so this is fixed while they run; the phone picture is scaled into it.
 - **When the phone pauses** — hold the last frame or show a placeholder.
 - **Hardware video decoding** — off by default; software decoding measured faster up to 1080p. Try on for 4K.
+- **Stream details** — the resolution, real fps and bitrate over the preview: always (default) or on hover. The preview itself is a reduced 10 fps snapshot; apps get the full stream.
+
+**Phone camera**
+- **1080p at 60 fps (beta, Android only)** — some Android phones reach 60 fps at 1080p in the browser; others drop to a smaller size at 60. iPhones can't: every iPhone browser runs on Safari's engine, which only gives 60 fps up to 720p.
 
 **Network**
 - **Network interface** — the address embedded in the QR code. Pick your Wi-Fi adapter if you have VPNs or virtual adapters.
 - **Port** — change it if something else uses it.
 
 **App**
-- **Keep running in the tray** — closing the window keeps the camera available.
+- **Appearance** — Dark (default), Light or System. The sun/moon button next to Settings switches it in one click.
+- **Keep running in the tray** — closing the window keeps the camera available. Off: closing the window quits OmniCam.
 - **Start with Windows.**
 - **Check for updates** — OmniCam also checks quietly when it starts and once a day, unless you turn off
   *Check for updates automatically*; that check is the only connection it makes beyond your network ([PRIVACY.md](PRIVACY.md)). When a new version is out, an *Update available* badge appears in the title bar; nothing is downloaded or installed until you click.

@@ -1,5 +1,47 @@
 # Changelog
 
+## 1.3.0 — 2026-10-04
+
+A bigger update: real 60 fps, a light theme, 4K output and a front-camera light, plus fixes for the
+torch, Disconnect and closing the window.
+
+### New
+- **720p at 60 fps that really is 60.** The 1080p60 button never worked on iPhone: every iPhone browser
+  runs on Safari's engine, which accepts a 60 fps request at 1080p and then keeps the camera at 30. It
+  only reaches 60 fps at 720p, so **720p60** replaces 1080p60 on the desktop and on the phone. The phone
+  now checks the rate its camera actually runs at instead of trusting what the browser accepted.
+- **Apps get the 60 fps too.** The OmniCam camera's frame rate now follows what the phone really
+  sends: 60 for 720p60, 30 otherwise, whichever side changed the resolution. Before, the camera stayed
+  at 30 and Discord or Zoom got half the frames.
+- **1080p at 60 fps, beta, Android only** — *Settings → Phone camera → Try 1080p60*. Some Android phones
+  reach it in the browser; others drop to a smaller size at 60. Tell us how yours does.
+- **Light theme.** *Settings → Appearance*: Dark (still the default), Light or System, which follows
+  Windows. The sun/moon button next to Settings switches it in one click.
+- **A light for the front camera.** Front cameras have no flashlight, so the torch button now turns the
+  phone screen white to light your face. Turn the phone's brightness up for more light: a web page can't.
+- **4K output** for OBS and recording, next to 720p and 1080p. Discord, Zoom and Teams send at most
+  1080p, so it stays a manual choice.
+- **The stream numbers stay on screen.** The preview in the window is a reduced 10 fps snapshot to save
+  CPU, so it looks laggier than what apps get; the resolution / fps / bitrate overlay is the real picture
+  and no longer hides until you hover. *Settings → Stream details* switches back to hover-only.
+- The phone shows the resolution and frame rate it is really sending.
+
+### Fixes
+- **The torch can be turned off from the PC.** The button only ever switched it on; it now shows the
+  torch's state and toggles it, whichever side switched it on.
+- **Disconnect goes straight back to a new QR code.** It used to land on *Reconnecting* and stay there.
+- **The phone knows it was disconnected.** It used to keep filming until its connection timed out; now
+  it stops the camera and explains that Disconnect was pressed and to scan the new QR code.
+- **Closing the window quits OmniCam when *Keep running in the tray* is off.** It kept running in the
+  tray either way.
+- A frozen phone stream is noticed after 1 second instead of 3.
+
+### Under the hood
+- Tests for the frame-rate matching and for how the desktop reads the phone's resolution (including a
+  phone held upright).
+- An unknown theme value in `settings.json` falls back to dark instead of stopping OmniCam from starting.
+- Developer CPU logging works again on Electron 44.
+
 ## 1.2.0 — 2026-10-02
 
 ### Fixes

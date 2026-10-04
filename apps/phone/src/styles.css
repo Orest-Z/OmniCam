@@ -23,7 +23,7 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); f
 .brand .mark { width: 72px; height: 72px; margin: 0 auto 6px; }
 .brand h1 { margin: 0 0 6px; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
 .brand .sub { margin: 0; color: var(--dim); max-width: 30ch; font-size: 15px; }
-.msg { color: var(--dim); min-height: 1.4em; max-width: 34ch; font-size: 14px; }
+.msg { color: var(--dim); min-height: 1.4em; max-width: 34ch; font-size: 14px; white-space: pre-line; }
 .msg.error { color: #ffb9c4; }
 
 button { font: inherit; color: inherit; border: 0; background: none; padding: 0; cursor: pointer; }
@@ -60,3 +60,7 @@ button[hidden] { display: none; }
 .select { appearance: none; -webkit-appearance: none; border: 0; border-radius: 999px; background: var(--glass); color: var(--fg); padding: 9px 16px;
   font: 600 13px var(--font); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); text-align: center; }
 .hint { text-align: center; color: var(--dim); font-size: 12px; margin: 0; }
+
+.screenlight { position: absolute; inset: 0; z-index: 10; background: #fff; display: flex; align-items: flex-end; justify-content: center; padding: 0 24px calc(28px + env(safe-area-inset-bottom)); }
+.screenlight[hidden] { display: none; }
+.screenlight p { margin: 0; color: #999; font-size: 13px; text-align: center; }

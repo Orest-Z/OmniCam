@@ -66,6 +66,9 @@ export interface ResolutionPreset {
 export const RESOLUTION_PRESETS: Record<string, ResolutionPreset> = {
   '720p': { width: 1280, height: 720, frameRate: 30 },
   '1080p': { width: 1920, height: 1080, frameRate: 30 },
+  // Phone browsers (all of iOS) only offer 60 fps below 1080p, so the high-rate preset is 720p.
+  '720p60': { width: 1280, height: 720, frameRate: 60 },
+  /** Beta, Android only (offered in Settings): some Android browsers reach 60 fps at 1080p. */
   '1080p60': { width: 1920, height: 1080, frameRate: 60 },
   '4k': { width: 3840, height: 2160, frameRate: 30 },
 };
@@ -78,6 +81,8 @@ export type DesktopToPhone =
   | { type: 'setMirror'; on: boolean }
   /** Nobody is watching on the desktop: encode at a low frame rate to save the phone's battery. */
   | { type: 'setIdle'; idle: boolean }
+  /** The user pressed Disconnect: the pairing code is replaced, so the phone should stop, not retry. */
+  | { type: 'disconnect' }
   | { type: 'ping'; t: number };
 
 /** Phone -> desktop */
@@ -105,6 +110,8 @@ export interface TrackInfo {
 
 export interface PhoneCapabilities {
   torch: boolean;
+  /** Torch is lit right now (the desktop button toggles from this). */
+  torchOn?: boolean;
   zoom: boolean;
   facingModes: Facing[];
 }
@@ -172,7 +179,7 @@ export interface AppSettings {
   /** Preferred LAN IP for the QR; empty = auto. */
   preferredIp: string;
   /** Fixed output format of the virtual camera. */
-  outputPreset: '720p' | '1080p';
+  outputPreset: '720p' | '1080p' | '4k';
   outputFps: 30 | 60;
   mirror: boolean;
   rotation: 0 | 90 | 180 | 270;
@@ -180,6 +187,10 @@ export interface AppSettings {
   scaleMode: 'fit' | 'fill';
   /** When the phone stalls, hold the last frame instead of showing the placeholder. */
   holdLastFrame: boolean;
+  /** Stream numbers over the preview: always, or only while hovered. */
+  streamDetails: 'always' | 'hover';
+  /** Desktop app colours; 'system' follows the Windows light/dark setting. */
+  theme: 'dark' | 'light' | 'system';
   closeToTray: boolean;
   launchAtLogin: boolean;
   /**
@@ -206,6 +217,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   rotation: 0,
   scaleMode: 'fill',
   holdLastFrame: true,
+  streamDetails: 'always',
+  theme: 'dark',
   closeToTray: true,
   launchAtLogin: false,
   hardwareDecode: false,
