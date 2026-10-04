@@ -231,17 +231,24 @@ function stopPump() {
 }
 
 // Peer connection -------------------------------------------------------------
-function teardownPeer() {
+/** `closeAfterMs` lets a last control message reach the phone before the connection goes. */
+function teardownPeer(closeAfterMs = 0) {
   stopPump();
-  control?.close();
+  const channel = control;
+  const peer = pc;
   control = null;
-  if (pc) {
-    pc.onconnectionstatechange = null;
-    pc.ontrack = null;
-    pc.ondatachannel = null;
-    pc.close();
-    pc = null;
+  pc = null;
+  if (peer) {
+    peer.onconnectionstatechange = null;
+    peer.ontrack = null;
+    peer.ondatachannel = null;
   }
+  const close = () => {
+    channel?.close();
+    peer?.close();
+  };
+  if (closeAfterMs) setTimeout(close, closeAfterMs);
+  else close();
   if (vcam && vcamStarted && !engineSettings?.holdLastFrame) vcam.showPlaceholder();
 }
 
@@ -438,7 +445,9 @@ ipcRenderer.on(ENGINE_OFFER, (_e, offer: EngineOffer) => {
 });
 ipcRenderer.on(ENGINE_CONTROL, (_e, msg: DesktopToPhone) => sendControl(msg));
 ipcRenderer.on(ENGINE_DISCONNECT, () => {
-  teardownPeer();
+  // Tell the phone first: it stops its camera and explains, instead of timing out into retries.
+  sendControl({ type: 'disconnect' });
+  teardownPeer(300);
   setState('idle');
 });
 ipcRenderer.on(ENGINE_PREVIEW, (_e, enabled: boolean) => {

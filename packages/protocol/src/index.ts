@@ -81,6 +81,8 @@ export type DesktopToPhone =
   | { type: 'setMirror'; on: boolean }
   /** Nobody is watching on the desktop: encode at a low frame rate to save the phone's battery. */
   | { type: 'setIdle'; idle: boolean }
+  /** The user pressed Disconnect: the pairing code is replaced, so the phone should stop, not retry. */
+  | { type: 'disconnect' }
   | { type: 'ping'; t: number };
 
 /** Phone -> desktop */

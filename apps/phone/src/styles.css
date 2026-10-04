@@ -23,7 +23,7 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); f
 .brand .mark { width: 72px; height: 72px; margin: 0 auto 6px; }
 .brand h1 { margin: 0 0 6px; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
 .brand .sub { margin: 0; color: var(--dim); max-width: 30ch; font-size: 15px; }
-.msg { color: var(--dim); min-height: 1.4em; max-width: 34ch; font-size: 14px; }
+.msg { color: var(--dim); min-height: 1.4em; max-width: 34ch; font-size: 14px; white-space: pre-line; }
 .msg.error { color: #ffb9c4; }
 
 button { font: inherit; color: inherit; border: 0; background: none; padding: 0; cursor: pointer; }

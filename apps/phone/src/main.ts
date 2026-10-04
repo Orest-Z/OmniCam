@@ -134,6 +134,11 @@ async function handleControl(msg: DesktopToPhone) {
       idleMode = msg.idle;
       if (sender) void tuneSender(sender);
       break;
+    case 'disconnect':
+      stopSession(DISCONNECTED_MSG);
+      // The old pairing code is dead, so Start would only fail: point to the new QR instead.
+      els.start.hidden = true;
+      break;
     case 'ping':
       send({ type: 'pong', t: msg.t });
       break;
@@ -315,6 +320,10 @@ function onConnectError(err: unknown) {
 // Session lifecycle
 // ---------------------------------------------------------------------------
 const NO_TOKEN_MSG = 'Open this page by scanning the QR code in OmniCam on your computer.';
+const DISCONNECTED_MSG =
+  'Disconnected from your computer.\n' +
+  'Disconnect was pressed in OmniCam on the computer, so the camera stopped and this QR code no longer works.\n' +
+  'To connect again, scan the new QR code shown in OmniCam.';
 
 async function startSession() {
   if (!token) {
