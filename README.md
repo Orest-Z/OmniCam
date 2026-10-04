@@ -215,7 +215,8 @@ the camera, and it resumes when you come back (the last frame is held meanwhile,
 
 </td>
     <td width="45%" align="center">
-      <img src="docs/media/screenshots/desktop-settings.webp" width="380" alt="Settings dialog">
+      <img src="docs/media/screenshots/desktop-settings.webp" width="380" alt="Settings dialog: camera device and phone camera">
+      <img src="docs/media/screenshots/desktop-settings-2.webp" width="380" alt="Settings dialog: network and app">
     </td>
   </tr>
 </table>
