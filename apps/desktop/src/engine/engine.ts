@@ -304,9 +304,11 @@ async function handleOffer(offer: EngineOffer): Promise<EngineAnswer> {
     } catch {
       /* not supported */
     }
-    ev.track.onmute = () => setState('stalled');
-    ev.track.onunmute = () => setState('connected');
-    ev.track.onended = () => setState('disconnected');
+    // Closing the peer (Disconnect, or a new phone taking over) ends this track too: only the
+    // current peer's track may change the state, or Disconnect lands on "Reconnecting".
+    ev.track.onmute = () => pc === peer && setState('stalled');
+    ev.track.onunmute = () => pc === peer && setState('connected');
+    ev.track.onended = () => pc === peer && setState('disconnected');
     startPump(ev.track);
   };
   peer.ondatachannel = (ev) => {
