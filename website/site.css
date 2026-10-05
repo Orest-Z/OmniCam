@@ -176,6 +176,9 @@ main section.stats-band { padding-top: 40px; padding-bottom: 40px; border-top: 0
   border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; background: var(--border); gap: 1px;
 }
 @media (min-width: 820px) { .stats { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.stats a { position: relative; }
+.stats .ico { position: absolute; top: 22px; right: 22px; width: 20px; height: 20px; color: var(--accent-soft); opacity: 0.7; transition: opacity 0.2s, transform 0.3s var(--ease); }
+.stats a:hover .ico { opacity: 1; transform: translateY(-2px); }
 .stats a { display: block; height: 100%; background: var(--bg); padding: 22px 24px; transition: background 0.2s; }
 .stats a:hover { text-decoration: none; background: var(--surface); }
 .stats b { display: block; color: var(--text); font-size: clamp(28px, 3.8vw, 40px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.1; font-variant-numeric: tabular-nums; }
