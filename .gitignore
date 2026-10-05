@@ -14,3 +14,8 @@ packages/vcam-native/build/
 *.tsbuildinfo
 packages/vcam-native/build-x86/
 apps/desktop/release/
+
+# Locally installed agent skills (npx skills add)
+.agents/
+.claude/
+skills-lock.json
