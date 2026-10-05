@@ -20,6 +20,20 @@
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
+  <!-- Icons: one 24px line set, 1.6 stroke, round caps. Drawn for this site. -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-frame" viewBox="0 0 24 24"><path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-flip" viewBox="0 0 24 24"><path d="M4.5 10a7.5 7.5 0 0 1 13.4-3.6M19.5 14a7.5 7.5 0 0 1-13.4 3.6"/><path d="M18.5 3v3.5H15M5.5 21v-3.5H9"/></symbol>
+    <symbol id="i-tray" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M9 21h6M12 17v4"/><path d="M15.5 13.5h2"/></symbol>
+    <symbol id="i-p2p" viewBox="0 0 24 24"><rect x="2.5" y="8" width="6" height="11" rx="1.5"/><rect x="13" y="10" width="8.5" height="6.5" rx="1.2"/><path d="M11.5 19.5h11.5"/><path d="M7 4.8a6 6 0 0 1 10 0M9.3 6.6a3 3 0 0 1 5.4 0"/></symbol>
+    <symbol id="i-code" viewBox="0 0 24 24"><path d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14"/></symbol>
+    <symbol id="i-battery" viewBox="0 0 24 24"><rect x="2.5" y="7" width="17" height="10" rx="2.2"/><path d="M22 10.5v3M6 10v4"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M10 6.5h10M10 12h10M10 17.5h10"/><path d="m3.5 6.5 1.3 1.3L7.2 5.3M3.5 12l1.3 1.3 2.4-2.5M3.5 17.5l1.3 1.3 2.4-2.5"/></symbol>
+    <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h15m-3.5-3.5L19 8l-3.5 3.5M20 16H5m3.5-3.5L5 16l3.5 3.5"/></symbol>
+    <symbol id="i-branch" viewBox="0 0 24 24"><circle cx="6" cy="5.5" r="2"/><circle cx="6" cy="18.5" r="2"/><circle cx="18" cy="7.5" r="2"/><path d="M6 7.5v9M18 9.5c0 4.5-6.5 3.5-10.5 7.5"/></symbol>
+    <symbol id="i-sign" viewBox="0 0 24 24"><path d="M3 16c2.5 0 3.5-8.5 5.5-8.5S8 17 10.5 17s2.5-5 4.5-5 1 3.5 3 3.5h2.5"/><path d="M3 20.5h18"/></symbol>
+    <symbol id="i-github" viewBox="0 0 16 16"><path fill="currentColor" stroke="none" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></symbol>
+  </svg>
   <header class="top">
     <div class="wrap top-row">
       <a class="brand" href="#">
@@ -30,7 +44,7 @@
         <a href="#how">How it works</a>
         <a href="#trust">Security</a>
         <a href="#faq">FAQ</a>
-        <a class="nav-gh" href="https://github.com/Orest-Z/OmniCam">GitHub</a>
+        <a class="nav-gh" href="https://github.com/Orest-Z/OmniCam"><svg class="ico" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
       </nav>
     </div>
   </header>
@@ -124,12 +138,12 @@
       <p class="label reveal">02 — Features</p>
       <h2 class="reveal">What you get</h2>
       <div class="bento">
-        <div class="card wide reveal"><h3>Up to 4K from the phone</h3><p>720p, 720p60, 1080p or 4K capture, encoded by the phone's hardware H.264 encoder.</p><span class="big" aria-hidden="true">4K</span></div>
-        <div class="card reveal"><h3>Front, back, torch</h3><p>Switch cameras, toggle the flashlight, mirror, rotate, Fill or Fit, from the PC or the phone.</p></div>
-        <div class="card reveal"><h3>Out of the way</h3><p>Runs from the tray; closing the window keeps the camera live. About a quarter of a CPU core at 1080p.</p></div>
-        <div class="card wide reveal"><h3>Stays on your network</h3><p>Peer-to-peer WebRTC over your Wi-Fi. No relay servers, nothing uploaded anywhere.</p><span class="big" aria-hidden="true">P2P</span></div>
-        <div class="card wide reveal"><h3>Free and open</h3><p>MIT licensed. Read every line on GitHub, build it yourself, or send a fix.</p><span class="big" aria-hidden="true">MIT</span></div>
-        <div class="card reveal"><h3>Saves the phone's battery when idle</h3><p>Drops to 5 fps when no app is using the camera and the window is hidden.</p></div>
+        <div class="card wide reveal"><svg class="ico" aria-hidden="true"><use href="#i-frame"/></svg><h3>Up to 4K from the phone</h3><p>720p, 720p60, 1080p or 4K capture, encoded by the phone's hardware H.264 encoder.</p><span class="big" aria-hidden="true">4K</span></div>
+        <div class="card reveal"><svg class="ico" aria-hidden="true"><use href="#i-flip"/></svg><h3>Front, back, torch</h3><p>Switch cameras, toggle the flashlight, mirror, rotate, Fill or Fit, from the PC or the phone.</p></div>
+        <div class="card reveal"><svg class="ico" aria-hidden="true"><use href="#i-tray"/></svg><h3>Out of the way</h3><p>Runs from the tray; closing the window keeps the camera live. About a quarter of a CPU core at 1080p.</p></div>
+        <div class="card wide reveal"><svg class="ico" aria-hidden="true"><use href="#i-p2p"/></svg><h3>Stays on your network</h3><p>Peer-to-peer WebRTC over your Wi-Fi. No relay servers, nothing uploaded anywhere.</p><span class="big" aria-hidden="true">P2P</span></div>
+        <div class="card wide reveal"><svg class="ico" aria-hidden="true"><use href="#i-code"/></svg><h3>Free and open</h3><p>MIT licensed. Read every line on GitHub, build it yourself, or send a fix.</p><span class="big" aria-hidden="true">MIT</span></div>
+        <div class="card reveal"><svg class="ico" aria-hidden="true"><use href="#i-battery"/></svg><h3>Saves the phone's battery when idle</h3><p>Drops to 5 fps when no app is using the camera and the window is hidden.</p></div>
       </div>
     </section>
 
@@ -155,6 +169,7 @@
       <p class="sub reveal">OmniCam asks for administrator rights and opens a port on your network. Here is exactly what it does with them.</p>
       <div class="grid two">
         <div class="card reveal">
+          <svg class="ico" aria-hidden="true"><use href="#i-list"/></svg>
           <h3>What the installer changes</h3>
           <ul>
             <li>Registers the <b>OmniCam</b> camera device (a DirectShow filter, 64- and 32-bit).</li>
@@ -163,6 +178,7 @@
           <p>Both are listed on the installer's first page and removed when you uninstall. Nothing else runs as administrator.</p>
         </div>
         <div class="card reveal">
+          <svg class="ico" aria-hidden="true"><use href="#i-swap"/></svg>
           <h3>What goes over the network</h3>
           <ul>
             <li>Phone ↔ PC on your local network: the pairing page and the encrypted video.</li>
@@ -171,12 +187,14 @@
           <p>No account, no telemetry, no analytics, no crash reports. <a href="https://github.com/Orest-Z/OmniCam/blob/main/PRIVACY.md">Privacy details</a></p>
         </div>
         <div class="card reveal">
+          <svg class="ico" aria-hidden="true"><use href="#i-branch"/></svg>
           <h3>Where the installer comes from</h3>
           <p>Every installer is built by the project's public GitHub Actions workflow from the tagged source, and published on
             <a href="https://github.com/Orest-Z/OmniCam/releases">GitHub Releases</a>. This site links there; it hosts no downloads of its own.</p>
           <p class="mono small" id="checksum" hidden></p>
         </div>
         <div class="card reveal">
+          <svg class="ico" aria-hidden="true"><use href="#i-sign"/></svg>
           <h3>Code signing</h3>
           <p>Releases are moving to free code signing provided by SignPath.io, certificate by SignPath Foundation, so
             Windows shows a verified publisher. Until that is in place, Windows SmartScreen asks you to confirm:
@@ -242,7 +260,7 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span>Download for Windows</span>
         </a>
-        <a class="btn ghost" href="https://github.com/Orest-Z/OmniCam">View source</a>
+        <a class="btn ghost" href="https://github.com/Orest-Z/OmniCam"><svg class="ico" aria-hidden="true"><use href="#i-github"/></svg>View source</a>
       </div>
       <p class="meta" data-download-meta>64-bit installer · MIT license</p>
     </section>

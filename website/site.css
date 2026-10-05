@@ -98,11 +98,10 @@ nav a:hover { color: var(--text); text-decoration: none; }
 }
 .hero-copy { display: flex; flex-direction: column; align-items: center; }
 .eyebrow {
-  display: inline-flex; align-items: center; gap: 8px; margin: 0 0 24px; padding: 5px 12px;
+  display: inline-flex; align-items: center; margin: 0 0 24px; padding: 5px 12px;
   border: 1px solid var(--border-strong); border-radius: 999px; background: rgba(20, 19, 23, 0.6);
   color: var(--text-2); font: 500 12px/1.4 var(--mono); letter-spacing: 0.02em;
 }
-.eyebrow::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
 h1 { font-size: clamp(40px, 7.4vw, 84px); line-height: 1; letter-spacing: -0.045em; margin: 0 0 24px; font-weight: 650; }
 h1 span, h2 span {
   color: transparent; background: linear-gradient(180deg, #a9a4b9, #5f5a6e); -webkit-background-clip: text; background-clip: text;
@@ -126,6 +125,18 @@ h1 span, h2 span {
 .btn.primary:hover { background: var(--accent-hover); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.16) inset, 0 14px 36px -10px rgba(138, 92, 243, 0.95); }
 .btn.ghost { background: transparent; }
 .btn svg { width: 18px; height: 18px; }
+/* Icons from the sprite at the top of index.html. */
+.ico { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.nav-gh { display: inline-flex; align-items: center; gap: 7px; }
+.nav-gh .ico { width: 15px; height: 15px; }
+.card > .ico {
+  width: 44px; height: 44px; padding: 10px; margin-bottom: 20px; border-radius: 12px;
+  color: var(--accent-soft); background: var(--accent-tint); border: 1px solid rgba(138, 92, 243, 0.22);
+  transition: transform 0.3s var(--ease), background 0.3s;
+}
+.card:hover > .ico { transform: translateY(-2px); background: rgba(138, 92, 243, 0.2); }
+.bento .card > .ico { margin-bottom: auto; }
+.bento .card h3 { margin-top: 28px; }
 .dim { color: var(--text-3); font: 500 13px var(--mono); }
 .meta { color: var(--text-3); font: 13px var(--mono); margin: 16px 0 0; }
 
