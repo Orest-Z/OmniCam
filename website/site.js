@@ -46,24 +46,20 @@ const count = new Intl.NumberFormat('en', { notation: 'compact', maximumFraction
   }
 })();
 
-// Demo video. Until someone asks for it, the player loops a muted five seconds (tap Start → live on the PC) while it is
-// on screen; the browser fetches only that range of the hosted file. "Watch with sound" plays the same file from the top.
-// Reduced motion or Data Saver: no teaser, just the poster and the button.
+// Demo video. It autoplays muted and looping while it is on screen: browsers refuse autoplay with sound until the
+// visitor has interacted with the page. "Watch with sound" restarts it from the top, unmuted, with controls.
+// Reduced motion or Data Saver: no autoplay, just the poster and the button.
 {
   const video = document.getElementById('demo');
   const play = document.querySelector('.play');
-  const LOOP_START = 12.6, LOOP_END = 17.6;
   let teaser = !matchMedia('(prefers-reduced-motion: reduce)').matches && !navigator.connection?.saveData;
 
   video.controls = false;
   play.hidden = false;
 
   if (teaser) {
-    video.preload = 'metadata';
-    video.addEventListener('loadedmetadata', () => (video.currentTime = LOOP_START), { once: true });
-    video.addEventListener('timeupdate', () => {
-      if (teaser && video.currentTime >= LOOP_END) video.currentTime = LOOP_START;
-    });
+    video.loop = true;
+    video.preload = 'auto';
     new IntersectionObserver(([e]) => {
       if (!teaser) return;
       if (e.isIntersecting) video.play().catch(() => {});
@@ -74,6 +70,7 @@ const count = new Intl.NumberFormat('en', { notation: 'compact', maximumFraction
   const full = () => {
     teaser = false;
     play.hidden = true;
+    video.loop = false;
     video.controls = true;
     video.muted = false;
     video.currentTime = 0;
