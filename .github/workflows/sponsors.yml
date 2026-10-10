@@ -1,0 +1,35 @@
+name: Update sponsors
+
+# Refreshes the Sponsors section in README.md from GitHub Sponsors.
+# main is protected, so changes arrive as a pull request instead of a direct push.
+on:
+  schedule:
+    - cron: "17 6 * * 1"   # every Monday
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sponsors:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate sponsors list
+        uses: JamesIves/github-sponsors-readme-action@v1
+        with:
+          token: ${{ secrets.SPONSORS_TOKEN }}
+          file: README.md
+          minimum: 1000   # $10/month and up, matching the README tier
+          fallback: "No sponsors yet. [Be the first](https://github.com/sponsors/Orest-Z)!"
+
+      - name: Open a pull request if the list changed
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: chore/update-sponsors
+          commit-message: Update sponsors in README
+          title: Update sponsors in README
+          body: Automated refresh of the Sponsors section from GitHub Sponsors.
+          delete-branch: true
