@@ -25,6 +25,7 @@
   <img alt="Phone: no app needed" src="https://img.shields.io/badge/Phone-no%20app%20needed-3b3552?style=flat-square">
   <img alt="Video: WebRTC on your LAN" src="https://img.shields.io/badge/Video-WebRTC%20on%20your%20LAN-3b3552?style=flat-square">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-3b3552?style=flat-square"></a>
+  <a href="https://github.com/sponsors/Orest-Z"><img alt="Sponsor" src="https://img.shields.io/github/sponsors/Orest-Z?label=Sponsor&logo=GitHub&color=EA4AAA&style=flat-square"></a>
 </p>
 
 <table align="center">
@@ -346,6 +347,12 @@ to put in a pull request, and [ARCHITECTURE.md](ARCHITECTURE.md) explains why th
 Found something security-sensitive? [SECURITY.md](SECURITY.md) says how to report it privately.
 [PRIVACY.md](PRIVACY.md) lists every connection the app makes, and [CODE_SIGNING.md](CODE_SIGNING.md) what gets
 signed and by whom.
+
+## Sponsors
+
+OmniCam is a hobby project. If it saves you buying a webcam, you can [sponsor its development](https://github.com/sponsors/Orest-Z). Thanks to everyone who does:
+
+<!-- sponsors --><!-- sponsors -->
 
 ## License
 
