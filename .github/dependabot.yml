@@ -19,6 +19,12 @@ updates:
       # Types must match the Node version the code runs on (Electron's and CI's), not the newest one.
       - dependency-name: '@types/node'
         update-types: [version-update:semver-major]
+      # electron-vite 5 only supports vite up to 7, and @vitejs/plugin-react 6 requires vite 8.
+      # Move all three together once an electron-vite release supports vite 8.
+      - dependency-name: vite
+        update-types: [version-update:semver-major]
+      - dependency-name: '@vitejs/plugin-react'
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: github-actions
     directory: /
