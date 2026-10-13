@@ -8,12 +8,13 @@ server. Nothing about you, your phone or your video is sent to the developer.
 | What | Where to | When | Can I turn it off? |
 |---|---|---|---|
 | The phone page and pairing | Your phone → your PC, on your local network (HTTPS, port 28441 by default) | While you pair | It *is* the app |
-| Video and camera controls | Your phone ↔ your PC, peer-to-peer on your local network (WebRTC, encrypted) | While streaming | It *is* the app |
+| Video, microphone sound and controls | Your phone ↔ your PC, peer-to-peer on your local network (WebRTC, encrypted) | While streaming; the microphone only when you turn it on | It *is* the app |
 | Update check | Your PC → GitHub (`github.com`, the project's Releases) | At launch and once a day | **Yes**: Settings → *Check for updates automatically* |
 | Update download | Your PC → GitHub | Only after you click *Update* | Don't click it |
 
-- The video never leaves your network: there are no STUN, TURN or relay servers, and WebRTC only uses
-  your PC's local addresses.
+- Video and sound never leave your network: there are no STUN, TURN or relay servers, and WebRTC only uses
+  your PC's local addresses. On the PC the phone's sound goes only into the virtual audio cable you
+  installed, never to your speakers, and nothing is recorded.
 - The phone page is served by your PC and loads nothing from the internet (fonts and scripts are built in).
 - An update check is an ordinary request to GitHub for the latest release's `latest.yml`. GitHub sees your
   IP address and that an OmniCam install asked; [GitHub's privacy statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement)

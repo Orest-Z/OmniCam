@@ -64,7 +64,7 @@ H.264; nothing leaves your network, and there is no account, no cloud and no app
 | Open source              | **yes**                  | no                | no                | no                | no                |
 | Account / cloud          | **none**                 | none              | none              | account           | none              |
 | Video path               | phone → PC on your Wi-Fi | Wi-Fi / USB       | Wi-Fi / USB       | Wi-Fi / USB       | Wi-Fi / USB       |
-| Microphone               | not yet                  | yes               | yes               | yes               | yes               |
+| Microphone               | yes, through VB-CABLE    | yes               | yes               | yes               | yes               |
 
 The trade-off for "no app" is a browser security warning the first time (explained below), and USB is not an option
 yet — a phone hotspot or USB tethering with the PC on it works as a stand-in.
@@ -80,11 +80,26 @@ What OmniCam does about it: the phone captures at the resolution you pick and no
 phone's hardware H.264 encoder, and the stream drops to 5 fps once no app on the PC is using the camera and the
 OmniCam window is hidden. That saves battery while you are idle — not while you are actually on a call. It also keeps
 the screen awake where the browser allows it (iOS 16.4+, Android Chrome); where it doesn't, locking the phone pauses
-the camera until you wake it.
+the camera until you wake it. *Microphone only* is far lighter: the camera and the video encoder stay off.
+
+### The phone as a microphone
+
+Pick *Camera + microphone* or *Microphone only* on the phone before tapping Start; the microphone and camera buttons in
+the OmniCam window switch either one later, without reconnecting. Windows has no way for an app to add a microphone
+device without a signed audio driver, so OmniCam plays the phone's sound into a virtual audio cable and apps use the
+cable's other end:
+
+1. Install [VB-CABLE](https://vb-audio.com/Cable/) (free) and restart the computer. Keep your speakers or headphones as
+   the default playback device; OmniCam warns if the cable has taken that place.
+2. In Discord, Zoom or Teams, choose **CABLE Output (VB-Audio Virtual Cable)** as the microphone.
+
+The microphone is sent raw, like a USB mic: the app's own noise suppression and echo cancellation do the rest. It is
+never played on your speakers. *Settings → Phone microphone* shows which cable is used.
 
 ### What it doesn't do (yet)
 
-- **No microphone.** Video only — your usual mic keeps working. A virtual mic is on the roadmap.
+- **No microphone device of its own.** The phone's microphone reaches apps through VB-CABLE (above). An "OmniCam"
+  microphone needs a signed Windows audio driver and is on the roadmap.
 - **Windows only.** Windows 10 (1809+) and Windows 11, 64-bit. macOS and Linux are on the roadmap.
 - **DirectShow cameras only.** The Windows Camera app and the new Microsoft Teams use the newer Windows camera stack
   and will not list OmniCam. Discord, Zoom, Google Meet, Chrome, Firefox, OBS and Slack do.
@@ -315,7 +330,7 @@ Without the native build the app still runs (QR, phone connection, preview) and 
 - macOS (CoreMediaIO camera extension) and Linux (v4l2loopback)
 - Code signing (in progress, through SignPath Foundation)
 - Optional "no-warning mode" with a real certificate
-- Virtual microphone
+- An "OmniCam" microphone device of its own, so VB-CABLE isn't needed
 
 ## AI involvement
 
