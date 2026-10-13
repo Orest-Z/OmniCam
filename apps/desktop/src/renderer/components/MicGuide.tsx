@@ -8,6 +8,7 @@ import { useLoopbacks } from '../useLoopbacks';
 import { SPEAKING_LEVEL } from './LiveView';
 import { Dialog } from './ui';
 import downloadShot from '../assets/vb-cable/download.webp';
+import unzipShot from '../assets/vb-cable/unzip.webp';
 import runAsAdminShot from '../assets/vb-cable/run-as-admin.webp';
 import installDriverShot from '../assets/vb-cable/install-driver.webp';
 import installedShot from '../assets/vb-cable/installed.webp';
@@ -29,7 +30,9 @@ const INSTALL: { tab: string; text: string; shot?: string; alt?: string }[] = [
   },
   {
     tab: 'Unzip',
-    text: 'In your Downloads folder, right-click the VBCABLE_Driver_Pack zip, choose Extract All, then open the folder it makes.',
+    text: 'In your Downloads folder, right-click the VBCABLE_Driver_Pack zip and extract it: 7-Zip → Extract to "VBCABLE_Driver_Pack…" as shown, or Extract All… without 7-Zip. Then open the folder it makes.',
+    shot: unzipShot,
+    alt: 'The downloaded zip right-clicked, with 7-Zip and Extract to "VBCABLE_Driver_Pack45\\" circled; Extract All sits just above',
   },
   {
     tab: 'Run as admin',
