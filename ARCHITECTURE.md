@@ -12,8 +12,8 @@ webcam** for Discord, Zoom, Teams, Chrome, OBS… with **nothing installed on th
    DirectShow virtual camera device named **"OmniCam"**.
 
 Priorities, in order: it must *just work* for non-technical users; video quality and latency on
-par with native camera apps; front/back camera switching; robust reconnects. Video only in v1
-(no virtual microphone).
+par with native camera apps; front/back camera switching; robust reconnects. The phone's microphone
+can come along, or replace the camera: it is played into a virtual audio cable (see **Phone microphone**).
 
 ## Non-negotiable product constraints and the decisions they forced
 
@@ -26,6 +26,7 @@ par with native camera apps; front/back camera switching; robust reconnects. Vid
 | Consumer apps negotiate a camera format once | Virtual camera output is a **fixed size/fps** (720p/1080p @30/60); incoming frames are scaled/letterboxed in native code. |
 | Some Wi-Fi blocks mDNS | Electron runs with `--disable-features=WebRtcHideLocalIpsWithMdns` so the desktop's ICE candidate is a real LAN IP. |
 | Camera must survive closing the window | Hidden **engine** window owns WebRTC + native addon; UI window is optional; app lives in the tray. |
+| Windows has no user-mode virtual microphone; audio drivers must be signed by Microsoft | The phone's audio is **played into a virtual audio cable** (VB-CABLE, installed by the user) with `setSinkId`; apps pick the cable's other end. An own signed driver is roadmap. |
 
 ## Architecture
 
@@ -33,9 +34,10 @@ par with native camera apps; front/back camera switching; robust reconnects. Vid
 PHONE (browser)                       DESKTOP (Electron)
  apps/phone  ── HTTPS GET / ────────►  main process   (apps/desktop/src/main)
              ── POST /api/session ──►    https server, cert, QR/token, tray, settings, IPC hub
-             ◄── WebRTC video+DC ───►  engine window  (apps/desktop/src/engine)  [nodeIntegration]
+             ◄ WebRTC video+audio+DC ► engine window  (apps/desktop/src/engine)  [nodeIntegration]
                                           RTCPeerConnection → MediaStreamTrackProcessor
                                           → VideoFrame.copyTo → addon.pushFrame()
+                                          audio track → <audio>.setSinkId(cable) → apps' microphone
                                        native addon   (packages/vcam-native)  [C++]
                                           pacing thread, libyuv convert/scale/rotate → BGR24
                                           → softcam shared memory → omnicam_vcam.dll (DirectShow)
@@ -54,6 +56,39 @@ PHONE (browser)                       DESKTOP (Electron)
   reconnect loop restores the stream. Everything `console.*` in main (engine logs are relayed)
   goes to `%APPDATA%\OmniCam\logs\omnicam.log`, 2 MB with one rotation.
 
+## Phone microphone
+
+- **A loopback, not a driver.** The engine plays the phone's audio track through a hidden `<audio>`
+  element whose output is a virtual cable (`setSinkId`); apps choose the cable's capture side as their
+  microphone. Chromium's WebRTC jitter buffer already absorbs network jitter, the phone-vs-device clock
+  drift and resampling in native code, so there is no Web Audio graph and no native audio code. An own
+  signed "OmniCam Microphone" driver would be one more loopback for `shared/audio-sink.ts` to recognise;
+  the engine would not change. Linux could create one at runtime without root (a PipeWire null sink plus
+  a remapped source).
+- **Never the speakers.** `shared/audio-sink.ts` (shared by engine and UI, tested) only returns known
+  loopback outputs, never Chromium's follow-the-default entries. The track is attached only after
+  `setSinkId` succeeds, only while the phone reports its microphone on, and is detached when the cable
+  goes away. With nothing attached Chromium does not decode the audio (verified: `totalSamplesDuration` 0).
+- **Nothing while the microphone is off.** Listing or watching audio devices (`enumerateDevices`,
+  `devicechange`) makes Chromium start its audio service and list cameras as well, and both stay for the
+  rest of the session. So the engine and the live view only do it while the phone's microphone is on
+  (Settings does it while open), and the video-capture service runs in the main process
+  (`RunVideoCaptureServiceInBrowserProcess`): ~7 MB there instead of a ~64 MB process of its own.
+  Listing cameras briefly opens OmniCam's own, so the log shows "camera opened by an app" once.
+- **Switching without renegotiating.** The phone always offers one video and one audio transceiver and
+  switches each with `replaceTrack(track | null)`; `setMic` / `setCamera` and the phone's `sources`
+  message carry the state. The phone keeps at least one on. The tracks share no `MediaStream`, so Chromium
+  does not lip-sync them and hold the video (`jitterBufferTarget = 0`) back to the audio's pace.
+- **A raw microphone.** The phone opens it with echo cancellation, noise suppression and AGC off, like a
+  USB mic: the app on the PC does its own. Camera and microphone open in one `getUserMedia` call (one
+  permission prompt on iOS), then the audio track leaves the camera's stream so camera restarts never
+  cut it. The answer asks for mono Opus at 64 kbps with in-band FEC (`engine/sdp.ts`).
+- **Camera off is not a stall.** With the camera off, stall detection follows audio packets instead of
+  frames, and apps get a "camera is off" placeholder rather than a frozen last frame. The UI's speaking
+  glow comes from `totalAudioEnergy` in the stats the engine already polls. WebRTC adds up squared 10 ms
+  *peaks* after the element's volume, so the level reads a little above true RMS, and a silent test at
+  volume 0 reads 0.
+
 ## Repository layout
 
 ```
@@ -62,14 +97,16 @@ apps/desktop/                Electron app (electron-vite, React, TS)
   src/main/                  index.ts, server.ts, cert.ts, network.ts, session.ts, settings.ts,
                              engine-bridge.ts (only thing that talks to the engine), tray.ts, ui-window.ts,
                              log.ts (%APPDATA%\OmniCam\logs), user-data.ts (1.0.0 folder migration)
-  src/engine/                engine.ts (WebRTC receiver, stats, preview JPEGs, frame pump), vcam.ts (addon API)
+  src/engine/                engine.ts (WebRTC receiver, stats, preview JPEGs, frame pump), vcam.ts (addon API),
+                             mic.ts (phone audio → virtual cable), sdp.ts (answer tuning)
   src/renderer/              React UI (Pairing, Preview, Controls, Settings)
   src/preload/               contextBridge → window.omnicam (typed in shared/ipc.ts)
   src/shared/ipc.ts          IPC channel names + payload types, settings and stats (single source of truth)
+  src/shared/audio-sink.ts   which audio outputs the phone's microphone may play into (engine and UI)
   resources/phone/           built phone page (generated, git-ignored)
   resources/native/          built addon + DLLs (generated, git-ignored)
   build/                     installer hooks, icon generator
-apps/phone/                  Vanilla TS page (camera.ts, signaling.ts, main.ts). No framework — it must load instantly.
+apps/phone/                  Vanilla TS page (camera.ts, mic.ts, signaling.ts, main.ts). No framework — it must load instantly.
 packages/protocol/           Wire types the phone and desktop exchange (HTTP API, DataChannel messages)
 packages/vcam-native/        C++: addon.cc (N-API), pipeline.cc (double buffer + pacing + libyuv),
                              backend/ivcam.h (per-OS interface), backend/win_softcam.cc,
@@ -123,6 +160,15 @@ Without the native build the app still runs (QR, phone connection, preview) and 
   A release is only offered once it is **published** (not a draft) and carries `latest.yml` next to
   the `.exe`; CI attaches both. electron-updater is bundled into the main process like every other
   dependency (devDependencies, no `node_modules` in the package).
+  The update dialog shows **What's new** from the same check: `fullChangelog` gives the notes of every
+  version since the installed one (GitHub's HTML of each release body, from the release feed), cut at
+  the first `<hr>` where CI's install steps start, and `ReleaseNotes.tsx` rebuilds them from their text
+  and a few tags (never `innerHTML`; `<br>` from the CHANGELOG's hard wraps become spaces).
+  After an update, the first launch shows **What's new in X** once, offline: `electron.vite.config.ts`
+  bakes this version's CHANGELOG section into the UI (`build/release-notes.ts`, a converter for the
+  CHANGELOG's small Markdown, tested), and `notesSeen` in settings records it was shown. It is set at
+  once on a fresh install; a settings file without it (any older install, the 1.0.0 migration) counts as
+  updated. Releasing renames Unreleased to the version before CI builds, so each installer carries its notes.
 - **The feed is this repository's public Releases.** The GitHub provider requests releases
   unauthenticated, so the check only works while the repository is public; a private repo answers
   404 and the UI reports "No published release was found". Installs from before the repository went
@@ -150,7 +196,9 @@ Without the native build the app still runs (QR, phone connection, preview) and 
 - **Releasing** is driven by the version in `apps/desktop/package.json` (it names the installer and
   fills `latest.yml`). Bump it, rename the `CHANGELOG.md` **Unreleased** heading to the new version,
   merge to `main`: CI builds, then publishes a release tagged `v<version>` whose notes are that
-  changelog section (commit subjects since the previous tag if there is none). A build whose version
+  changelog section (commit subjects since the previous tag if there is none). That section is also
+  what the app shows as What's new, so write it for users, and never put a `---` rule in it: the app
+  stops reading at the first one. A build whose version
   is already released publishes nothing, so ordinary commits to `main` only build. Pushing a `v*`
   tag publishes the same way and fails the build if the tag and the version disagree.
 
@@ -159,13 +207,17 @@ Without the native build the app still runs (QR, phone connection, preview) and 
 - Assets live in `assets/brand/` (Geist fonts, `mark.svg`, the reference icon sheet). Every icon size
   is generated from vector geometry by `node apps/desktop/build/icons.mjs` — never hand-crop bitmaps.
   The same geometry is duplicated in `renderer/components/Mark.tsx`, the phone `index.html` and the
-  engine placeholder (`vcam.ts`); change all four together.
+  engine placeholder (`vcam.ts`); change all four together. The phone's microphone mark (`#mic-mark` in the
+  phone `index.html`) borrows the camera mark's signal arcs, line weights and colour, so it follows them too.
 - Palette/typography are CSS tokens at the top of `renderer/styles.css` (mirrored in the phone
   `styles.css` and `THEME` in `main/ui-window.ts` for the native title bar). Violet `#8a5cf3` is the
   single accent (buttons, active states, live indicator); light violet `#ccb6fe` for active text;
   amber/red only for paused/error. Low contrast on purpose: violet-tinted grays, no pure white surfaces.
 - The main window is state-driven: `PairView` (QR + steps) until a phone connects, `LiveView`
-  (preview + controls) afterwards. Settings and the QR-while-live are dialogs, not panels.
+  (preview + controls) afterwards. Settings and the QR-while-live are dialogs, not panels. Settings is a
+  sidebar of five sections (Camera, Microphone, Connection, App, About), each opening with a one-line status;
+  a section with a problem gets a dot and is where Settings opens. Settings carry one short line; longer
+  explanations go in an ⓘ tooltip, rarely used ones under a collapsed Advanced (a native `<details>`).
 - Icons: `lucide-react` only. Fonts: Geist / Geist Mono, self-hosted (no network on the phone page).
 
 ## Performance notes (measured, Electron 44 / Win10, 1080p stream)
@@ -196,4 +248,4 @@ Sizes, reasoning and contribution notes are in [ROADMAP.md](ROADMAP.md); this is
 - Windows 11 Media Foundation virtual camera backend (for UWP/MF-only apps).
 - macOS: CoreMediaIO Camera Extension backend (needs Apple signing). Linux: v4l2loopback.
 - "No-warning mode": real domain + per-install certificate (requires internet + a small service).
-- Virtual microphone. Code signing (in progress, SignPath).
+- An own signed microphone driver, replacing VB-CABLE. Code signing (in progress, SignPath).

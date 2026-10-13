@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { Moon, Settings as SettingsIcon, Sun } from 'lucide-react';
+import { Bug, Heart, Moon, Settings as SettingsIcon, Sun } from 'lucide-react';
 import type { ConnectionState, UpdateState } from '../shared/ipc';
 import { LiveView } from './components/LiveView';
+import { MicGuide } from './components/MicGuide';
 import { Mark } from './components/Mark';
 import { PairView } from './components/PairView';
 import { SettingsDialog, portFallback, portFallbackMessage } from './components/SettingsDialog';
-import { UpdateDialog, updateOnOffer } from './components/UpdateDialog';
+import { UpdateDialog, WhatsNewDialog, updateOnOffer } from './components/UpdateDialog';
 import { Dialog, IconButton } from './components/ui';
 import { useAppState } from './useAppState';
 import { Toasts, useToasts } from './toasts';
@@ -17,6 +18,27 @@ const STATUS: Record<ConnectionState, string> = {
   stalled: 'Paused on phone',
   disconnected: 'Reconnecting',
 };
+
+const SPONSORS_URL = 'https://github.com/sponsors/Orest-Z';
+
+/**
+ * A new GitHub issue with a short form already filled in: which OmniCam and which phone (never an
+ * address or a name), and where the log is.
+ */
+function bugReportUrl(version: string, phone?: string): string {
+  const body = [
+    '**What happened?**',
+    '',
+    '',
+    '**What did you expect instead?**',
+    '',
+    '',
+    '---',
+    `OmniCam ${version} · Windows${phone ? ` · phone: ${phone}` : ''}`,
+    'The log helps a lot: Settings → About → Open log folder, then attach omnicam.log here.',
+  ].join('\n');
+  return `https://github.com/Orest-Z/OmniCam/issues/new?body=${encodeURIComponent(body)}`;
+}
 
 /** Title-bar badge text while an update is on offer; null hides the badge. */
 function updateBadge(u: UpdateState): string | null {
@@ -32,6 +54,8 @@ export function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [updateOpen, setUpdateOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
+  const [micGuideOpen, setMicGuideOpen] = useState(false);
+  const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   const { toasts, push } = useToasts();
   const prevState = useRef<ConnectionState>('idle');
   const prevCheckedAt = useRef<number | null | undefined>(undefined);
@@ -79,6 +103,12 @@ export function App() {
     }
   }, [update, version, push]);
 
+  // First launch after an update: what it brought, once (closing the dialog marks it seen).
+  const notesUnseen = Boolean(state && __RELEASE_NOTES__ && state.settings.notesSeen !== state.version);
+  useEffect(() => {
+    if (notesUnseen) setWhatsNewOpen(true);
+  }, [notesUnseen]);
+
   if (!state) return <div className="app" />;
   const { pairing, settings, stats, vcam, vcamError } = state;
   const showLive = stats.state !== 'idle';
@@ -109,6 +139,12 @@ export function App() {
             {badge}
           </button>
         )}
+        <IconButton title="Report a bug on GitHub" onClick={() => void window.omnicam.openExternal(bugReportUrl(state.version, stats.device?.platform))}>
+          <Bug />
+        </IconButton>
+        <IconButton title="Sponsor OmniCam on GitHub" className="heart" onClick={() => void window.omnicam.openExternal(SPONSORS_URL)}>
+          <Heart />
+        </IconButton>
         <IconButton title={dark ? 'Switch to light mode' : 'Switch to dark mode'} onClick={() => void setSettings({ theme: dark ? 'light' : 'dark' })}>
           {dark ? <Sun /> : <Moon />}
         </IconButton>
@@ -126,6 +162,7 @@ export function App() {
             onSettings={(p) => void setSettings(p)}
             onControl={(m) => void control(m)}
             onShowQr={() => setQrOpen(true)}
+            onOpenMicGuide={() => setMicGuideOpen(true)}
           />
         ) : (
           <PairView pairing={pairing} vcam={vcam} vcamError={vcamError} onOpenSettings={() => setSettingsOpen(true)} />
@@ -138,17 +175,35 @@ export function App() {
           pairing={pairing}
           vcam={vcam}
           vcamError={vcamError}
-          stats={stats}
           update={state.update}
           version={state.version}
           onSettings={(p) => void setSettings(p)}
-          onControl={(m) => void control(m)}
           onOpenUpdate={() => {
             setSettingsOpen(false);
             setUpdateOpen(true);
           }}
+          onOpenMicGuide={() => {
+            setSettingsOpen(false);
+            setMicGuideOpen(true);
+          }}
+          onOpenWhatsNew={() => {
+            setSettingsOpen(false);
+            setWhatsNewOpen(true);
+          }}
           onClose={() => setSettingsOpen(false)}
         />
+      )}
+      {whatsNewOpen && (
+        <WhatsNewDialog
+          version={state.version}
+          onClose={() => {
+            setWhatsNewOpen(false);
+            if (settings.notesSeen !== state.version) void setSettings({ notesSeen: state.version });
+          }}
+        />
+      )}
+      {micGuideOpen && (
+        <MicGuide stats={stats} settings={settings} onControl={(m) => void control(m)} onClose={() => setMicGuideOpen(false)} />
       )}
       {updateOpen && (
         <UpdateDialog update={state.update} version={state.version} stats={stats} vcam={vcam} onClose={() => setUpdateOpen(false)} />

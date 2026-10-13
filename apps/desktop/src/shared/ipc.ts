@@ -2,6 +2,7 @@ import {
   DEFAULT_PORT,
   type DesktopToPhone,
   type DeviceInfo,
+  type MediaSources,
   type PhoneCapabilities,
   type TrackInfo,
 } from '@omnicam/protocol';
@@ -69,6 +70,13 @@ export interface StreamStats {
   device?: DeviceInfo;
   trackInfo?: TrackInfo;
   caps?: PhoneCapabilities;
+  /** What the phone sends; unknown until it says, which reads as the camera only. */
+  sources?: MediaSources;
+  /**
+   * Loudness of the phone's microphone over the last second, 0–1: the RMS of WebRTC's 10 ms peak levels,
+   * so about 3 dB above true RMS for speech. 0 while nothing plays it.
+   */
+  micLevel?: number;
 }
 
 export interface VirtualCamStats {
@@ -115,6 +123,13 @@ export interface AppSettings {
   scaleMode: 'fit' | 'fill';
   /** When the phone stalls, hold the last frame instead of showing the placeholder. */
   holdLastFrame: boolean;
+  /** Loopback output (its label) the phone's microphone is played into; empty = the first one found. */
+  micOutput: string;
+  /**
+   * The version whose What's new was last shown. Set at once on a fresh install, so only an update shows
+   * it; empty on an install older than this setting, which then counts as updated.
+   */
+  notesSeen: string;
   /** Stream numbers over the preview: always, or only while hovered. */
   streamDetails: 'always' | 'hover';
   /** Desktop app colours; 'system' follows the Windows light/dark setting. */
@@ -145,6 +160,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   rotation: 0,
   scaleMode: 'fill',
   holdLastFrame: true,
+  micOutput: '',
+  notesSeen: '',
   streamDetails: 'always',
   theme: 'dark',
   closeToTray: true,
@@ -169,6 +186,7 @@ export interface EngineSettings {
   rotation: 0 | 90 | 180 | 270;
   scaleMode: 'fit' | 'fill';
   holdLastFrame: boolean;
+  micOutput: string;
   /** Absolute path to the native addon (.node), or empty to run without a virtual camera. */
   addonPath: string;
   /** Directory containing softcam.dll (Windows). */
@@ -202,6 +220,17 @@ export interface UpdateState {
   failed?: 'check' | 'download';
   /** Epoch ms of the last finished check. */
   checkedAt?: number;
+  /** What the versions on offer bring: every version newer than this one, newest first. */
+  notes?: ReleaseNote[];
+}
+
+/**
+ * One release's notes: its CHANGELOG section as GitHub renders it (HTML), without the install steps
+ * CI adds under it. Comes from the internet, so the UI rebuilds it from text and never inserts it.
+ */
+export interface ReleaseNote {
+  version: string;
+  html: string;
 }
 
 export interface AppState {

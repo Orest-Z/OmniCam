@@ -25,6 +25,7 @@ import {
 import { loadVcam, renderPlaceholder, type FrameFormat, type VcamAddon } from './vcam';
 import { installFonts } from '../shared/fonts';
 import { tuneAnswerSdp } from './sdp';
+import { MicOutput } from './mic';
 
 installFonts();
 
@@ -54,6 +55,11 @@ let vcamStarted = false;
 let pumpAbort: AbortController | null = null;
 let previewEnabled = false;
 let lastFrameAt = 0;
+let lastAudioAt = 0;
+let lastAudio = { energy: 0, duration: 0, packets: 0 }; // inbound audio counters at the previous stats poll
+/** The phone's audio track; it reaches the loopback device only while the phone says its microphone is on. */
+let micTrack: MediaStreamTrack | null = null;
+const micOut = new MicOutput(log);
 let loggedFormat = false;
 let copyMs = 0;
 let copyN = 0;
@@ -73,6 +79,9 @@ const stats: StreamStats = {
   state: 'idle', width: 0, height: 0, fps: 0, bitrateKbps: 0, rttMs: 0, codec: '',
   packetsLost: 0, jitterMs: 0, framesDecoded: 0,
 };
+
+/** The phone's camera is on, or the phone hasn't said yet (until then, video is what counts). */
+const cameraOn = () => stats.sources?.camera !== false;
 
 function setState(state: ConnectionState) {
   if (stats.state === state) return;
@@ -94,6 +103,8 @@ function vcamStats(): VirtualCamStats {
 function applySettings(next: EngineSettings) {
   const prev = engineSettings;
   engineSettings = next;
+  // Before the addon checks: the microphone needs no virtual camera.
+  micOut.setPreferred(next.micOutput);
 
   if (!vcam) {
     const loaded = loadVcam(next.addonPath);
@@ -134,7 +145,8 @@ function applySettings(next: EngineSettings) {
 function setPlaceholderFrame() {
   if (!vcam || !vcamStarted || !engineSettings) return;
   const { outputWidth: w, outputHeight: h } = engineSettings;
-  vcam.setPlaceholder(renderPlaceholder(w, h, ['OmniCam', 'Scan the QR code in the OmniCam app on this computer']), w, h);
+  const hint = cameraOn() ? 'Scan the QR code in the OmniCam app on this computer' : 'The camera is off on the phone';
+  vcam.setPlaceholder(renderPlaceholder(w, h, ['OmniCam', hint]), w, h);
 }
 // Re-render once the bundled font is available (first render may fall back to a system font).
 void document.fonts.ready.then(() => setPlaceholderFrame());
@@ -245,6 +257,12 @@ function teardownPeer(closeAfterMs = 0) {
   };
   if (closeAfterMs) setTimeout(close, closeAfterMs);
   else close();
+  micTrack = null;
+  micOut.setTrack(null);
+  stats.micLevel = 0;
+  const cameraWasOff = !cameraOn();
+  stats.sources = undefined;
+  if (cameraWasOff) setPlaceholderFrame(); // back to "scan the QR code"
   if (vcam && vcamStarted && !engineSettings?.holdLastFrame) vcam.showPlaceholder();
 }
 
@@ -297,8 +315,17 @@ async function handleOffer(offer: EngineOffer): Promise<EngineAnswer> {
   sessionId = crypto.randomUUID();
   phoneIdle = false;
   lastDemandAt = performance.now();
+  // Give the new connection the stall timeout to deliver its first frame or audio packet.
+  lastFrameAt = lastAudioAt = performance.now();
+  lastAudio = { energy: 0, duration: 0, packets: 0 };
 
   peer.ontrack = (ev) => {
+    if (ev.track.kind === 'audio') {
+      // The phone always negotiates audio; it plays only once the phone says its microphone is on.
+      micTrack = ev.track;
+      micOut.setTrack(stats.sources?.mic ? micTrack : null);
+      return;
+    }
     if (ev.track.kind !== 'video') return;
     log('video track received', ev.track.id);
     // LAN: do not spend a jitter buffer's worth of latency. Chromium honors this receiver hint.
@@ -309,7 +336,8 @@ async function handleOffer(offer: EngineOffer): Promise<EngineAnswer> {
     }
     // Closing the peer (Disconnect, or a new phone taking over) ends this track too: only the
     // current peer's track may change the state, or Disconnect lands on "Reconnecting".
-    ev.track.onmute = () => pc === peer && setState('stalled');
+    // With the camera off the video track is muted on purpose; that is not a stall.
+    ev.track.onmute = () => pc === peer && cameraOn() && setState('stalled');
     ev.track.onunmute = () => pc === peer && setState('connected');
     ev.track.onended = () => pc === peer && setState('disconnected');
     startPump(ev.track);
@@ -361,6 +389,18 @@ function onPhoneMessage(msg: PhoneToDesktop) {
     case 'capabilities':
       stats.caps = msg.caps;
       break;
+    case 'sources': {
+      const cameraWasOn = cameraOn();
+      stats.sources = msg.sources;
+      micOut.setTrack(msg.sources.mic ? micTrack : null);
+      // Camera switched off: apps get a placeholder that says so, never a frozen frame of whoever
+      // turned it off (whatever "When the phone pauses" is set to).
+      if (cameraOn() !== cameraWasOn) {
+        setPlaceholderFrame();
+        if (!cameraOn() && vcam && vcamStarted) vcam.showPlaceholder();
+      }
+      break;
+    }
     case 'pong':
       stats.rttMs = Math.round(performance.now() - msg.t);
       break;
@@ -387,10 +427,12 @@ async function pollStats() {
   if (!report) return;
   const now = performance.now();
   let inbound: RTCInboundRtpStreamStats | undefined;
+  let audio: RTCInboundRtpStreamStats | undefined;
   const codecs = new Map<string, string>();
   let rtt: number | undefined;
   report.forEach((r) => {
     if (r.type === 'inbound-rtp' && (r as RTCInboundRtpStreamStats).kind === 'video') inbound = r as RTCInboundRtpStreamStats;
+    if (r.type === 'inbound-rtp' && (r as RTCInboundRtpStreamStats).kind === 'audio') audio = r as RTCInboundRtpStreamStats;
     if (r.type === 'codec') codecs.set(r.id, (r as { mimeType?: string }).mimeType ?? '');
     if (r.type === 'candidate-pair' && (r as RTCIceCandidatePairStats).state === 'succeeded' && (r as RTCIceCandidatePairStats).nominated) {
       rtt = (r as RTCIceCandidatePairStats).currentRoundTripTime;
@@ -414,11 +456,23 @@ async function pollStats() {
       log(`decoder: ${dec.decoderImplementation} (power efficient: ${dec.powerEfficientDecoder ?? 'unknown'})`);
     }
   }
+  if (audio) {
+    const energy = audio.totalAudioEnergy ?? 0;
+    const duration = audio.totalSamplesDuration ?? 0;
+    const packets = audio.packetsReceived ?? 0;
+    // Level over the last second from the energy the receiver adds up while it plays (squared 10 ms
+    // peaks, after the element's volume): no audio graph, no extra timer. 0 while nothing plays it.
+    const played = duration - lastAudio.duration;
+    stats.micLevel = played > 0 ? Math.round(Math.sqrt(Math.max(0, energy - lastAudio.energy) / played) * 1000) / 1000 : 0;
+    if (packets > lastAudio.packets) lastAudioAt = now;
+    lastAudio = { energy, duration, packets };
+  }
   if (rtt !== undefined) stats.rttMs = Math.round(rtt * 1000);
   lastStatsAt = now;
 
   if (pc.connectionState === 'connected') {
-    stats.state = now - lastFrameAt > STALL_AFTER_MS ? 'stalled' : 'connected';
+    // Paused on the phone: no frames for a while, or with the camera off, no audio.
+    stats.state = now - (cameraOn() ? lastFrameAt : lastAudioAt) > STALL_AFTER_MS ? 'stalled' : 'connected';
   }
   publishStats();
   ipcRenderer.send(ENGINE_VCAM_STATS, vcamStats());

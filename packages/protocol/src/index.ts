@@ -68,8 +68,6 @@ export const RESOLUTION_PRESETS: Record<string, ResolutionPreset> = {
   '1080p': { width: 1920, height: 1080, frameRate: 30 },
   // Phone browsers (all of iOS) only offer 60 fps below 1080p, so the high-rate preset is 720p.
   '720p60': { width: 1280, height: 720, frameRate: 60 },
-  /** Beta, Android only (offered in Settings): some Android browsers reach 60 fps at 1080p. */
-  '1080p60': { width: 1920, height: 1080, frameRate: 60 },
   '4k': { width: 3840, height: 2160, frameRate: 30 },
 };
 
@@ -79,6 +77,9 @@ export type DesktopToPhone =
   | { type: 'setResolution'; preset: keyof typeof RESOLUTION_PRESETS }
   | { type: 'setTorch'; on: boolean }
   | { type: 'setMirror'; on: boolean }
+  /** Turn the phone's microphone or camera on or off. The phone keeps at least one of them on. */
+  | { type: 'setMic'; on: boolean }
+  | { type: 'setCamera'; on: boolean }
   /** Nobody is watching on the desktop: encode at a low frame rate to save the phone's battery. */
   | { type: 'setIdle'; idle: boolean }
   /** The user pressed Disconnect: the pairing code is replaced, so the phone should stop, not retry. */
@@ -90,8 +91,16 @@ export type PhoneToDesktop =
   | { type: 'hello'; device: DeviceInfo; cameras: CameraDescriptor[] }
   | { type: 'trackInfo'; info: TrackInfo }
   | { type: 'capabilities'; caps: PhoneCapabilities }
+  /** What the phone sends right now; on connect and after every change. */
+  | { type: 'sources'; sources: MediaSources }
   | { type: 'error'; message: string }
   | { type: 'pong'; t: number };
+
+/** Camera and microphone are negotiated together and switched on and off without renegotiating. */
+export interface MediaSources {
+  camera: boolean;
+  mic: boolean;
+}
 
 export interface CameraDescriptor {
   deviceId: string;

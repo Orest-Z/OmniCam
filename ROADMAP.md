@@ -130,11 +130,20 @@ The honest version of "why does my phone get warm" is in the README. These would
 Harder than Linux despite the nicer API: a camera extension needs a paid Apple Developer account,
 signing, notarization, and the user approving a system extension. Linux first.
 
-### 7 · Virtual microphone — L, *C++*
+### 7 · An "OmniCam" microphone device — L, *C++ and costs money*
 
-Often the first thing people ask for. It is a second device, a second pipeline (WebRTC audio, resampling,
-drift between the phone's clock and the audio device's) and a second driver per OS. Genuinely a
-project-sized chunk of work rather than a feature.
+The phone already works as a microphone: the engine plays its audio into a virtual cable the user
+installs (VB-CABLE), and apps pick the cable's other end. Chromium's WebRTC receiver handles jitter, clock
+drift and resampling, so that part needed no native code ([ARCHITECTURE.md](ARCHITECTURE.md#phone-microphone)).
+
+What is left is a device of OmniCam's own, so nobody has to install VB-CABLE: a loopback audio driver
+(render side for the engine, capture side "OmniCam Microphone" for apps), for instance based on
+Microsoft's SysVAD sample. The engine would not change; `shared/audio-sink.ts` would just recognise it.
+The code is the smaller part. Windows only loads kernel drivers that Microsoft has signed, which takes
+attestation signing through a Partner Center account with an EV certificate (paid, yearly; SignPath's free
+signing does not cover drivers), and a driver bug blue-screens the user's PC, so development needs a
+test-signing VM. On Linux the same idea needs no driver at all: a PipeWire null sink plus a remapped source,
+created at runtime without root. macOS would need a HAL plug-in, BlackHole-style.
 
 ### 8 · "No-warning mode" — L, *needs a service*
 

@@ -1,5 +1,39 @@
 # Changelog
 
+## 2.0.0 — 2026-10-14
+
+The biggest update yet: your phone can now be your computer's microphone too, with or without its camera.
+Settings is reorganised, the setup is guided step by step, and updates show what they bring before you
+install them.
+
+### New
+- **The phone can be your microphone.** Pick *Camera + microphone* or *Microphone only* on the phone
+  before tapping Start. Windows needs a signed driver for a microphone device of OmniCam's own, so for now
+  OmniCam plays the sound into the free [VB-CABLE](https://vb-audio.com/Cable/) virtual cable and Discord,
+  Zoom or Teams pick **CABLE Output** as the microphone. *Settings → Microphone* walks through it and
+  warns if the cable has become the Windows default output. The sound is never played on your speakers.
+- **Microphone only** keeps the camera off: much lighter on the phone's battery, and nothing to decode on
+  the PC.
+- **Switch any time, from either side.** The phone has a *Camera / Camera + mic / Mic only* picker while
+  streaming, and the window has camera and microphone buttons; both switch without reconnecting. The
+  microphone button glows while someone is talking. With the camera off, apps see a "camera is off" card
+  instead of a frozen last frame.
+- **The phone shows what it is about to become:** the OmniCam mark for the camera, a matching microphone
+  mark for the microphone, and both for camera and microphone.
+- **Settings in five sections:** Camera, Microphone, Connection, App and About, picked from a sidebar.
+  Each section starts with how things stand, a dot marks the one that needs attention (Settings opens
+  there), and the long explanations moved into ⓘ tooltips, so nothing needs scrolling. Hardware decoding
+  is under *Camera → Advanced*.
+- **See what an update brings before installing it.** The update dialog lists what's new in every
+  version since yours, right in the app, instead of a link to GitHub. After updating, OmniCam shows
+  what's new once on its first start; *Settings → About* shows it again any time.
+- **Report a bug or sponsor OmniCam** from two small buttons in the title bar. The bug button opens a
+  GitHub issue with a short form already filled in (OmniCam version and phone type, nothing personal).
+
+### Removed
+- **The 1080p at 60 fps beta (Android).** It drew no feedback, so it is gone from Settings and the phone.
+  720p at 60 fps stays, and works on every phone.
+
 ## 1.3.0 — 2026-10-04
 
 A bigger update: real 60 fps, a light theme, 4K output and a front-camera light, plus fixes for the

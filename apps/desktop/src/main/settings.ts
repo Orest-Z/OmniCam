@@ -1,5 +1,5 @@
 import { app } from 'electron';
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { DEFAULT_SETTINGS, type AppSettings } from '../shared/ipc';
 
@@ -8,8 +8,11 @@ class SettingsStore {
   private file = join(app.getPath('userData'), 'settings.json');
   private data: AppSettings = { ...DEFAULT_SETTINGS };
   private listeners = new Set<(s: AppSettings, prev: AppSettings) => void>();
+  /** No settings file yet: a fresh install, not an update. */
+  fresh = false;
 
   load(): AppSettings {
+    this.fresh = !existsSync(this.file);
     try {
       const raw = JSON.parse(readFileSync(this.file, 'utf8')) as Partial<AppSettings>;
       this.data = { ...DEFAULT_SETTINGS, ...raw };

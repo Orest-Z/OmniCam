@@ -102,6 +102,18 @@ nav a:hover { color: var(--text); text-decoration: none; }
   border: 1px solid var(--border-strong); border-radius: 999px; background: rgba(20, 19, 23, 0.6);
   color: var(--text-2); font: 500 12px/1.4 var(--mono); letter-spacing: 0.02em;
 }
+/* The newest feature, as a chip inside the pill; on a narrow screen it goes under the pill's text. */
+.eyebrow .new {
+  display: inline-flex; align-items: center; gap: 5px; margin-left: 10px; padding: 1px 9px 1px 7px; border-radius: 999px;
+  background: var(--accent-tint); border: 1px solid rgba(138, 92, 243, 0.4); color: var(--accent-soft);
+  transition: background 0.2s;
+}
+.eyebrow .new:hover { text-decoration: none; background: rgba(138, 92, 243, 0.24); }
+.eyebrow .new .ico { width: 13px; height: 13px; }
+@media (max-width: 560px) {
+  .eyebrow { flex-direction: column; gap: 6px; border-radius: 14px; padding: 8px 12px; }
+  .eyebrow .new { margin-left: 0; }
+}
 h1 { font-size: clamp(40px, 7.4vw, 84px); line-height: 1; letter-spacing: -0.045em; margin: 0 0 24px; font-weight: 650; }
 h1 span, h2 span {
   color: transparent; background: linear-gradient(180deg, #a9a4b9, #5f5a6e); -webkit-background-clip: text; background-clip: text;
@@ -261,9 +273,32 @@ figcaption span { color: var(--text-3); font: 500 11px var(--mono); letter-spaci
 .split { display: grid; grid-template-columns: minmax(0, 1fr); gap: 40px; align-items: start; }
 @media (min-width: 860px) { .split { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; } }
 .split p { color: var(--text-2); max-width: 40ch; font-size: 17px; }
-.settings-shot { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
-.settings-shot img:last-child { margin-top: 48px; }
-@media (max-width: 520px) { .settings-shot { grid-template-columns: minmax(0, 1fr); } .settings-shot img:last-child { margin-top: 0; } }
+/* Two sections of the Settings window, stacked and offset. */
+.settings-shot { display: grid; gap: 16px; }
+.settings-shot img:first-child { margin-right: 40px; }
+.settings-shot img:last-child { margin-left: 40px; }
+@media (max-width: 520px) { .settings-shot img:first-child, .settings-shot img:last-child { margin: 0; } }
+
+/* Microphone: what it does beside the phone's three screens. */
+.mic { display: grid; grid-template-columns: minmax(0, 1fr); gap: 48px; align-items: center; }
+@media (min-width: 960px) { .mic { grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 56px; } }
+.mic p { color: var(--text-2); font-size: 17px; max-width: 40ch; }
+.mic p b { color: var(--text); font-weight: 550; }
+.flow { list-style: none; padding: 0; margin: 24px 0 28px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 26px; }
+.flow li { position: relative; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font: 500 13px var(--mono); }
+.flow li:first-child { border-color: rgba(138, 92, 243, 0.5); background: var(--accent-tint); color: var(--accent-soft); }
+.flow li + li::before { content: '→'; position: absolute; left: -20px; color: var(--text-3); }
+@media (max-width: 560px) {
+  .flow { gap: 8px 14px; }
+  .flow li { padding: 5px 8px; font-size: 11.5px; }
+  .flow li + li::before { left: -11px; }
+}
+.points { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+.points li { position: relative; padding-left: 22px; color: var(--text-2); font-size: 15px; max-width: 52ch; }
+.points li::before { content: ''; position: absolute; left: 3px; top: 0.62em; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+.points b { color: var(--text); font-weight: 550; }
+.phones.three { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.phones.three li:nth-child(2) { margin-top: 40px; }
 
 .stack { display: grid; gap: 40px; margin-top: 16px; }
 .stack > div { max-width: 46em; }

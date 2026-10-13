@@ -36,6 +36,12 @@ import { outputFpsFor } from '../shared/stream-format';
 // The engine's ICE host candidate must be a real LAN IP, not an mDNS name: phones on networks
 // that block mDNS could otherwise never complete connectivity checks.
 app.commandLine.appendSwitch('disable-features', 'WebRtcHideLocalIpsWithMdns');
+// OmniCam never captures video itself, but listing audio outputs for the phone's microphone makes
+// Chromium list cameras too, and its separate video-capture process then stays for the whole session:
+// ~64 MB. In the main process the same listing costs ~7 MB (measured on Electron 44 / Win10). Camera
+// drivers are loaded here for that listing, as in any native app that lists cameras.
+// (One switch per name: a second 'enable-features' would replace this one.)
+app.commandLine.appendSwitch('enable-features', 'RunVideoCaptureServiceInBrowserProcess');
 // Never throttle the hidden engine window.
 app.commandLine.appendSwitch('disable-renderer-backgrounding');
 app.commandLine.appendSwitch('disable-background-timer-throttling');
@@ -46,6 +52,8 @@ app.commandLine.appendSwitch('disable-background-timer-throttling');
 installFileLog();
 migrateLegacyUserData();
 settings.load();
+// A fresh install has nothing new to show; an update shows What's new once (the UI marks it seen).
+if (settings.fresh) settings.update({ notesSeen: app.getVersion() });
 if (!settings.get().hardwareDecode) app.commandLine.appendSwitch('disable-accelerated-video-decode');
 
 if (!app.requestSingleInstanceLock()) {
@@ -112,7 +120,8 @@ function wireIpc(): void {
   ipcMain.handle(UI_SET_PREVIEW, (_e, enabled: boolean) => engine.setPreview(enabled));
 
   ipcMain.handle(UI_OPEN_EXTERNAL, (_e, url: string) => {
-    if (/^https?:\/\//.test(url)) return shell.openExternal(url);
+    // Web pages, plus Windows' Sound settings for the microphone guide; nothing else the OS could launch.
+    if (/^https?:\/\//.test(url) || url === 'ms-settings:sound') return shell.openExternal(url);
   });
 
   ipcMain.handle(UI_OPEN_LOGS, () => shell.openPath(logDir()));

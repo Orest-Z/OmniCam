@@ -49,7 +49,7 @@ export function updateTray(stats: StreamStats): void {
       { label: 'Open OmniCam', click: () => createOrShowUiWindow() },
       {
         label: 'Switch camera',
-        enabled: live,
+        enabled: live && stats.sources?.camera !== false,
         click: () => engine.control({ type: 'switchCamera' }),
       },
       {
