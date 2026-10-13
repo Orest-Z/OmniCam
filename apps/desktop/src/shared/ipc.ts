@@ -2,6 +2,7 @@ import {
   DEFAULT_PORT,
   type DesktopToPhone,
   type DeviceInfo,
+  type MediaSources,
   type PhoneCapabilities,
   type TrackInfo,
 } from '@omnicam/protocol';
@@ -69,6 +70,10 @@ export interface StreamStats {
   device?: DeviceInfo;
   trackInfo?: TrackInfo;
   caps?: PhoneCapabilities;
+  /** What the phone sends; unknown until it says, which reads as the camera only. */
+  sources?: MediaSources;
+  /** Loudness of the phone's microphone over the last second (RMS, 0–1); 0 while nothing plays it. */
+  micLevel?: number;
 }
 
 export interface VirtualCamStats {
@@ -115,6 +120,8 @@ export interface AppSettings {
   scaleMode: 'fit' | 'fill';
   /** When the phone stalls, hold the last frame instead of showing the placeholder. */
   holdLastFrame: boolean;
+  /** Loopback output (its label) the phone's microphone is played into; empty = the first one found. */
+  micOutput: string;
   /** Stream numbers over the preview: always, or only while hovered. */
   streamDetails: 'always' | 'hover';
   /** Desktop app colours; 'system' follows the Windows light/dark setting. */
@@ -145,6 +152,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   rotation: 0,
   scaleMode: 'fill',
   holdLastFrame: true,
+  micOutput: '',
   streamDetails: 'always',
   theme: 'dark',
   closeToTray: true,
@@ -169,6 +177,7 @@ export interface EngineSettings {
   rotation: 0 | 90 | 180 | 270;
   scaleMode: 'fit' | 'fill';
   holdLastFrame: boolean;
+  micOutput: string;
   /** Absolute path to the native addon (.node), or empty to run without a virtual camera. */
   addonPath: string;
   /** Directory containing softcam.dll (Windows). */

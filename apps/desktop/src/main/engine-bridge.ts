@@ -73,6 +73,7 @@ export function toEngineSettings(s: AppSettings): EngineSettings {
     rotation: s.rotation,
     scaleMode: s.scaleMode,
     holdLastFrame: s.holdLastFrame,
+    micOutput: s.micOutput,
     ...nativePaths(),
   };
 }
