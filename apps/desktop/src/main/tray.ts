@@ -1,5 +1,5 @@
 import { app, Menu, Tray, nativeImage } from 'electron';
-import type { StreamStats } from '@omnicam/protocol';
+import type { StreamStats } from '../shared/ipc';
 import { engine } from './engine-bridge';
 import { createOrShowUiWindow, iconPath, markQuitting } from './ui-window';
 import { disconnectPhone } from './actions';

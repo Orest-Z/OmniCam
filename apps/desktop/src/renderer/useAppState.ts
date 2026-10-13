@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { AppSettings, DesktopToPhone } from '@omnicam/protocol';
-import type { AppState } from '../shared/ipc';
+import type { DesktopToPhone } from '@omnicam/protocol';
+import type { AppSettings, AppState } from '../shared/ipc';
 
 export function useAppState() {
   const [state, setState] = useState<AppState | null>(null);

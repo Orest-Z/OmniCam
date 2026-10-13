@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import QRCode from 'qrcode';
-import type { PairingInfo } from '@omnicam/protocol';
+import type { PairingInfo } from '../shared/ipc';
 import { pickAddress, lanAddresses } from './network';
 import { tokenMatches } from './pairing-guard';
 import { settings } from './settings';

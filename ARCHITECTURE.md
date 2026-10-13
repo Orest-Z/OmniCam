@@ -65,12 +65,12 @@ apps/desktop/                Electron app (electron-vite, React, TS)
   src/engine/                engine.ts (WebRTC receiver, stats, preview JPEGs, frame pump), vcam.ts (addon API)
   src/renderer/              React UI (Pairing, Preview, Controls, Settings)
   src/preload/               contextBridge → window.omnicam (typed in shared/ipc.ts)
-  src/shared/ipc.ts          IPC channel names + payload types (single source of truth)
+  src/shared/ipc.ts          IPC channel names + payload types, settings and stats (single source of truth)
   resources/phone/           built phone page (generated, git-ignored)
   resources/native/          built addon + DLLs (generated, git-ignored)
   build/                     installer hooks, icon generator
 apps/phone/                  Vanilla TS page (camera.ts, signaling.ts, main.ts). No framework — it must load instantly.
-packages/protocol/           Wire types shared by everything (HTTP API, DataChannel messages, stats, settings)
+packages/protocol/           Wire types the phone and desktop exchange (HTTP API, DataChannel messages)
 packages/vcam-native/        C++: addon.cc (N-API), pipeline.cc (double buffer + pacing + libyuv),
                              backend/ivcam.h (per-OS interface), backend/win_softcam.cc,
                              filter/omnicam_filter.cpp (DirectShow DLL entry), third_party/{softcam,libyuv} submodules
@@ -96,8 +96,8 @@ Without the native build the app still runs (QR, phone connection, preview) and 
 
 ## Conventions
 
-- TypeScript strict everywhere; shared types live in `packages/protocol` or `src/shared/ipc.ts` —
-  never duplicate a message shape.
+- TypeScript strict everywhere; shared types live in `packages/protocol` (only what crosses to the
+  phone) or `src/shared/ipc.ts` (desktop-only) — never duplicate a message shape.
 - Main ↔ engine IPC goes through `engine-bridge.ts` only. UI ↔ main goes through the preload
   bridge only (UI is sandboxed; no Node in the renderer).
 - Which folder may import which is written down in `al-dente.json`: main, engine, preload and the

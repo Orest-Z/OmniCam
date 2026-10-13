@@ -68,7 +68,7 @@ The valuable first targets are all pure functions — no Electron, no hardware:
 - `apps/desktop/src/main/server.ts` — `sessionAllowed` budget, window expiry, eviction
 - `apps/desktop/src/main/updater.ts` — the `describe()` error mapping
 - `apps/desktop/src/engine/sdp.ts` — the answer munging
-- `packages/protocol` — settings defaults and message shapes
+- `packages/protocol` and `apps/desktop/src/shared/ipc.ts` — message shapes and settings defaults
 
 Vitest fits the repo (TypeScript, ESM, no new toolchain). A `test` job in
 `.github/workflows/build.yml` next to `typecheck` finishes it.

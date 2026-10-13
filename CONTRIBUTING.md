@@ -60,7 +60,7 @@ You can skip the native steps if you are working on the UI or the phone page. Th
 | `apps/desktop/src/engine/` | Hidden window that receives the WebRTC stream and feeds the native addon |
 | `apps/desktop/src/renderer/` | The React UI (sandboxed; talks to main through the preload bridge) |
 | `apps/phone/` | The page the phone opens: camera capture and WebRTC sender |
-| `packages/protocol/` | Message and settings types shared by everything |
+| `packages/protocol/` | Message types the phone and desktop exchange |
 | `packages/vcam-native/` | C++ addon, frame pipeline (libyuv) and the DirectShow camera filter |
 
 The layout and the reasoning behind it are in [ARCHITECTURE.md](ARCHITECTURE.md).

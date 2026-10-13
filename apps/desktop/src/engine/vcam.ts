@@ -1,4 +1,4 @@
-import type { VirtualCamStats } from '@omnicam/protocol';
+import type { VirtualCamStats } from '../shared/ipc';
 
 /** Pixel formats the addon accepts, mirroring WebCodecs `VideoPixelFormat` names. */
 export type FrameFormat = 'I420' | 'I420A' | 'NV12' | 'RGBA' | 'BGRA' | 'RGBX' | 'BGRX';

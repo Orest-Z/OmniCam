@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { cpus } from 'node:os';
-import type { AppSettings, DesktopToPhone, PhoneToDesktop } from '@omnicam/protocol';
+import type { DesktopToPhone, PhoneToDesktop } from '@omnicam/protocol';
 import {
   UI_CONTROL,
   UI_DISCONNECT,
@@ -15,6 +15,7 @@ import {
   UI_UPDATE_DOWNLOAD,
   UI_UPDATE_INSTALL,
   UI_VCAM_ERROR,
+  type AppSettings,
   type AppState,
   type PreviewFrame,
 } from '../shared/ipc';
