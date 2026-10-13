@@ -5,5 +5,5 @@
     "allowImportingTsExtensions": true,
     "erasableSyntaxOnly": true
   },
-  "include": ["test", "src/main/pairing-guard.ts", "src/shared/stream-format.ts", "src/shared/audio-sink.ts"]
+  "include": ["test", "src/main/pairing-guard.ts", "src/shared/stream-format.ts", "src/shared/audio-sink.ts", "src/engine/sdp.ts"]
 }
