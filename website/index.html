@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>OmniCam — your phone as a webcam</title>
-  <meta name="description" content="Use your phone's camera as a webcam on your Windows PC. Nothing to install on the phone: scan a QR code, tap Start. Free and open source (MIT).">
+  <title>OmniCam — your phone as a webcam and microphone</title>
+  <meta name="description" content="Use your phone's camera and microphone on your Windows PC. Nothing to install on the phone: scan a QR code, tap Start. Free and open source (MIT).">
   <meta name="theme-color" content="#0a0a0d">
-  <meta property="og:title" content="OmniCam — your phone as a webcam">
-  <meta property="og:description" content="Scan a QR code, tap Start, and your phone is a webcam for Discord, Zoom, Meet and OBS. Nothing to install on the phone. Free, MIT.">
+  <meta property="og:title" content="OmniCam — your phone as a webcam and microphone">
+  <meta property="og:description" content="Scan a QR code, tap Start, and your phone is a webcam and microphone for Discord, Zoom, Meet and OBS. Nothing to install on the phone. Free, MIT.">
   <meta property="og:image" content="https://orest-z.github.io/OmniCam/og.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
@@ -36,6 +36,7 @@
     <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></symbol>
     <symbol id="i-fork" viewBox="0 0 24 24"><circle cx="6" cy="5.5" r="2"/><circle cx="18" cy="5.5" r="2"/><circle cx="12" cy="18.5" r="2"/><path d="M6 7.5V9a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3V7.5M12 12v4.5"/></symbol>
     <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3.5 12.1V5A1.5 1.5 0 0 1 5 3.5h7.1a1.5 1.5 0 0 1 1.06.44l7.4 7.4a1.5 1.5 0 0 1 0 2.12l-7.1 7.1a1.5 1.5 0 0 1-2.12 0l-7.4-7.4a1.5 1.5 0 0 1-.44-1.06z"/><circle cx="8.5" cy="8.5" r="1.3"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></symbol>
     <symbol id="i-github" viewBox="0 0 16 16"><path fill="currentColor" stroke="none" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></symbol>
   </svg>
   <header class="top">
@@ -46,6 +47,7 @@
       </a>
       <nav aria-label="Sections">
         <a href="#how">How it works</a>
+        <a href="#mic">Microphone</a>
         <a href="#trust">Security</a>
         <a href="#faq">FAQ</a>
         <a class="nav-gh" href="https://github.com/Orest-Z/OmniCam"><svg class="ico" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
@@ -56,10 +58,11 @@
   <main id="main">
     <section class="hero">
       <div class="wrap hero-copy">
-        <p class="eyebrow">Free · open source · Windows 10 / 11</p>
+        <p class="eyebrow">Free · open source · Windows 10 / 11 <a class="new" href="#mic"><svg class="ico" aria-hidden="true"><use href="#i-mic"/></svg>New: microphone <span aria-hidden="true">→</span></a></p>
         <h1>Your phone is the webcam.<br><span>Nothing to install on it.</span></h1>
         <p class="lede">Scan a QR code, tap <b>Start camera</b>, and a camera named <b>OmniCam</b> shows up in Discord, Zoom,
-          Google Meet, Chrome and OBS. Video goes from your phone to your PC over your own Wi-Fi. No account, no cloud.</p>
+          Google Meet, Chrome and OBS, with the phone's <b>microphone</b> too if you want it. Video and sound go from your phone
+          to your PC over your own Wi-Fi. No account, no cloud.</p>
         <div class="cta">
           <a class="btn primary" data-download href="https://github.com/Orest-Z/OmniCam/releases/latest">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -151,24 +154,54 @@
       </div>
     </section>
 
+    <section id="mic" class="wrap">
+      <div class="mic">
+        <div class="reveal">
+          <p class="label">03 — Microphone</p>
+          <h2>The phone is your microphone too</h2>
+          <p>Pick <b>Camera + microphone</b> or <b>Microphone only</b> before tapping Start, and switch any time from the
+            phone or the PC, without reconnecting.</p>
+          <!-- The path the sound takes, as the app's setup guide draws it. -->
+          <ol class="flow" aria-label="How the sound reaches your app">
+            <li>Phone mic</li>
+            <li>OmniCam</li>
+            <li>VB-CABLE</li>
+            <li>Your app</li>
+          </ol>
+          <ul class="points">
+            <li><b>Sent raw, like a USB mic.</b> Your call app's noise suppression and echo cancellation do the rest.</li>
+            <li><b>Microphone only</b> keeps the camera off: far lighter on the phone's battery, nothing to decode on the PC.</li>
+            <li><b>Stays on your network</b> like the video, and is never played on your speakers.</li>
+            <li><b>Needs VB-CABLE</b>, a free virtual audio cable from VB-Audio: Windows only lets a signed driver add a
+              microphone. OmniCam's setup guide shows each step with pictures, about two minutes.</li>
+          </ul>
+        </div>
+        <ol class="phones three">
+          <li class="reveal"><img src="../docs/media/screenshots/phone-mic-1-start.webp" loading="lazy" width="740" height="1600" alt="OmniCam on an iPhone: the OmniCam and microphone marks, Camera + microphone picked, and Start camera and mic."><span><b>Camera + microphone</b></span></li>
+          <li class="reveal"><img src="../docs/media/screenshots/phone-mic-2-mic-only.webp" loading="lazy" width="740" height="1600" alt="OmniCam on an iPhone: the microphone mark, Microphone only picked, and Start microphone."><span><b>Microphone only</b></span></li>
+          <li class="reveal"><img src="../docs/media/screenshots/phone-mic-3-live.webp" loading="lazy" width="740" height="1600" alt="OmniCam on an iPhone, live as a microphone only, with the mode picker at the bottom."><span>Live, camera off</span></li>
+        </ol>
+      </div>
+    </section>
+
     <section class="wrap">
       <div class="split">
         <div class="reveal">
-          <p class="label">03 — Settings</p>
+          <p class="label">04 — Settings</p>
           <h2>Settings you'll actually use</h2>
-          <p>Output resolution (up to 4K) for your apps, what to show when the phone pauses, which network
-            the QR code uses, light or dark, start with Windows, and whether to check for updates. The frame
-            rate follows the phone on its own. Nothing else to configure.</p>
+          <p>Five sections: Camera, Microphone, Connection, App and About. Each says how things stand, and a dot marks the
+            one that needs you. Output resolution up to 4K, what to show when the phone pauses, which cable the phone's
+            microphone plays into, light or dark, start with Windows, updates. The frame rate follows the phone on its own.</p>
         </div>
         <div class="settings-shot">
-          <img class="reveal" src="../docs/media/screenshots/desktop-settings.webp" loading="lazy" width="567" height="658" alt="OmniCam Settings: camera device and phone camera">
-          <img class="reveal" src="../docs/media/screenshots/desktop-settings-2.webp" loading="lazy" width="557" height="576" alt="OmniCam Settings: network and app">
+          <img class="reveal" src="../docs/media/screenshots/desktop-settings.webp" loading="lazy" width="1560" height="1120" alt="OmniCam Settings, Camera section: output resolution, when the phone pauses, stream details">
+          <img class="reveal" src="../docs/media/screenshots/desktop-settings-2.webp" loading="lazy" width="1560" height="1120" alt="OmniCam Settings, Microphone section: ready, with the cable the phone's sound plays into">
         </div>
       </div>
     </section>
 
     <section id="trust" class="wrap">
-      <p class="label reveal">04 — Trust</p>
+      <p class="label reveal">05 — Trust</p>
       <h2 class="reveal">Security and privacy, plainly</h2>
       <p class="sub reveal">OmniCam asks for administrator rights and opens a port on your network. Here is exactly what it does with them.</p>
       <div class="grid two">
@@ -185,7 +218,7 @@
           <svg class="ico" aria-hidden="true"><use href="#i-swap"/></svg>
           <h3>What goes over the network</h3>
           <ul>
-            <li>Phone ↔ PC on your local network: the pairing page and the encrypted video.</li>
+            <li>Phone ↔ PC on your local network: the pairing page, the encrypted video, and the microphone's sound if you turn it on.</li>
             <li>PC → GitHub: a daily update check you can turn off in Settings.</li>
           </ul>
           <p>No account, no telemetry, no analytics, no crash reports. <a href="https://github.com/Orest-Z/OmniCam/blob/main/PRIVACY.md">Privacy details</a></p>
@@ -209,7 +242,7 @@
     </section>
 
     <section id="warning" class="wrap">
-      <p class="label reveal">05 — First run</p>
+      <p class="label reveal">06 — First run</p>
       <h2 class="reveal">About the warning on your phone</h2>
       <div class="stack">
         <div class="reveal">
@@ -231,10 +264,10 @@
     </section>
 
     <section class="wrap">
-      <p class="label reveal">06 — Limits</p>
+      <p class="label reveal">07 — Limits</p>
       <h2 class="reveal">What it doesn't do yet</h2>
       <ul class="limits">
-        <li class="reveal"><b>No microphone.</b> Video only; your usual mic keeps working.</li>
+        <li class="reveal"><b>The microphone needs VB-CABLE.</b> A free virtual cable from VB-Audio; an "OmniCam" microphone of its own needs a signed driver and is on the roadmap.</li>
         <li class="reveal"><b>Windows only.</b> macOS and Linux are on the roadmap.</li>
         <li class="reveal"><b>DirectShow apps only.</b> The Windows Camera app and the new Microsoft Teams won't list it yet.</li>
         <li class="reveal"><b>One phone at a time</b>, and the page must stay open with the screen on, so long calls want a charger.</li>
@@ -244,7 +277,7 @@
 
     <section id="faq" class="wrap faq">
       <div class="reveal">
-        <p class="label">07 — FAQ</p>
+        <p class="label">08 — FAQ</p>
         <h2>Questions</h2>
         <p class="sub">Something else? <a href="https://github.com/Orest-Z/OmniCam/issues">Open an issue</a>.</p>
       </div>
@@ -252,7 +285,9 @@
         <details><summary>Is it really free?</summary><p>Yes. MIT license, no paid tier, no account, no ads. If it helps you, a star on GitHub or a bug report is the best thanks.</p></details>
         <details><summary>The phone can't open the page</summary><p>Phone and PC must be on the same Wi-Fi, not a guest network or mobile data. Some routers isolate Wi-Fi devices from each other; use another network or a phone hotspot. With VPNs or virtual adapters, pick your Wi-Fi under Settings → Network interface.</p></details>
         <details><summary>"OmniCam" doesn't show up in my app</summary><p>Restart the app; apps list cameras when they start. If it's still missing, run the installer again to re-register the camera.</p></details>
-        <details><summary>Does any video go through the internet?</summary><p>No. Video goes peer-to-peer from your phone to your PC on your local network. There are no relay servers.</p></details>
+        <details><summary>How do I use my phone as a microphone?</summary><p>Install <a href="https://vb-audio.com/Cable/">VB-CABLE</a> (free) and restart. On the phone pick <i>Camera + microphone</i> or <i>Microphone only</i>, then choose <b>CABLE Output</b> as the microphone in Discord, Zoom or Teams. <i>Settings → Microphone → Set up</i> in OmniCam walks through it with pictures and ticks each step off as you go.</p></details>
+        <details><summary>Why does the microphone need VB-CABLE?</summary><p>Call apps only list microphones that come from an audio driver, and Windows only loads drivers Microsoft has signed. VB-CABLE is a free, signed virtual cable: OmniCam plays the phone's sound into one end and your app records from the other. The camera needs nothing like it, because Windows lets an app add a camera without a driver.</p></details>
+        <details><summary>Does any video or sound go through the internet?</summary><p>No. Video and sound go peer-to-peer from your phone to your PC on your local network. There are no relay servers.</p></details>
         <details><summary>How was it built?</summary><p>By one developer, with AI assistance for parts of the implementation, documentation and testing. The <a href="https://github.com/Orest-Z/OmniCam#ai-involvement">README</a> says where it helped and where it didn't, and the <a href="https://github.com/Orest-Z/OmniCam/blob/main/ARCHITECTURE.md">architecture notes</a> explain every design decision.</p></details>
       </div>
     </section>
