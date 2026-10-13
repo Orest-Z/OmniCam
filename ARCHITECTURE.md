@@ -100,6 +100,8 @@ Without the native build the app still runs (QR, phone connection, preview) and 
   never duplicate a message shape.
 - Main ↔ engine IPC goes through `engine-bridge.ts` only. UI ↔ main goes through the preload
   bridge only (UI is sandboxed; no Node in the renderer).
+- Which folder may import which is written down in `al-dente.json`: main, engine, preload and the
+  UI only meet through `src/shared`, and the phone page only uses `packages/protocol`.
 - Phone page: no dependencies, no framework, must work on iOS Safari 15+ and Android Chrome.
   Every browser API call that can be unsupported is wrapped (wake lock, torch, codec prefs…).
 - Native code: never touch `third_party/` submodules; adapt at build time (see
