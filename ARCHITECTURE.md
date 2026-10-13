@@ -85,7 +85,9 @@ PHONE (browser)                       DESKTOP (Electron)
   cut it. The answer asks for mono Opus at 64 kbps with in-band FEC (`engine/sdp.ts`).
 - **Camera off is not a stall.** With the camera off, stall detection follows audio packets instead of
   frames, and apps get a "camera is off" placeholder rather than a frozen last frame. The UI's speaking
-  glow is the one-second RMS from `totalAudioEnergy` in the stats the engine already polls.
+  glow comes from `totalAudioEnergy` in the stats the engine already polls. WebRTC adds up squared 10 ms
+  *peaks* after the element's volume, so the level reads a little above true RMS, and a silent test at
+  volume 0 reads 0.
 
 ## Repository layout
 

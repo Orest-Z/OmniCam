@@ -72,7 +72,10 @@ export interface StreamStats {
   caps?: PhoneCapabilities;
   /** What the phone sends; unknown until it says, which reads as the camera only. */
   sources?: MediaSources;
-  /** Loudness of the phone's microphone over the last second (RMS, 0–1); 0 while nothing plays it. */
+  /**
+   * Loudness of the phone's microphone over the last second, 0–1: the RMS of WebRTC's 10 ms peak levels,
+   * so about 3 dB above true RMS for speech. 0 while nothing plays it.
+   */
   micLevel?: number;
 }
 

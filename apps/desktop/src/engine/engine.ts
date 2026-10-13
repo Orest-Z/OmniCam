@@ -460,8 +460,8 @@ async function pollStats() {
     const energy = audio.totalAudioEnergy ?? 0;
     const duration = audio.totalSamplesDuration ?? 0;
     const packets = audio.packetsReceived ?? 0;
-    // RMS over the last second from the energy the receiver adds up while it plays: no audio graph,
-    // no extra timer. Stays 0 while nothing plays the microphone.
+    // Level over the last second from the energy the receiver adds up while it plays (squared 10 ms
+    // peaks, after the element's volume): no audio graph, no extra timer. 0 while nothing plays it.
     const played = duration - lastAudio.duration;
     stats.micLevel = played > 0 ? Math.round(Math.sqrt(Math.max(0, energy - lastAudio.energy) / played) * 1000) / 1000 : 0;
     if (packets > lastAudio.packets) lastAudioAt = now;

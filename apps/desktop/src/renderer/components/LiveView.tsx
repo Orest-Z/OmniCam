@@ -17,8 +17,11 @@ interface Props {
   onOpenSettings: () => void;
 }
 
-/** One-second RMS above about -40 dBFS: someone is talking, not just room noise. */
-const SPEAKING_LEVEL = 0.01;
+/**
+ * Level above about -34 dBFS (see micLevel): someone is talking, not just room noise on a raw phone mic.
+ * A starting point, not measured on phones yet: tune it if the glow lights for silence or misses speech.
+ */
+const SPEAKING_LEVEL = 0.02;
 
 export function LiveView({ stats, vcam, settings, onSettings, onControl, onShowQr, onOpenSettings }: Props) {
   const live = stats.state === 'connected' || stats.state === 'stalled';
