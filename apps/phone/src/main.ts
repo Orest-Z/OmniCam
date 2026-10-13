@@ -2,9 +2,11 @@ import {
   CONTROL_CHANNEL_LABEL,
   RESOLUTION_PRESETS,
   type DesktopToPhone,
+  type MediaSources,
   type PhoneToDesktop,
 } from '@omnicam/protocol';
 import { CameraController } from './camera';
+import { MIC_CONSTRAINTS, MicController } from './mic';
 import { installFonts } from './fonts';
 
 installFonts();
@@ -29,11 +31,16 @@ const els = {
   torch: $<HTMLButtonElement>('torch'),
   screenlight: $<HTMLDivElement>('screenlight'),
   res: $<HTMLSelectElement>('res'),
+  mode: $<HTMLSelectElement>('mode'),
+  miconly: $<HTMLDivElement>('miconly'),
 };
 
 const token = new URLSearchParams(location.search).get('t') ?? '';
 const camera = new CameraController();
+const mic = new MicController();
 const device = describeDevice();
+/** What the phone sends. Chosen on the start screen; the desktop can switch either with setMic / setCamera. */
+const sources: MediaSources = { camera: true, mic: false };
 
 type UiState = 'idle' | 'starting' | 'connecting' | 'live' | 'reconnecting' | 'error';
 const STATUS_LABEL: Record<UiState, string> = {
@@ -49,6 +56,7 @@ const STATUS_CLASS: Partial<Record<UiState, string>> = { live: 'live', reconnect
 let pc: RTCPeerConnection | null = null;
 let control: RTCDataChannel | null = null;
 let sender: RTCRtpSender | null = null;
+let micSender: RTCRtpSender | null = null;
 let wantConnected = false;
 let reconnectAttempt = 0;
 let reconnectTimer: number | undefined;
@@ -102,6 +110,45 @@ function showTorch(on: boolean) {
   send({ type: 'capabilities', caps: { ...camera.capabilities(), torch: hasLight(), torchOn: on } });
 }
 
+/** Camera-only controls follow the camera, and the desktop is told what the phone now sends. */
+function showSources() {
+  els.flip.hidden = els.res.hidden = !sources.camera;
+  els.torch.hidden = !sources.camera || !hasLight();
+  els.miconly.hidden = sources.camera;
+  if (!sources.camera) els.trackinfo.textContent = '';
+  send({ type: 'sources', sources: { ...sources } });
+}
+
+/**
+ * Switches the camera or the microphone. Both are negotiated from the start, so this only swaps the
+ * sender's track. One of them always stays on: a connection that sends nothing would look stalled.
+ */
+async function setSource(kind: keyof MediaSources, on: boolean) {
+  if (sources[kind] === on || (!on && !sources[kind === 'mic' ? 'camera' : 'mic'])) return;
+  try {
+    // Turning on: onTrackChanged hands the new track to its sender.
+    if (kind === 'camera' && on) {
+      await camera.start();
+    } else if (kind === 'camera') {
+      if (torchOn) showTorch(false);
+      camera.stopTracks();
+      els.preview.srcObject = null;
+      void sender?.replaceTrack(null);
+    } else if (on) {
+      await mic.start();
+    } else {
+      mic.stop();
+      void micSender?.replaceTrack(null);
+    }
+  } catch (err) {
+    // Usually a permission the phone never granted (the session started without this source).
+    send({ type: 'error', message: `could not turn the ${kind === 'mic' ? 'microphone' : 'camera'} on (${(err as Error).name})` });
+    return;
+  }
+  sources[kind] = on;
+  showSources();
+}
+
 // ---------------------------------------------------------------------------
 // Control channel
 // ---------------------------------------------------------------------------
@@ -112,7 +159,7 @@ function send(msg: PhoneToDesktop) {
 async function handleControl(msg: DesktopToPhone) {
   switch (msg.type) {
     case 'switchCamera':
-      await (msg.facing ? camera.setFacing(msg.facing) : camera.flip());
+      if (sources.camera) await (msg.facing ? camera.setFacing(msg.facing) : camera.flip());
       break;
     case 'setResolution': {
       const preset = RESOLUTION_PRESETS[msg.preset];
@@ -125,10 +172,16 @@ async function handleControl(msg: DesktopToPhone) {
       break;
     }
     case 'setTorch':
-      await setLight(msg.on);
+      if (sources.camera) await setLight(msg.on);
       break;
     case 'setMirror':
       // Mirroring is applied on the desktop side; nothing to do on the phone.
+      break;
+    case 'setMic':
+      await setSource('mic', msg.on);
+      break;
+    case 'setCamera':
+      await setSource('camera', msg.on);
       break;
     case 'setIdle':
       idleMode = msg.idle;
@@ -208,7 +261,7 @@ async function tuneSender(s: RTCRtpSender) {
  * constraints they accepted, and a phone asked for 60 fps may still deliver 30.
  */
 async function showMeasuredRate() {
-  if (!sender || !wantConnected) return;
+  if (!sender || !wantConnected || !sources.camera) return;
   const stats = await sender.getStats().catch(() => null);
   stats?.forEach((r) => {
     if (r.type !== 'outbound-rtp' || r.kind !== 'video' || !r.frameWidth) return;
@@ -230,21 +283,25 @@ setInterval(() => void showMeasuredRate(), 2000);
 
 async function connect() {
   teardownPeer();
-  const track = camera.track;
-  if (!track) throw new Error('camera not started');
+  if (!camera.track && !mic.track) throw new Error('nothing to send');
   setStatus(reconnectAttempt ? 'reconnecting' : 'connecting');
 
   const peer = new RTCPeerConnection({ iceServers: [], bundlePolicy: 'max-bundle' });
   pc = peer;
 
-  const transceiver = peer.addTransceiver(track, { direction: 'sendonly' });
+  // Video and audio are both negotiated whether they are on or not, so switching one is a
+  // replaceTrack, never a new offer. No shared stream: the desktop would lip-sync the two and hold
+  // the video back to the audio's pace.
+  const transceiver = peer.addTransceiver(camera.track ?? 'video', { direction: 'sendonly' });
   sender = transceiver.sender;
   preferCodecs(transceiver);
+  micSender = peer.addTransceiver(mic.track ?? 'audio', { direction: 'sendonly' }).sender;
 
   const ch = peer.createDataChannel(CONTROL_CHANNEL_LABEL, { ordered: true });
   control = ch;
   ch.onopen = async () => {
     send({ type: 'hello', device, cameras: await camera.listCameras() });
+    showSources();
     refreshTrackInfo();
   };
   ch.onmessage = (ev) => {
@@ -288,6 +345,7 @@ function teardownPeer() {
   control?.close();
   control = null;
   sender = null;
+  micSender = null;
   if (pc) {
     pc.onconnectionstatechange = null;
     pc.close();
@@ -332,42 +390,50 @@ async function startSession() {
     return;
   }
   if (!navigator.mediaDevices?.getUserMedia) {
-    showOverlay('This browser cannot access the camera. Make sure the address starts with https://', true);
+    showOverlay('This browser cannot access the camera or microphone. Make sure the address starts with https://', true);
     return;
   }
-  els.start.disabled = true;
-  showOverlay('Waiting for camera permission…');
+  sources.camera = els.mode.value !== 'mic';
+  sources.mic = els.mode.value !== 'camera';
+  const what = sources.camera ? (sources.mic ? 'camera and microphone' : 'camera') : 'microphone';
+  els.start.disabled = els.mode.disabled = true;
+  showOverlay('Waiting for permission…');
   try {
-    await camera.start('user', RESOLUTION_PRESETS[els.res.value] ?? RESOLUTION_PRESETS['1080p']);
+    const preset = RESOLUTION_PRESETS[els.res.value] ?? RESOLUTION_PRESETS['1080p'];
+    if (!sources.camera) await mic.start();
+    else if (sources.mic) await camera.startWithMic(MIC_CONSTRAINTS, 'user', preset);
+    else await camera.start('user', preset);
   } catch (err) {
     const name = (err as DOMException).name;
     showOverlay(
       name === 'NotAllowedError'
-        ? 'Camera permission denied. Allow camera access for this site and tap Start again.'
-        : `Could not start the camera (${name}).`,
+        ? `Permission denied. Allow ${what} access for this site and tap Start again.`
+        : `Could not start the ${what} (${name}).`,
       true,
     );
-    els.start.disabled = false;
+    els.start.disabled = els.mode.disabled = false;
     return;
   }
   wantConnected = true;
   reconnectAttempt = 0;
   showHud();
+  showSources();
   await requestWakeLock();
   refreshTrackInfo();
   void connect().catch(onConnectError);
 }
 
-function stopSession(message = 'Camera stopped.', isError = false) {
+function stopSession(message = 'Stopped.', isError = false) {
   wantConnected = false;
   clearTimeout(reconnectTimer);
   reconnectTimer = undefined;
   teardownPeer();
   camera.stopTracks();
+  mic.stop();
   els.preview.srcObject = null;
   void wakeLock?.release();
   wakeLock = null;
-  els.start.disabled = false;
+  els.start.disabled = els.mode.disabled = false;
   torchOn = false;
   els.screenlight.hidden = true;
   showOverlay(message, isError);
@@ -393,13 +459,20 @@ camera.onTrackChanged = (track) => {
   refreshTrackInfo();
 };
 
+camera.onAudioTrack = (track) => mic.adopt(track);
+mic.onTrackChanged = (track) => {
+  if (track.readyState !== 'live') {
+    if (document.visibilityState === 'visible') void recover();
+    return;
+  }
+  if (micSender && micSender.track !== track) void micSender.replaceTrack(track);
+};
+
 async function recover() {
   if (!wantConnected) return;
-  try {
-    await camera.recoverIfEnded();
-  } catch (err) {
-    console.warn('camera recovery failed', err);
-  }
+  // Only what is switched on: a camera that is off must stay off.
+  if (sources.camera) await camera.recoverIfEnded().catch((err) => console.warn('camera recovery failed', err));
+  if (sources.mic) await mic.start().catch((err) => console.warn('microphone recovery failed', err));
   if (pc && pc.connectionState !== 'connected') scheduleReconnect();
 }
 
@@ -436,6 +509,20 @@ els.res.addEventListener('change', () => {
   }
 });
 window.addEventListener('beforeunload', () => teardownPeer());
+
+// The start screen's choice is remembered for next time (storage can be unavailable, e.g. private mode).
+const START_LABEL: Record<string, string> = { camera: 'Start camera', both: 'Start camera and mic', mic: 'Start microphone' };
+try {
+  els.mode.value = localStorage.getItem('omnicam.mode') ?? 'camera';
+} catch { /* the default stays */ }
+if (!els.mode.value) els.mode.value = 'camera';
+els.start.textContent = START_LABEL[els.mode.value];
+els.mode.addEventListener('change', () => {
+  els.start.textContent = START_LABEL[els.mode.value];
+  try {
+    localStorage.setItem('omnicam.mode', els.mode.value);
+  } catch { /* not remembered */ }
+});
 
 showOverlay(token ? '' : NO_TOKEN_MSG, !token);
 // `auto=1` skips the Start button (automated tests, reconnect deep links). Browsers may still

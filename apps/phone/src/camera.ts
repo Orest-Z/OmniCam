@@ -8,7 +8,11 @@ export class CameraController {
   private stream: MediaStream | null = null;
   private facing: Facing = 'user';
   private preset: ResolutionPreset = { width: 1920, height: 1080, frameRate: 30 };
+  /** Microphone constraints for the open that `startWithMic` is running, false otherwise. */
+  private audio: MediaTrackConstraints | false = false;
   onTrackChanged: ((track: MediaStreamTrack) => void) | null = null;
+  /** Receives the microphone track that `startWithMic` opened together with the camera. */
+  onAudioTrack: ((track: MediaStreamTrack) => void) | null = null;
 
   get track(): MediaStreamTrack | null {
     return this.stream?.getVideoTracks()[0] ?? null;
@@ -38,14 +42,19 @@ export class CameraController {
     this.fpsNote = '';
     try {
       if (fps > 30) this.stream = await this.openHighFps(facing, preset);
-      this.stream ??= await navigator.mediaDevices.getUserMedia({ audio: false, video: ideal });
+      this.stream ??= await navigator.mediaDevices.getUserMedia({ audio: this.audio, video: ideal });
     } catch (err) {
       // Fall back to "any camera" so the user at least gets a picture.
       if ((err as DOMException).name === 'OverconstrainedError') {
-        this.stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+        this.stream = await navigator.mediaDevices.getUserMedia({ audio: this.audio, video: true });
       } else {
         throw err;
       }
+    }
+    // Opened together with the microphone: hand its track over, so camera restarts never stop it.
+    for (const audio of this.stream.getAudioTracks()) {
+      this.stream.removeTrack(audio);
+      this.onAudioTrack?.(audio);
     }
     const track = this.track!;
     // Hint the encoder that this is camera motion, not screen content.
@@ -75,7 +84,7 @@ export class CameraController {
       let stream: MediaStream | null = null;
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          audio: false,
+          audio: this.audio,
           video: { facingMode: { ideal: facing }, ...size, frameRate: { min: fps - 5, ideal: fps } },
         });
         const track = stream.getVideoTracks()[0];
@@ -91,6 +100,16 @@ export class CameraController {
       stream?.getTracks().forEach((t) => t.stop());
     }
     return null;
+  }
+
+  /** Opens the camera and the microphone in one request, so the browser asks for both permissions at once. */
+  async startWithMic(mic: MediaTrackConstraints, facing: Facing, preset: ResolutionPreset): Promise<MediaStreamTrack> {
+    this.audio = mic;
+    try {
+      return await this.start(facing, preset);
+    } finally {
+      this.audio = false;
+    }
   }
 
   async flip(): Promise<MediaStreamTrack> {

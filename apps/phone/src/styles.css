@@ -60,6 +60,13 @@ button[hidden] { display: none; }
 .select { appearance: none; -webkit-appearance: none; border: 0; border-radius: 999px; background: var(--glass); color: var(--fg); padding: 9px 16px;
   font: 600 13px var(--font); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); text-align: center; }
 .hint { text-align: center; color: var(--dim); font-size: 12px; margin: 0; }
+.overlay .select { border: 1px solid rgba(204, 182, 254, 0.25); padding: 11px 20px; font-size: 14px; }
+
+.miconly { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; padding-top: 24vh;
+  background: radial-gradient(80% 50% at 50% 0%, rgba(138, 92, 243, 0.22), transparent 70%), var(--bg); color: var(--accent-soft); }
+.miconly[hidden] { display: none; }
+.miconly svg { width: 56px; height: 56px; }
+.miconly p { margin: 0; color: var(--dim); font-size: 14px; }
 
 .screenlight { position: absolute; inset: 0; z-index: 10; background: #fff; display: flex; align-items: flex-end; justify-content: center; padding: 0 24px calc(28px + env(safe-area-inset-bottom)); }
 .screenlight[hidden] { display: none; }

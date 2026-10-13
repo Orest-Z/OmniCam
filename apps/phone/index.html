@@ -17,6 +17,12 @@
   <body>
     <div id="app">
       <video id="preview" autoplay playsinline muted></video>
+      <!-- Microphone only: nothing to preview, so the screen says what is being sent. Under the start
+           overlay, which covers it after Stop. -->
+      <div id="miconly" class="miconly" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" x2="12" y1="19" y2="22" /></svg>
+        <p>Microphone only</p>
+      </div>
 
       <div id="overlay" class="overlay">
         <div class="brand">
@@ -31,6 +37,11 @@
           <h1>OmniCam</h1>
           <p class="sub">This phone is about to become the webcam of your computer.</p>
         </div>
+        <select id="mode" class="select" title="What this phone sends">
+          <option value="camera">Camera</option>
+          <option value="both">Camera + microphone</option>
+          <option value="mic">Microphone only</option>
+        </select>
         <button id="start" class="primary">Start camera</button>
         <p id="overlay-msg" class="msg"></p>
       </div>
@@ -60,7 +71,7 @@
             <option value="4k">4K</option>
             <option value="1080p60" hidden>1080p 60 fps (beta)</option>
           </select>
-          <p class="hint">Keep this page open. Locking the phone pauses the camera.</p>
+          <p class="hint">Keep this page open. Locking the phone pauses the camera and microphone.</p>
         </div>
       </div>
       <!-- Front "torch": the screen itself lights the face. Tap to turn off. -->
