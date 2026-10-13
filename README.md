@@ -93,7 +93,7 @@ cable's other end:
    the default playback device; OmniCam warns if the cable has taken that place.
 2. In Discord, Zoom or Teams, choose **CABLE Output (VB-Audio Virtual Cable)** as the microphone.
 
-*Settings → Phone microphone → Set up* walks through this as a checklist that ticks itself: it sees when VB-CABLE is
+*Settings → Microphone → Set up* walks through this as a checklist that ticks itself: it sees when VB-CABLE is
 installed, when it has become the default output, and when the phone's sound arrives. The microphone is sent raw, like
 a USB mic: the app's own noise suppression and echo cancellation do the rest. It is never played on your speakers.
 

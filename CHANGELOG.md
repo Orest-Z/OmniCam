@@ -6,7 +6,7 @@
 - **The phone can be your microphone.** Pick *Camera + microphone* or *Microphone only* on the phone
   before tapping Start. Windows needs a signed driver for a microphone device of OmniCam's own, so for now
   OmniCam plays the sound into the free [VB-CABLE](https://vb-audio.com/Cable/) virtual cable and Discord,
-  Zoom or Teams pick **CABLE Output** as the microphone. *Settings → Phone microphone* walks through it and
+  Zoom or Teams pick **CABLE Output** as the microphone. *Settings → Microphone* walks through it and
   warns if the cable has become the Windows default output. The sound is never played on your speakers.
 - **Microphone only** keeps the camera off: much lighter on the phone's battery, and nothing to decode on
   the PC.
@@ -16,6 +16,10 @@
   instead of a frozen last frame.
 - **The phone shows what it is about to become:** the OmniCam mark for the camera, a matching microphone
   mark for the microphone, and both for camera and microphone.
+- **Settings in five sections:** Camera, Microphone, Connection, App and About, picked from a sidebar.
+  Each section starts with how things stand, a dot marks the one that needs attention (Settings opens
+  there), and the long explanations moved into ⓘ tooltips, so nothing needs scrolling. The 1080p60 beta
+  and hardware decoding are under *Camera → Advanced*.
 
 ## 1.3.0 — 2026-10-04
 

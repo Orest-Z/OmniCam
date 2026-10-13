@@ -203,7 +203,10 @@ Without the native build the app still runs (QR, phone connection, preview) and 
   single accent (buttons, active states, live indicator); light violet `#ccb6fe` for active text;
   amber/red only for paused/error. Low contrast on purpose: violet-tinted grays, no pure white surfaces.
 - The main window is state-driven: `PairView` (QR + steps) until a phone connects, `LiveView`
-  (preview + controls) afterwards. Settings and the QR-while-live are dialogs, not panels.
+  (preview + controls) afterwards. Settings and the QR-while-live are dialogs, not panels. Settings is a
+  sidebar of five sections (Camera, Microphone, Connection, App, About), each opening with a one-line status;
+  a section with a problem gets a dot and is where Settings opens. Settings carry one short line; longer
+  explanations go in an ⓘ tooltip, rarely used ones under a collapsed Advanced (a native `<details>`).
 - Icons: `lucide-react` only. Fonts: Geist / Geist Mono, self-hosted (no network on the phone page).
 
 ## Performance notes (measured, Electron 44 / Win10, 1080p stream)

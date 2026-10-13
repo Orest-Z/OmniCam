@@ -339,7 +339,43 @@ svg { display: block; }
 .field .k { font-size: 13px; }
 .field .k small { display: block; color: var(--text-3); font-size: 11.5px; margin-top: 1px; }
 .field .v { display: flex; align-items: center; gap: 8px; }
-.section { margin: 18px 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-3); font-weight: 600; }
+.field .title { display: inline-flex; align-items: center; gap: 6px; }
+.field .info { display: inline-grid; color: var(--text-3); cursor: help; border-radius: 50%; }
+.field .info:hover, .field .info:focus-visible { color: var(--accent-soft); }
+.field .info svg { width: 13px; height: 13px; }
+
+/* --- settings: sections in a sidebar ------------------------------------ */
+.dialog.settings { width: min(780px, calc(100vw - 48px)); height: min(560px, calc(100vh - 64px)); display: flex; flex-direction: column; overflow: hidden; }
+.dialog.settings header { margin-bottom: 14px; }
+.settings-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 196px 1fr; gap: 20px; }
+.settings-nav { display: flex; flex-direction: column; gap: 4px; padding-right: 14px; border-right: 1px solid var(--border); }
+.settings-nav button { display: flex; align-items: center; gap: 11px; padding: 7px 10px 7px 7px; border-radius: 11px; font-size: 13.5px; font-weight: 500;
+  color: var(--text-2); text-align: left; transition: background 0.12s, color 0.12s; }
+.settings-nav button:hover { background: var(--surface-2); color: var(--text); }
+.settings-nav button.on { background: var(--accent-tint); color: var(--accent-soft); }
+.settings-nav .ic { width: 34px; height: 34px; flex: none; border-radius: 9px; display: grid; place-items: center; background: var(--surface-2); color: var(--text-2); }
+.settings-nav .ic svg { width: 18px; height: 18px; }
+.settings-nav button.on .ic { background: rgba(138, 92, 243, 0.22); color: var(--accent-soft); }
+.settings-nav .dot { margin-left: auto; width: 8px; height: 8px; border-radius: 50%; }
+.dot.bad { background: var(--danger); box-shadow: 0 0 0 3px rgba(240, 106, 126, 0.2); }
+.dot.warn { background: var(--warn); }
+.dot.new { background: var(--accent); box-shadow: 0 0 0 3px rgba(138, 92, 243, 0.22); }
+.settings-pane { min-height: 0; overflow: auto; padding-right: 6px; }
+.settings-pane h3 { margin: 2px 0 6px; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+.settings-pane > .notice { margin: 4px 0 8px; }
+.pane-status { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 12.5px; color: var(--text-2); }
+.pane-status svg { width: 15px; height: 15px; flex: none; color: var(--text-3); }
+.pane-status.ok svg { color: var(--live); }
+.advanced summary { display: flex; align-items: center; gap: 6px; padding: 12px 0 4px; font-size: 12.5px; font-weight: 500; color: var(--text-2); cursor: pointer; list-style: none; }
+.advanced summary::-webkit-details-marker { display: none; }
+.advanced summary svg { width: 14px; height: 14px; transition: transform 0.15s; }
+.advanced[open] summary svg { transform: rotate(90deg); }
+.callout { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; margin-top: 8px; padding: 16px; border-radius: var(--r-md);
+  background: var(--surface-2); border: 1px solid var(--border); }
+.callout .ic { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: var(--accent-tint); color: var(--accent-soft); }
+.callout .ic svg { width: 20px; height: 20px; }
+.callout b { font-size: 13.5px; font-weight: 600; }
+.callout p { margin: 2px 0 0; font-size: 12.5px; color: var(--text-2); line-height: 1.5; }
 .switch { position: relative; width: 36px; height: 20px; border-radius: 999px; background: var(--surface-3); border: 1px solid var(--border-strong); transition: background 0.15s; }
 .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--text-2); transition: transform 0.15s, background 0.15s; }
 .switch.on { background: var(--accent); border-color: var(--accent); }
