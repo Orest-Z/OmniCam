@@ -196,7 +196,8 @@ Without the native build the app still runs (QR, phone connection, preview) and 
 - Assets live in `assets/brand/` (Geist fonts, `mark.svg`, the reference icon sheet). Every icon size
   is generated from vector geometry by `node apps/desktop/build/icons.mjs` — never hand-crop bitmaps.
   The same geometry is duplicated in `renderer/components/Mark.tsx`, the phone `index.html` and the
-  engine placeholder (`vcam.ts`); change all four together.
+  engine placeholder (`vcam.ts`); change all four together. The phone's microphone mark (`#mic-mark` in the
+  phone `index.html`) borrows the camera mark's signal arcs, line weights and colour, so it follows them too.
 - Palette/typography are CSS tokens at the top of `renderer/styles.css` (mirrored in the phone
   `styles.css` and `THEME` in `main/ui-window.ts` for the native title bar). Violet `#8a5cf3` is the
   single accent (buttons, active states, live indicator); light violet `#ccb6fe` for active text;

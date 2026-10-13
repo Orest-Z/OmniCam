@@ -15,27 +15,45 @@
     <link rel="stylesheet" href="./src/styles.css" />
   </head>
   <body>
+    <!-- The microphone mark: a microphone drawn with the OmniCam mark's line weights, colour and signal
+         arcs (here they read as sound). Defined once, used on the start screen and the mic-only screen. -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <symbol id="mic-mark" viewBox="0 0 100 100">
+        <g fill="none" stroke="#ccb6fe" stroke-linecap="round">
+          <rect x="33" y="28" width="22" height="40" rx="11" stroke-width="8.6" />
+          <path d="M 22 56 A 22 22 0 0 0 66 56" stroke-width="6" />
+          <path d="M 44 78 V 90" stroke-width="6" />
+          <path d="M 59.66 20.83 A 38.5 38.5 0 0 1 80.18 42.83" stroke-width="6" />
+          <path d="M 64.54 9.87 A 50.5 50.5 0 0 1 91.45 38.73" stroke-width="6" />
+        </g>
+      </symbol>
+    </svg>
     <div id="app">
       <video id="preview" autoplay playsinline muted></video>
       <!-- Microphone only: nothing to preview, so the screen says what is being sent. Under the start
            overlay, which covers it after Stop. -->
       <div id="miconly" class="miconly" hidden>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" x2="12" y1="19" y2="22" /></svg>
+        <svg class="mark" viewBox="0 0 100 100" aria-hidden="true"><use href="#mic-mark" /></svg>
         <p>Microphone only</p>
       </div>
 
       <div id="overlay" class="overlay">
-        <div class="brand">
-          <svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
-            <g fill="none" stroke="#ccb6fe" stroke-linecap="round">
-              <circle cx="44" cy="56" r="26" stroke-width="8.6" />
-              <path d="M 59.66 20.83 A 38.5 38.5 0 0 1 80.18 42.83" stroke-width="6" />
-              <path d="M 64.54 9.87 A 50.5 50.5 0 0 1 91.45 38.73" stroke-width="6" />
-            </g>
-            <circle cx="44" cy="56" r="7.2" fill="#ccb6fe" />
-          </svg>
+        <!-- data-mode follows the picker below: the camera mark, the mic mark, or both. -->
+        <div id="brand" class="brand" data-mode="camera">
+          <div class="marks">
+            <svg class="mark cam" viewBox="0 0 100 100" aria-hidden="true">
+              <g fill="none" stroke="#ccb6fe" stroke-linecap="round">
+                <circle cx="44" cy="56" r="26" stroke-width="8.6" />
+                <path d="M 59.66 20.83 A 38.5 38.5 0 0 1 80.18 42.83" stroke-width="6" />
+                <path d="M 64.54 9.87 A 50.5 50.5 0 0 1 91.45 38.73" stroke-width="6" />
+              </g>
+              <circle cx="44" cy="56" r="7.2" fill="#ccb6fe" />
+            </svg>
+            <span class="plus" aria-hidden="true">+</span>
+            <svg class="mark mic" viewBox="0 0 100 100" aria-hidden="true"><use href="#mic-mark" /></svg>
+          </div>
           <h1>OmniCam</h1>
-          <p class="sub">This phone is about to become the webcam of your computer.</p>
+          <p id="sub" class="sub">This phone is about to become the webcam of your computer.</p>
         </div>
         <select id="mode" class="select" title="What this phone sends">
           <option value="camera">Camera</option>
@@ -64,14 +82,22 @@
           </button>
         </div>
         <div class="bottom">
-          <select id="res" class="select" title="Resolution">
-            <option value="720p">720p</option>
-            <option value="720p60">720p 60 fps</option>
-            <option value="1080p" selected>1080p</option>
-            <option value="4k">4K</option>
-            <option value="1080p60" hidden>1080p 60 fps (beta)</option>
-          </select>
-          <p class="hint">Keep this page open. Locking the phone pauses the camera and microphone.</p>
+          <div class="selects">
+            <!-- Switches what the phone sends at any time, without reconnecting. -->
+            <select id="mode-live" class="select" title="What this phone sends">
+              <option value="camera">Camera</option>
+              <option value="both">Camera + mic</option>
+              <option value="mic">Mic only</option>
+            </select>
+            <select id="res" class="select" title="Resolution">
+              <option value="720p">720p</option>
+              <option value="720p60">720p 60 fps</option>
+              <option value="1080p" selected>1080p</option>
+              <option value="4k">4K</option>
+              <option value="1080p60" hidden>1080p 60 fps (beta)</option>
+            </select>
+          </div>
+          <p id="hint" class="hint">Keep this page open. Locking the phone pauses the camera and microphone.</p>
         </div>
       </div>
       <!-- Front "torch": the screen itself lights the face. Tap to turn off. -->

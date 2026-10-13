@@ -32,6 +32,10 @@ const els = {
   screenlight: $<HTMLDivElement>('screenlight'),
   res: $<HTMLSelectElement>('res'),
   mode: $<HTMLSelectElement>('mode'),
+  modeLive: $<HTMLSelectElement>('mode-live'),
+  brand: $<HTMLDivElement>('brand'),
+  sub: $<HTMLParagraphElement>('sub'),
+  hint: $<HTMLParagraphElement>('hint'),
   miconly: $<HTMLDivElement>('miconly'),
 };
 
@@ -39,8 +43,14 @@ const token = new URLSearchParams(location.search).get('t') ?? '';
 const camera = new CameraController();
 const mic = new MicController();
 const device = describeDevice();
-/** What the phone sends. Chosen on the start screen; the desktop can switch either with setMic / setCamera. */
+/**
+ * What the phone sends. Chosen on the start screen, switchable during a session from the phone's own
+ * picker or from the desktop (setMic / setCamera).
+ */
 const sources: MediaSources = { camera: true, mic: false };
+/** The pickers' names for the three combinations. */
+type Mode = 'camera' | 'both' | 'mic';
+const modeOf = (s: MediaSources): Mode => (s.camera ? (s.mic ? 'both' : 'camera') : 'mic');
 
 type UiState = 'idle' | 'starting' | 'connecting' | 'live' | 'reconnecting' | 'error';
 const STATUS_LABEL: Record<UiState, string> = {
@@ -110,21 +120,41 @@ function showTorch(on: boolean) {
   send({ type: 'capabilities', caps: { ...camera.capabilities(), torch: hasLight(), torchOn: on } });
 }
 
-/** Camera-only controls follow the camera, and the desktop is told what the phone now sends. */
+/**
+ * Camera-only controls follow the camera, both pickers and the start screen show the current mode
+ * (remembered for next time), and the desktop is told what the phone now sends.
+ */
 function showSources() {
   els.flip.hidden = els.res.hidden = !sources.camera;
   els.torch.hidden = !sources.camera || !hasLight();
   els.miconly.hidden = sources.camera;
   if (!sources.camera) els.trackinfo.textContent = '';
+  els.modeLive.value = els.mode.value = modeOf(sources);
+  showMode();
   send({ type: 'sources', sources: { ...sources } });
+}
+
+const START_LABEL: Record<Mode, string> = { camera: 'Start camera', both: 'Start camera and mic', mic: 'Start microphone' };
+const BECOMES: Record<Mode, string> = { camera: 'the webcam', both: 'the webcam and microphone', mic: 'the microphone' };
+
+/** The start screen follows the chosen mode: its button, its line, and its marks (camera, mic, or both). */
+function showMode() {
+  const mode = els.mode.value as Mode;
+  els.start.textContent = START_LABEL[mode];
+  els.sub.textContent = `This phone is about to become ${BECOMES[mode]} of your computer.`;
+  els.brand.dataset.mode = mode;
+  try {
+    localStorage.setItem('omnicam.mode', mode);
+  } catch { /* not remembered (storage unavailable, e.g. private mode) */ }
 }
 
 /**
  * Switches the camera or the microphone. Both are negotiated from the start, so this only swaps the
  * sender's track. One of them always stays on: a connection that sends nothing would look stalled.
+ * Resolves true once the source is in the asked state.
  */
-async function setSource(kind: keyof MediaSources, on: boolean) {
-  if (sources[kind] === on || (!on && !sources[kind === 'mic' ? 'camera' : 'mic'])) return;
+async function setSource(kind: keyof MediaSources, on: boolean): Promise<boolean> {
+  if (sources[kind] === on || (!on && !sources[kind === 'mic' ? 'camera' : 'mic'])) return sources[kind] === on;
   try {
     // Turning on: onTrackChanged hands the new track to its sender.
     if (kind === 'camera' && on) {
@@ -143,10 +173,41 @@ async function setSource(kind: keyof MediaSources, on: boolean) {
   } catch (err) {
     // Usually a permission the phone never granted (the session started without this source).
     send({ type: 'error', message: `could not turn the ${kind === 'mic' ? 'microphone' : 'camera'} on (${(err as Error).name})` });
-    return;
+    return false;
   }
   sources[kind] = on;
   showSources();
+  return true;
+}
+
+const HINT = els.hint.textContent ?? '';
+
+/**
+ * The phone's own picker, during a session. What the mode needs goes on before what it doesn't goes off,
+ * so the phone never sends nothing; if a source can't be turned on, it stays as it was and says why.
+ */
+async function setMode(mode: Mode) {
+  const wantMic = mode !== 'camera';
+  const wantCamera = mode !== 'mic';
+  const missing =
+    (wantMic && !(await setSource('mic', true)) && 'microphone') || (wantCamera && !(await setSource('camera', true)) && 'camera');
+  if (missing) {
+    els.hint.textContent = `Couldn't turn on the ${missing}. Allow it for this page in the browser's site settings, then try again.`;
+    setTimeout(() => (els.hint.textContent = HINT), 6000);
+  } else {
+    if (!wantMic) await setSource('mic', false);
+    if (!wantCamera) await setSource('camera', false);
+  }
+  showSources(); // the picker shows what is really sent, also after a refusal
+}
+
+/** Desktop commands and the phone's own picker run one at a time, in order, so switches never race. */
+let commands = Promise.resolve();
+function enqueue(task: () => Promise<unknown>) {
+  commands = commands.then(task).then(
+    () => undefined,
+    (err) => console.warn('control failed', err),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -304,9 +365,8 @@ async function connect() {
     showSources();
     refreshTrackInfo();
   };
-  // One command at a time, in order: "microphone on, then camera off" must not race the microphone
-  // opening, or the phone refuses to turn off what looks like its last source. Pings skip the queue.
-  let commands = Promise.resolve();
+  // One command at a time, in order (see enqueue): "microphone on, then camera off" must not race the
+  // microphone opening, or the phone refuses to turn off what looks like its last source. Pings skip it.
   ch.onmessage = (ev) => {
     let msg: DesktopToPhone;
     try {
@@ -315,7 +375,7 @@ async function connect() {
       return; // ignore malformed
     }
     if (msg.type === 'ping') void handleControl(msg);
-    else commands = commands.then(() => handleControl(msg)).catch((err) => console.warn('control failed', err));
+    else enqueue(() => handleControl(msg));
   };
 
   peer.onconnectionstatechange = () => {
@@ -516,19 +576,14 @@ els.res.addEventListener('change', () => {
 });
 window.addEventListener('beforeunload', () => teardownPeer());
 
-// The start screen's choice is remembered for next time (storage can be unavailable, e.g. private mode).
-const START_LABEL: Record<string, string> = { camera: 'Start camera', both: 'Start camera and mic', mic: 'Start microphone' };
+// The mode is remembered for next time (storage can be unavailable, e.g. private mode).
 try {
   els.mode.value = localStorage.getItem('omnicam.mode') ?? 'camera';
 } catch { /* the default stays */ }
 if (!els.mode.value) els.mode.value = 'camera';
-els.start.textContent = START_LABEL[els.mode.value];
-els.mode.addEventListener('change', () => {
-  els.start.textContent = START_LABEL[els.mode.value];
-  try {
-    localStorage.setItem('omnicam.mode', els.mode.value);
-  } catch { /* not remembered */ }
-});
+showMode();
+els.mode.addEventListener('change', () => showMode());
+els.modeLive.addEventListener('change', () => enqueue(() => setMode(els.modeLive.value as Mode)));
 
 showOverlay(token ? '' : NO_TOKEN_MSG, !token);
 // `auto=1` skips the Start button (automated tests, reconnect deep links). Browsers may still

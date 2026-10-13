@@ -10,9 +10,12 @@
   warns if the cable has become the Windows default output. The sound is never played on your speakers.
 - **Microphone only** keeps the camera off: much lighter on the phone's battery, and nothing to decode on
   the PC.
-- **Camera and microphone buttons** in the window switch either one on the phone during a call, without
-  reconnecting. The microphone button glows while someone is talking. With the camera off, apps see a
-  "camera is off" card instead of a frozen last frame.
+- **Switch any time, from either side.** The phone has a *Camera / Camera + mic / Mic only* picker while
+  streaming, and the window has camera and microphone buttons; both switch without reconnecting. The
+  microphone button glows while someone is talking. With the camera off, apps see a "camera is off" card
+  instead of a frozen last frame.
+- **The phone shows what it is about to become:** the OmniCam mark for the camera, a matching microphone
+  mark for the microphone, and both for camera and microphone.
 
 ## 1.3.0 — 2026-10-04
 
