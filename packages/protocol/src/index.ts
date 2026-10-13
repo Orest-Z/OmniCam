@@ -79,6 +79,9 @@ export type DesktopToPhone =
   | { type: 'setResolution'; preset: keyof typeof RESOLUTION_PRESETS }
   | { type: 'setTorch'; on: boolean }
   | { type: 'setMirror'; on: boolean }
+  /** Turn the phone's microphone or camera on or off. The phone keeps at least one of them on. */
+  | { type: 'setMic'; on: boolean }
+  | { type: 'setCamera'; on: boolean }
   /** Nobody is watching on the desktop: encode at a low frame rate to save the phone's battery. */
   | { type: 'setIdle'; idle: boolean }
   /** The user pressed Disconnect: the pairing code is replaced, so the phone should stop, not retry. */
@@ -90,8 +93,16 @@ export type PhoneToDesktop =
   | { type: 'hello'; device: DeviceInfo; cameras: CameraDescriptor[] }
   | { type: 'trackInfo'; info: TrackInfo }
   | { type: 'capabilities'; caps: PhoneCapabilities }
+  /** What the phone sends right now; on connect and after every change. */
+  | { type: 'sources'; sources: MediaSources }
   | { type: 'error'; message: string }
   | { type: 'pong'; t: number };
+
+/** Camera and microphone are negotiated together and switched on and off without renegotiating. */
+export interface MediaSources {
+  camera: boolean;
+  mic: boolean;
+}
 
 export interface CameraDescriptor {
   deviceId: string;
