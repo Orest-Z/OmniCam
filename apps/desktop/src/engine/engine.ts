@@ -27,7 +27,7 @@ import {
   type EngineSettings,
 } from '../shared/ipc';
 import { loadVcam, renderPlaceholder, type FrameFormat, type VcamAddon } from './vcam';
-import { installFonts } from '../renderer/fonts';
+import { installFonts } from '../shared/fonts';
 import { tuneAnswerSdp } from './sdp';
 
 installFonts();
