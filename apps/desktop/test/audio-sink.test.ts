@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { describe, test } from 'node:test';
-import { loopbackOutputs, micNameFor, pickSink } from '../src/shared/audio-sink.ts';
+import { defaultIsLoopback, loopbackOutputs, micNameFor, pickSink } from '../src/shared/audio-sink.ts';
 
 const out = (label: string, deviceId = label) => ({ kind: 'audiooutput', deviceId, label });
 
@@ -36,6 +36,17 @@ describe('pickSink', () => {
   test('nowhere rather than the speakers', () => {
     assert.equal(pickSink([SPEAKERS], ''), null);
     assert.equal(pickSink([SPEAKERS], SPEAKERS.label), null);
+  });
+});
+
+describe('defaultIsLoopback', () => {
+  test('a cable as the Windows default or communications output', () => {
+    assert.equal(defaultIsLoopback([SPEAKERS, CABLE, out('Default - CABLE Input (VB-Audio Virtual Cable)', 'default')]), true);
+    assert.equal(defaultIsLoopback([SPEAKERS, CABLE, out('Communications - CABLE Input (VB-Audio Virtual Cable)', 'communications')]), true);
+  });
+
+  test('speakers as the default, cable installed beside them', () => {
+    assert.equal(defaultIsLoopback([out('Default - Speakers (Realtek(R) Audio)', 'default'), SPEAKERS, CABLE]), false);
   });
 });
 

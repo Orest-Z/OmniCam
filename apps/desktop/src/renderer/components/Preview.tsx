@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { StreamStats } from '../../shared/ipc';
 
 interface Props {
   stats: StreamStats;
   /** Keep the stream numbers on screen instead of only on hover. */
   alwaysShowStats: boolean;
+  /** Drawn over the preview, bottom left. */
+  children?: ReactNode;
 }
 
 const CHIP: Record<StreamStats['state'], { text: string; cls: string } | null> = {
@@ -20,7 +22,7 @@ const CHIP: Record<StreamStats['state'], { text: string; cls: string } | null> =
  * blitted with putImageData on a software canvas. Deliberately no ImageBitmap / blob <img> /
  * accelerated canvas: each of those was measured to grow Chromium's GPU process without bound.
  */
-export function Preview({ stats, alwaysShowStats }: Props) {
+export function Preview({ stats, alwaysShowStats, children }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [showStats, setShowStats] = useState(true);
   const live = stats.state === 'connected' || stats.state === 'stalled';
@@ -85,6 +87,7 @@ export function Preview({ stats, alwaysShowStats }: Props) {
           {stats.packetsLost > 0 ? ` · ${stats.packetsLost} lost` : ''}
         </span>
       )}
+      {children}
     </div>
   );
 }

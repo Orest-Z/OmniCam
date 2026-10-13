@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { AlertTriangle, ArrowUpRight, CheckCircle2 } from 'lucide-react';
 import type { DesktopToPhone } from '@omnicam/protocol';
 import type { AppSettings, PairingInfo, StreamStats, UpdateState, VirtualCamStats } from '../../shared/ipc';
+import { micNameFor, pickSink } from '../../shared/audio-sink';
+import { useLoopbacks } from '../useLoopbacks';
 import { Dialog, Segmented, Switch } from './ui';
 import { updateOnOffer, updateSummary } from './UpdateDialog';
 
@@ -21,6 +23,8 @@ interface Props {
 
 /** Where Android testers report how the 1080p60 beta did on their phone. */
 const BETA_FEEDBACK_URL = 'https://github.com/Orest-Z/OmniCam/discussions/20';
+/** The free virtual cable the phone's microphone plays into. Linked, never bundled: that needs VB-Audio's permission. */
+const VB_CABLE_URL = 'https://vb-audio.com/Cable/';
 
 /** The port in settings was taken, so the server is somewhere else — shown wherever the port is. */
 export function portFallback(pairing: PairingInfo | null): PairingInfo | null {
@@ -37,6 +41,8 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, stats, upda
   const android = live && stats.device?.platform === 'Android';
   const track = stats.trackInfo;
   const fallback = portFallback(pairing);
+  const loopbacks = useLoopbacks();
+  const sink = loopbacks && pickSink(loopbacks.outputs, settings.micOutput);
   const commitPort = () => {
     const n = Number(port);
     if (Number.isInteger(n) && n > 1024 && n < 65536 && n !== settings.port) onSettings({ port: n });
@@ -166,6 +172,52 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, stats, upda
           </button>
         </div>
       </div>
+
+      <div className="section">Phone microphone</div>
+      {loopbacks && !sink && (
+        <div className="notice warn">
+          <AlertTriangle />
+          <span>
+            To use the phone as a microphone, install the free VB-CABLE virtual audio cable and restart the computer. OmniCam plays the phone's
+            sound into it, and apps pick it as their microphone. Keep your speakers as the default playback device in Windows.
+            <br />
+            <button className="link" onClick={() => void window.omnicam.openExternal(VB_CABLE_URL)}>
+              Get VB-CABLE
+              <ArrowUpRight />
+            </button>
+          </span>
+        </div>
+      )}
+      {loopbacks?.isDefault && (
+        <div className="notice bad">
+          <AlertTriangle />
+          <span>
+            A virtual cable is the default playback device in Windows, so everything this computer plays would reach apps through the phone's
+            microphone. In Windows Sound settings, make your speakers or headphones the default output again (and the default communication
+            device).
+          </span>
+        </div>
+      )}
+      {loopbacks && sink && (
+        <div className="field">
+          <div className="k">
+            Play the phone's sound into
+            <small>
+              In Discord, Zoom or Teams, choose "{micNameFor(sink.label)}" as the microphone. Turn the microphone on from the phone's start
+              screen (Camera + microphone, or Microphone only) or with the microphone button here.
+            </small>
+          </div>
+          <div className="v">
+            <select className="select" value={sink.label} onChange={(e) => onSettings({ micOutput: e.target.value })}>
+              {loopbacks.outputs.map((d) => (
+                <option key={d.deviceId} value={d.label}>
+                  {d.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
 
       <div className="section">Network</div>
       <div className="field">

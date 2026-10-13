@@ -126,6 +126,7 @@ export function App() {
             onSettings={(p) => void setSettings(p)}
             onControl={(m) => void control(m)}
             onShowQr={() => setQrOpen(true)}
+            onOpenSettings={() => setSettingsOpen(true)}
           />
         ) : (
           <PairView pairing={pairing} vcam={vcam} vcamError={vcamError} onOpenSettings={() => setSettingsOpen(true)} />

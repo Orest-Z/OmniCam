@@ -16,14 +16,20 @@ export interface AudioDevice {
   label: string;
 }
 
-/**
- * Loopback outputs among the devices. Chromium's "default" and "communications" entries are left out:
- * they follow whatever Windows makes the default, which can turn into the speakers at any moment.
- */
+/** Chromium's entries that follow the Windows default output; they can turn into the speakers at any moment. */
+const followsDefault = (d: AudioDevice) => d.deviceId === 'default' || d.deviceId === 'communications';
+
+/** Loopback outputs among the devices, never one of the follow-the-default entries. */
 export function loopbackOutputs<T extends AudioDevice>(devices: T[]): T[] {
-  return devices.filter(
-    (d) => d.kind === 'audiooutput' && d.deviceId !== 'default' && d.deviceId !== 'communications' && LOOPBACK_OUTPUT.test(d.label),
-  );
+  return devices.filter((d) => d.kind === 'audiooutput' && !followsDefault(d) && LOOPBACK_OUTPUT.test(d.label));
+}
+
+/**
+ * Windows plays everything, or calls, into a loopback: VB-CABLE's installer can make "CABLE Input" the
+ * default. All of that sound would then reach the phone's microphone in apps.
+ */
+export function defaultIsLoopback(devices: AudioDevice[]): boolean {
+  return devices.some((d) => d.kind === 'audiooutput' && followsDefault(d) && LOOPBACK_OUTPUT.test(d.label));
 }
 
 /** Where the phone's audio goes: the chosen loopback while it is there, else the first one found, else nowhere. */

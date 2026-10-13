@@ -34,17 +34,19 @@ export function IconButton({
   on,
   title,
   disabled,
+  className = '',
   onClick,
   children,
 }: {
   on?: boolean;
   title: string;
   disabled?: boolean;
+  className?: string;
   onClick: () => void;
   children: ReactNode;
 }) {
   return (
-    <button className={'iconbtn' + (on ? ' on' : '')} title={title} aria-label={title} aria-pressed={on} disabled={disabled} onClick={onClick}>
+    <button className={`iconbtn ${className}` + (on ? ' on' : '')} title={title} aria-label={title} aria-pressed={on} disabled={disabled} onClick={onClick}>
       {children}
     </button>
   );
