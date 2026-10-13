@@ -1,6 +1,6 @@
 import { app } from 'electron';
 import { autoUpdater, type ProgressInfo, type UpdateInfo } from 'electron-updater';
-import type { UpdateState } from '../shared/ipc';
+import type { ReleaseNote, UpdateState } from '../shared/ipc';
 import { broadcast } from './actions';
 import { settings } from './settings';
 import { markQuitting } from './ui-window';
@@ -42,6 +42,16 @@ function describe(err: unknown): string {
   if (/sha512 checksum mismatch/i.test(msg)) return 'The download was corrupted. Try again.';
   if (/\b403\b|rate limit/i.test(msg)) return 'GitHub refused the request. Try again later.';
   return 'Something went wrong. The log folder (Settings) has details.';
+}
+
+/**
+ * The notes of every version on offer, newest first (fullChangelog gives one per version). CI puts the
+ * download and verification steps for GitHub visitors under a rule; the app needs none of that.
+ */
+function notesOf(info: UpdateInfo): ReleaseNote[] {
+  const raw = info.releaseNotes;
+  const list = Array.isArray(raw) ? raw : raw ? [{ version: info.version, note: raw }] : [];
+  return list.map((n) => ({ version: n.version, html: (n.note ?? '').split(/<hr\b[^>]*>/i)[0].trim() })).filter((n) => n.html);
 }
 
 function busy(): boolean {
@@ -91,6 +101,9 @@ export function initUpdater(): void {
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = false;
   autoUpdater.allowDowngrade = false;
+  // Notes for every version since the installed one, not just the latest: someone who skipped a release
+  // still sees what it brought. They come with the release feed the check reads anyway.
+  autoUpdater.fullChangelog = true;
   autoUpdater.logger = {
     info: (m: unknown) => console.log('[updater]', m),
     warn: (m: unknown) => console.warn('[updater]', m),
@@ -100,10 +113,10 @@ export function initUpdater(): void {
 
   autoUpdater.on('update-available', (info: UpdateInfo) => {
     console.log(`update: ${info.version} available (running ${app.getVersion()})`);
-    set({ status: 'available', version: info.version, checkedAt: Date.now() });
+    set({ status: 'available', version: info.version, notes: notesOf(info), checkedAt: Date.now() });
   });
   autoUpdater.on('update-not-available', () => {
-    set({ status: 'not-available', version: undefined, checkedAt: Date.now() });
+    set({ status: 'not-available', version: undefined, notes: undefined, checkedAt: Date.now() });
   });
   autoUpdater.on('download-progress', (p: ProgressInfo) => {
     const now = Date.now();

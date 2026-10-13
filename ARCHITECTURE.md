@@ -160,6 +160,10 @@ Without the native build the app still runs (QR, phone connection, preview) and 
   A release is only offered once it is **published** (not a draft) and carries `latest.yml` next to
   the `.exe`; CI attaches both. electron-updater is bundled into the main process like every other
   dependency (devDependencies, no `node_modules` in the package).
+  The update dialog shows **What's new** from the same check: `fullChangelog` gives the notes of every
+  version since the installed one (GitHub's HTML of each release body, from the release feed), cut at
+  the first `<hr>` where CI's install steps start, and `ReleaseNotes.tsx` rebuilds them from their text
+  and a few tags (never `innerHTML`; `<br>` from the CHANGELOG's hard wraps become spaces).
 - **The feed is this repository's public Releases.** The GitHub provider requests releases
   unauthenticated, so the check only works while the repository is public; a private repo answers
   404 and the UI reports "No published release was found". Installs from before the repository went
@@ -187,7 +191,9 @@ Without the native build the app still runs (QR, phone connection, preview) and 
 - **Releasing** is driven by the version in `apps/desktop/package.json` (it names the installer and
   fills `latest.yml`). Bump it, rename the `CHANGELOG.md` **Unreleased** heading to the new version,
   merge to `main`: CI builds, then publishes a release tagged `v<version>` whose notes are that
-  changelog section (commit subjects since the previous tag if there is none). A build whose version
+  changelog section (commit subjects since the previous tag if there is none). That section is also
+  what the app shows as What's new, so write it for users, and never put a `---` rule in it: the app
+  stops reading at the first one. A build whose version
   is already released publishes nothing, so ordinary commits to `main` only build. Pushing a `v*`
   tag publishes the same way and fails the build if the tag and the version disagree.
 

@@ -331,6 +331,22 @@ svg { display: block; }
 .dialog.update .lead { margin: 0 0 6px; font-size: 13.5px; }
 .dialog.update .small { font-size: 12.5px; margin: 14px 0 0; }
 .dialog.update .notice { margin-top: 14px; }
+/* What's new: the CHANGELOG sections of the versions on offer, scrolling inside the dialog. */
+.dialog.update:has(.notes) { width: min(540px, calc(100vw - 48px)); }
+.dialog.update .whatsnew { margin: 16px 0 8px; font-size: 13px; font-weight: 600; }
+.notes { max-height: min(340px, calc(100vh - 330px)); overflow: auto; padding: 2px 16px 10px; border-radius: var(--r-md);
+  background: var(--surface-2); border: 1px solid var(--border); font-size: 12.5px; line-height: 1.55; color: var(--text-2); user-select: text; }
+.notes .ver { margin: 14px 0 0; font-size: 13.5px; font-weight: 600; color: var(--text); }
+.notes .kind { display: flex; align-items: center; gap: 6px; margin: 14px 0 4px; font-size: 11px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent-soft); }
+.notes .kind svg { width: 13px; height: 13px; }
+.notes p { margin: 8px 0; }
+.notes ul, .notes ol { margin: 0; padding-left: 18px; }
+.notes li { margin: 5px 0; }
+.notes li::marker { color: var(--text-3); }
+.notes strong { color: var(--text); font-weight: 600; }
+.notes code { font-family: var(--mono); font-size: 11.5px; }
+.notes .link { display: inline; font-size: inherit; }
 .dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 .link { display: inline-flex; align-items: center; gap: 4px; color: var(--accent-soft); font-size: 12.5px; font-weight: 500; }
 .link:hover { text-decoration: underline; }

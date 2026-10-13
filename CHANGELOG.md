@@ -20,6 +20,8 @@
   Each section starts with how things stand, a dot marks the one that needs attention (Settings opens
   there), and the long explanations moved into ⓘ tooltips, so nothing needs scrolling. Hardware decoding
   is under *Camera → Advanced*.
+- **See what an update brings before installing it.** The update dialog lists what's new in every
+  version since yours, right in the app, instead of a link to GitHub.
 - **Report a bug or sponsor OmniCam** from two small buttons in the title bar. The bug button opens a
   GitHub issue with a short form already filled in (OmniCam version and phone type, nothing personal).
 

@@ -214,6 +214,17 @@ export interface UpdateState {
   failed?: 'check' | 'download';
   /** Epoch ms of the last finished check. */
   checkedAt?: number;
+  /** What the versions on offer bring: every version newer than this one, newest first. */
+  notes?: ReleaseNote[];
+}
+
+/**
+ * One release's notes: its CHANGELOG section as GitHub renders it (HTML), without the install steps
+ * CI adds under it. Comes from the internet, so the UI rebuilds it from text and never inserts it.
+ */
+export interface ReleaseNote {
+  version: string;
+  html: string;
 }
 
 export interface AppState {

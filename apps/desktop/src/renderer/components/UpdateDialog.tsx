@@ -1,6 +1,7 @@
 import { AlertTriangle, ArrowUpRight, Download, RotateCcw } from 'lucide-react';
 import type { StreamStats, UpdateState, VirtualCamStats } from '../../shared/ipc';
 import { Dialog } from './ui';
+import { ReleaseNotes } from './ReleaseNotes';
 
 const RELEASES_URL = 'https://github.com/Orest-Z/OmniCam/releases';
 
@@ -57,10 +58,17 @@ export function UpdateDialog({ update, version, stats, vcam, onClose }: Props) {
         <strong>OmniCam {next}</strong> is {update.status === 'downloaded' ? 'downloaded and ready to install' : 'available'}. You have{' '}
         {version}.
       </p>
-      <button className="link" onClick={() => void window.omnicam.openExternal(`${RELEASES_URL}/tag/v${next}`)}>
-        What's new in {next}
-        <ArrowUpRight />
-      </button>
+      {update.notes?.length ? (
+        <>
+          <h3 className="whatsnew">What's new{update.notes.length > 1 ? ` since ${version}` : ''}</h3>
+          <ReleaseNotes notes={update.notes} />
+        </>
+      ) : (
+        <button className="link" onClick={() => void window.omnicam.openExternal(`${RELEASES_URL}/tag/v${next}`)}>
+          What's new in {next}
+          <ArrowUpRight />
+        </button>
+      )}
 
       {update.status === 'downloading' && (
         <div className="download">
