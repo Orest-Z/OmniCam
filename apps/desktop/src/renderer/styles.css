@@ -301,6 +301,18 @@ svg { display: block; }
   color: var(--text); background: var(--surface-3); border: 1px solid rgba(138, 92, 243, 0.45); }
 .mockselect b svg { width: 14px; height: 14px; color: var(--accent-soft); }
 .mockselect b svg:last-child { color: var(--text-3); }
+/* VB-CABLE's install, one screenshot at a time. Screenshots are light, so they sit on white in both themes. */
+.slidetabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+.slidetabs button { padding: 4px 9px; border-radius: 6px; font-size: 11.5px; font-weight: 500; color: var(--text-3); background: var(--surface-2); }
+.slidetabs button.past { color: var(--text-2); }
+.slidetabs button.on { color: var(--accent-soft); background: var(--accent-tint); box-shadow: inset 0 0 0 1px rgba(138, 92, 243, 0.35); }
+.slides > .btn { margin-bottom: 10px; }
+.shot { display: block; width: 100%; margin-bottom: 10px; border-radius: 10px; overflow: hidden; background: #fff; border: 1px solid var(--border-strong); cursor: zoom-in; }
+.shot img { display: block; max-width: 100%; max-height: 300px; margin: 0 auto; } /* shrink to fit, never blow up a small one */
+.slidenav { display: flex; align-items: center; gap: 10px; }
+.slidenav span { font-size: 12px; color: var(--text-3); }
+.zoom { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 24px; background: rgba(0, 0, 0, 0.82); cursor: zoom-out; animation: fade 0.12s ease-out; }
+.zoom img { max-width: 100%; max-height: 100%; border-radius: 10px; background: #fff; box-shadow: var(--shadow); }
 .where { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 12px; color: var(--text-2); }
 .where b { display: inline-block; width: 92px; color: var(--text); font-weight: 500; }
 
