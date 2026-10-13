@@ -28,6 +28,7 @@
   --font: 'Geist', -apple-system, 'Segoe UI', system-ui, sans-serif;
   --mono: 'Geist Mono', Consolas, ui-monospace, monospace;
   --shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 12px 32px rgba(0, 0, 0, 0.45);
+  color-scheme: dark; /* native scrollbars and dropdown menus follow the theme */
 }
 
 /* Light theme (Settings > Appearance; Electron's themeSource drives prefers-color-scheme). Same
@@ -35,6 +36,7 @@
    Keep --bg / --text-2 in sync with THEME.light in main/ui-window.ts (caption buttons). */
 @media (prefers-color-scheme: light) {
   :root {
+    color-scheme: light;
     --bg: #f7f5fc;
     --surface: #ffffff;
     --surface-2: #f2eefb;
