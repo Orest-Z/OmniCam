@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 2.0.0 — 2026-10-14
+
+The biggest update yet: your phone can now be your computer's microphone too, with or without its camera.
+Settings is reorganised, the setup is guided step by step, and updates show what they bring before you
+install them.
 
 ### New
 - **The phone can be your microphone.** Pick *Camera + microphone* or *Microphone only* on the phone
