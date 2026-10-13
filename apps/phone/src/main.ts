@@ -304,12 +304,18 @@ async function connect() {
     showSources();
     refreshTrackInfo();
   };
+  // One command at a time, in order: "microphone on, then camera off" must not race the microphone
+  // opening, or the phone refuses to turn off what looks like its last source. Pings skip the queue.
+  let commands = Promise.resolve();
   ch.onmessage = (ev) => {
+    let msg: DesktopToPhone;
     try {
-      void handleControl(JSON.parse(ev.data) as DesktopToPhone);
+      msg = JSON.parse(ev.data) as DesktopToPhone;
     } catch {
-      /* ignore malformed */
+      return; // ignore malformed
     }
+    if (msg.type === 'ping') void handleControl(msg);
+    else commands = commands.then(() => handleControl(msg)).catch((err) => console.warn('control failed', err));
   };
 
   peer.onconnectionstatechange = () => {
