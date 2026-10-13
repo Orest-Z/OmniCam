@@ -237,8 +237,8 @@ Five sections in a sidebar. Each starts with how things stand, and a dot marks t
 
 </td>
     <td width="45%" align="center">
-      <img src="docs/media/screenshots/desktop-settings.webp" width="380" alt="Settings dialog: camera device and phone camera">
-      <img src="docs/media/screenshots/desktop-settings-2.webp" width="380" alt="Settings dialog: network and app">
+      <img src="docs/media/screenshots/desktop-settings.webp" width="380" alt="Settings, Camera section: output resolution, when the phone pauses, stream details">
+      <img src="docs/media/screenshots/desktop-settings-2.webp" width="380" alt="Settings, Microphone section: ready, with the cable the phone's sound plays into">
     </td>
   </tr>
 </table>
