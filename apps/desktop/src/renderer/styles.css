@@ -138,6 +138,8 @@ svg { display: block; }
 .iconbtn:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
 .iconbtn.on { background: var(--accent-tint); color: var(--accent-soft); border-color: rgba(138, 92, 243, 0.35); }
 .iconbtn svg { width: 17px; height: 17px; }
+/* The sponsor heart fills with GitHub Sponsors' pink on hover. */
+.iconbtn.heart:hover:not(:disabled) svg { color: #ea4aaa; fill: #ea4aaa; }
 
 .seg { display: inline-flex; padding: 3px; border-radius: var(--r-sm); background: var(--surface-2); border: 1px solid var(--border); }
 .seg button {

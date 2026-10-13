@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Moon, Settings as SettingsIcon, Sun } from 'lucide-react';
+import { Bug, Heart, Moon, Settings as SettingsIcon, Sun } from 'lucide-react';
 import type { ConnectionState, UpdateState } from '../shared/ipc';
 import { LiveView } from './components/LiveView';
 import { MicGuide } from './components/MicGuide';
@@ -18,6 +18,27 @@ const STATUS: Record<ConnectionState, string> = {
   stalled: 'Paused on phone',
   disconnected: 'Reconnecting',
 };
+
+const SPONSORS_URL = 'https://github.com/sponsors/Orest-Z';
+
+/**
+ * A new GitHub issue with a short form already filled in: which OmniCam and which phone (never an
+ * address or a name), and where the log is.
+ */
+function bugReportUrl(version: string, phone?: string): string {
+  const body = [
+    '**What happened?**',
+    '',
+    '',
+    '**What did you expect instead?**',
+    '',
+    '',
+    '---',
+    `OmniCam ${version} · Windows${phone ? ` · phone: ${phone}` : ''}`,
+    'The log helps a lot: Settings → About → Open log folder, then attach omnicam.log here.',
+  ].join('\n');
+  return `https://github.com/Orest-Z/OmniCam/issues/new?body=${encodeURIComponent(body)}`;
+}
 
 /** Title-bar badge text while an update is on offer; null hides the badge. */
 function updateBadge(u: UpdateState): string | null {
@@ -111,6 +132,12 @@ export function App() {
             {badge}
           </button>
         )}
+        <IconButton title="Report a bug on GitHub" onClick={() => void window.omnicam.openExternal(bugReportUrl(state.version, stats.device?.platform))}>
+          <Bug />
+        </IconButton>
+        <IconButton title="Sponsor OmniCam on GitHub" className="heart" onClick={() => void window.omnicam.openExternal(SPONSORS_URL)}>
+          <Heart />
+        </IconButton>
         <IconButton title={dark ? 'Switch to light mode' : 'Switch to dark mode'} onClick={() => void setSettings({ theme: dark ? 'light' : 'dark' })}>
           {dark ? <Sun /> : <Moon />}
         </IconButton>

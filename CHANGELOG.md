@@ -20,6 +20,8 @@
   Each section starts with how things stand, a dot marks the one that needs attention (Settings opens
   there), and the long explanations moved into ⓘ tooltips, so nothing needs scrolling. Hardware decoding
   is under *Camera → Advanced*.
+- **Report a bug or sponsor OmniCam** from two small buttons in the title bar. The bug button opens a
+  GitHub issue with a short form already filled in (OmniCam version and phone type, nothing personal).
 
 ### Removed
 - **The 1080p at 60 fps beta (Android).** It drew no feedback, so it is gone from Settings and the phone.
