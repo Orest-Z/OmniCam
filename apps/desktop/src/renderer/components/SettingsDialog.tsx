@@ -16,6 +16,7 @@ interface Props {
   onSettings: (patch: Partial<AppSettings>) => void;
   onOpenUpdate: () => void;
   onOpenMicGuide: () => void;
+  onOpenWhatsNew: () => void;
   onClose: () => void;
 }
 
@@ -44,7 +45,7 @@ const SECTIONS: { id: SectionId; label: string; icon: LucideIcon }[] = [
  * Settings as five sections in a sidebar. Each opens with a status line, and a section that needs
  * attention carries a dot. Long explanations sit in ⓘ tooltips.
  */
-export function SettingsDialog({ settings, pairing, vcam, vcamError, update, version, onSettings, onOpenUpdate, onOpenMicGuide, onClose }: Props) {
+export function SettingsDialog({ settings, pairing, vcam, vcamError, update, version, onSettings, onOpenUpdate, onOpenMicGuide, onOpenWhatsNew, onClose }: Props) {
   const fallback = portFallback(pairing);
   const loopbacks = useLoopbacks();
   const sink = loopbacks && pickSink(loopbacks.outputs, settings.micOutput);
@@ -64,7 +65,7 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, update, ver
     mic: <MicPane settings={settings} loopbacks={loopbacks} sink={sink} onSettings={onSettings} onOpenMicGuide={onOpenMicGuide} />,
     connection: <ConnectionPane settings={settings} pairing={pairing} onSettings={onSettings} />,
     app: <AppPane settings={settings} onSettings={onSettings} />,
-    about: <AboutPane settings={settings} update={update} version={version} onSettings={onSettings} onOpenUpdate={onOpenUpdate} />,
+    about: <AboutPane settings={settings} update={update} version={version} onSettings={onSettings} onOpenUpdate={onOpenUpdate} onOpenWhatsNew={onOpenWhatsNew} />,
   }[section];
 
   return (
@@ -302,13 +303,27 @@ function AppPane({ settings, onSettings }: Pick<Props, 'settings' | 'onSettings'
   );
 }
 
-function AboutPane({ settings, update, version, onSettings, onOpenUpdate }: Pick<Props, 'settings' | 'update' | 'version' | 'onSettings' | 'onOpenUpdate'>) {
+function AboutPane({
+  settings,
+  update,
+  version,
+  onSettings,
+  onOpenUpdate,
+  onOpenWhatsNew,
+}: Pick<Props, 'settings' | 'update' | 'version' | 'onSettings' | 'onOpenUpdate' | 'onOpenWhatsNew'>) {
   return (
     <>
       <h3>About</h3>
       <Status ok={update.status === 'not-available'}>
         OmniCam {version} · {updateSummary(update)}
       </Status>
+      {__RELEASE_NOTES__ && (
+        <Field title={`What's new in ${version}`} sub="What this version brought.">
+          <button className="btn" onClick={onOpenWhatsNew}>
+            Show
+          </button>
+        </Field>
+      )}
       <Field title="Updates">
         {updateOnOffer(update) ? (
           <button className="btn primary" onClick={onOpenUpdate}>

@@ -128,6 +128,20 @@ export function UpdateDialog({ update, version, stats, vcam, onClose }: Props) {
   );
 }
 
+/** What this version brought: shown once after an update, and from Settings → About. */
+export function WhatsNewDialog({ version, onClose }: { version: string; onClose: () => void }) {
+  return (
+    <Dialog title={`What's new in OmniCam ${version}`} className="update" onClose={onClose}>
+      <ReleaseNotes notes={[{ version, html: __RELEASE_NOTES__ }]} />
+      <div className="actions">
+        <button className="btn primary" onClick={onClose}>
+          Got it
+        </button>
+      </div>
+    </Dialog>
+  );
+}
+
 /** One line for Settings describing where the updater is. */
 export function updateSummary(update: UpdateState): string {
   switch (update.status) {

@@ -52,6 +52,8 @@ app.commandLine.appendSwitch('disable-background-timer-throttling');
 installFileLog();
 migrateLegacyUserData();
 settings.load();
+// A fresh install has nothing new to show; an update shows What's new once (the UI marks it seen).
+if (settings.fresh) settings.update({ notesSeen: app.getVersion() });
 if (!settings.get().hardwareDecode) app.commandLine.appendSwitch('disable-accelerated-video-decode');
 
 if (!app.requestSingleInstanceLock()) {

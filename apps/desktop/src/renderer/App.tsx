@@ -6,7 +6,7 @@ import { MicGuide } from './components/MicGuide';
 import { Mark } from './components/Mark';
 import { PairView } from './components/PairView';
 import { SettingsDialog, portFallback, portFallbackMessage } from './components/SettingsDialog';
-import { UpdateDialog, updateOnOffer } from './components/UpdateDialog';
+import { UpdateDialog, WhatsNewDialog, updateOnOffer } from './components/UpdateDialog';
 import { Dialog, IconButton } from './components/ui';
 import { useAppState } from './useAppState';
 import { Toasts, useToasts } from './toasts';
@@ -55,6 +55,7 @@ export function App() {
   const [updateOpen, setUpdateOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const [micGuideOpen, setMicGuideOpen] = useState(false);
+  const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   const { toasts, push } = useToasts();
   const prevState = useRef<ConnectionState>('idle');
   const prevCheckedAt = useRef<number | null | undefined>(undefined);
@@ -101,6 +102,12 @@ export function App() {
       push(`Couldn't check for updates. ${update.error}`, 'bad');
     }
   }, [update, version, push]);
+
+  // First launch after an update: what it brought, once (closing the dialog marks it seen).
+  const notesUnseen = Boolean(state && __RELEASE_NOTES__ && state.settings.notesSeen !== state.version);
+  useEffect(() => {
+    if (notesUnseen) setWhatsNewOpen(true);
+  }, [notesUnseen]);
 
   if (!state) return <div className="app" />;
   const { pairing, settings, stats, vcam, vcamError } = state;
@@ -179,7 +186,20 @@ export function App() {
             setSettingsOpen(false);
             setMicGuideOpen(true);
           }}
+          onOpenWhatsNew={() => {
+            setSettingsOpen(false);
+            setWhatsNewOpen(true);
+          }}
           onClose={() => setSettingsOpen(false)}
+        />
+      )}
+      {whatsNewOpen && (
+        <WhatsNewDialog
+          version={state.version}
+          onClose={() => {
+            setWhatsNewOpen(false);
+            if (settings.notesSeen !== state.version) void setSettings({ notesSeen: state.version });
+          }}
         />
       )}
       {micGuideOpen && (

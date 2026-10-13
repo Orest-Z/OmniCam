@@ -125,6 +125,11 @@ export interface AppSettings {
   holdLastFrame: boolean;
   /** Loopback output (its label) the phone's microphone is played into; empty = the first one found. */
   micOutput: string;
+  /**
+   * The version whose What's new was last shown. Set at once on a fresh install, so only an update shows
+   * it; empty on an install older than this setting, which then counts as updated.
+   */
+  notesSeen: string;
   /** Stream numbers over the preview: always, or only while hovered. */
   streamDetails: 'always' | 'hover';
   /** Desktop app colours; 'system' follows the Windows light/dark setting. */
@@ -156,6 +161,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   scaleMode: 'fill',
   holdLastFrame: true,
   micOutput: '',
+  notesSeen: '',
   streamDetails: 'always',
   theme: 'dark',
   closeToTray: true,

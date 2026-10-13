@@ -164,6 +164,11 @@ Without the native build the app still runs (QR, phone connection, preview) and 
   version since the installed one (GitHub's HTML of each release body, from the release feed), cut at
   the first `<hr>` where CI's install steps start, and `ReleaseNotes.tsx` rebuilds them from their text
   and a few tags (never `innerHTML`; `<br>` from the CHANGELOG's hard wraps become spaces).
+  After an update, the first launch shows **What's new in X** once, offline: `electron.vite.config.ts`
+  bakes this version's CHANGELOG section into the UI (`build/release-notes.ts`, a converter for the
+  CHANGELOG's small Markdown, tested), and `notesSeen` in settings records it was shown. It is set at
+  once on a fresh install; a settings file without it (any older install, the 1.0.0 migration) counts as
+  updated. Releasing renames Unreleased to the version before CI builds, so each installer carries its notes.
 - **The feed is this repository's public Releases.** The GitHub provider requests releases
   unauthenticated, so the check only works while the repository is public; a private repo answers
   404 and the UI reports "No published release was found". Installs from before the repository went
