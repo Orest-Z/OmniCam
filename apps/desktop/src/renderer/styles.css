@@ -244,6 +244,66 @@ svg { display: block; }
 .inuse.on { color: var(--accent-soft); }
 .inuse.on i { background: var(--live); }
 
+/* --- microphone guide -------------------------------------------------- */
+.dialog.guide .lead { margin: 0 0 16px; font-size: 13px; color: var(--text-2); line-height: 1.55; }
+.dialog.guide .lead b { color: var(--text); font-weight: 600; }
+/* The sound's path: parts light up as they work, the wires run while sound goes through. */
+.flow { display: flex; align-items: flex-start; padding: 14px 10px; margin-bottom: 18px; border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--border); }
+.flow .node { width: 92px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; }
+.flow .node span { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; margin-bottom: 4px;
+  background: var(--surface-3); color: var(--text-3); transition: background 0.3s, color 0.3s, box-shadow 0.3s; }
+.flow .node span svg { width: 19px; height: 19px; }
+.flow .node b { font-size: 12px; font-weight: 600; }
+.flow .node small { font-size: 11px; color: var(--text-3); line-height: 1.3; }
+.flow .node.done span { background: var(--accent-tint); color: var(--accent-soft); box-shadow: inset 0 0 0 1px rgba(138, 92, 243, 0.35); }
+.flow .node.done small { color: var(--accent-soft); }
+.flow .node.bad span { background: rgba(240, 106, 126, 0.12); color: var(--danger); }
+.flow .node.bad small { color: var(--danger); }
+.flow .link { position: relative; flex: 1; height: 2px; margin-top: 20px; border-radius: 2px; background: var(--border-strong); overflow: hidden; transition: background 0.3s; }
+.flow .link.on { background: rgba(167, 139, 250, 0.45); }
+.flow .link.flowing::before {
+  content: ''; position: absolute; top: -1px; left: -12px; right: 0; height: 4px;
+  background: radial-gradient(circle, var(--live) 1.5px, transparent 2px) 0 50% / 12px 4px repeat-x;
+  animation: flow 0.6s linear infinite;
+}
+@keyframes flow { to { transform: translateX(12px); } }
+@media (prefers-reduced-motion: reduce) { .flow .link.flowing::before { animation: none; } }
+
+.gsteps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; }
+.gstep { display: grid; grid-template-columns: 26px 1fr; gap: 12px; }
+.gstep .mark { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 600;
+  background: var(--surface-2); border: 1px solid var(--border-strong); color: var(--text-2); }
+.gstep .mark svg { width: 14px; height: 14px; }
+.gstep.done .mark { background: var(--accent); border-color: transparent; color: #fff; }
+.gstep.bad .mark { background: rgba(240, 106, 126, 0.14); border-color: rgba(240, 106, 126, 0.4); color: var(--danger); }
+.gstep h3 { margin: 3px 0 4px; font-size: 13.5px; font-weight: 600; }
+.gstep.done h3 { color: var(--text-2); }
+.gstep p { margin: 0 0 8px; font-size: 12.5px; color: var(--text-2); line-height: 1.5; }
+.gstep p b { color: var(--text); font-weight: 500; }
+.gstep .mockdialog { margin: 0 0 10px; }
+.gstep .btn svg { width: 13px; height: 13px; }
+.modes { display: flex; gap: 8px; margin-bottom: 8px; }
+.mode { flex: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 10px 12px; border-radius: 10px; text-align: left;
+  background: var(--surface-2); border: 1px solid var(--border); font-size: 12.5px; font-weight: 500; transition: border-color 0.12s, background 0.12s; }
+.mode span { display: flex; gap: 4px; color: var(--accent-soft); }
+.mode svg { width: 16px; height: 16px; }
+.mode:hover:not(:disabled) { border-color: var(--border-strong); background: var(--surface-3); }
+.mode.on { border-color: rgba(138, 92, 243, 0.55); background: var(--accent-tint); color: var(--accent-soft); }
+.mode:disabled { opacity: 1; cursor: default; } /* not connected: a picture of the phone's choice, not a broken button */
+.meter { display: flex; align-items: center; gap: 10px; }
+.meter span { width: 140px; height: 6px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--text-3); transform-origin: left; transition: transform 0.6s ease-out; }
+.meter.on i { background: var(--live); }
+.meter small { font-size: 12px; color: var(--text-2); }
+.mockselect { display: inline-flex; flex-direction: column; gap: 5px; margin-bottom: 10px; padding: 10px 12px; border-radius: 10px;
+  background: var(--surface-2); border: 1px solid var(--border); font-size: 11.5px; color: var(--text-3); }
+.mockselect b { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 7px; font-size: 12.5px; font-weight: 500;
+  color: var(--text); background: var(--surface-3); border: 1px solid rgba(138, 92, 243, 0.45); }
+.mockselect b svg { width: 14px; height: 14px; color: var(--accent-soft); }
+.mockselect b svg:last-child { color: var(--text-3); }
+.where { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 12px; color: var(--text-2); }
+.where b { display: inline-block; width: 92px; color: var(--text); font-weight: 500; }
+
 /* --- dialogs ----------------------------------------------------------- */
 .backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); display: grid; place-items: center; z-index: 50; animation: fade 0.12s ease-out; }
 .dialog { width: min(560px, calc(100vw - 48px)); max-height: calc(100vh - 64px); overflow: auto; padding: 22px; box-shadow: var(--shadow); animation: pop 0.14s ease-out; }

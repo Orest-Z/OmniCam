@@ -14,16 +14,16 @@ interface Props {
   onSettings: (patch: Partial<AppSettings>) => void;
   onControl: (msg: DesktopToPhone) => void;
   onShowQr: () => void;
-  onOpenSettings: () => void;
+  onOpenMicGuide: () => void;
 }
 
 /**
  * Level above about -34 dBFS (see micLevel): someone is talking, not just room noise on a raw phone mic.
  * A starting point, not measured on phones yet: tune it if the glow lights for silence or misses speech.
  */
-const SPEAKING_LEVEL = 0.02;
+export const SPEAKING_LEVEL = 0.02;
 
-export function LiveView({ stats, vcam, settings, onSettings, onControl, onShowQr, onOpenSettings }: Props) {
+export function LiveView({ stats, vcam, settings, onSettings, onControl, onShowQr, onOpenMicGuide }: Props) {
   const live = stats.state === 'connected' || stats.state === 'stalled';
   const facing = stats.trackInfo?.facing ?? 'user';
   const preset = activePreset(stats.trackInfo);
@@ -42,7 +42,7 @@ export function LiveView({ stats, vcam, settings, onSettings, onControl, onShowQ
         {camera ? (
           <Preview stats={stats} alwaysShowStats={settings.streamDetails === 'always'}>
             {noCable && (
-              <button className="overhint" onClick={onOpenSettings}>
+              <button className="overhint" onClick={onOpenMicGuide}>
                 The phone's microphone needs a virtual cable: set it up
               </button>
             )}
@@ -59,7 +59,7 @@ export function LiveView({ stats, vcam, settings, onSettings, onControl, onShowQ
               </small>
             ) : (
               loopbacks && (
-                <button className="link" onClick={onOpenSettings}>
+                <button className="link" onClick={onOpenMicGuide}>
                   Set up the microphone: it needs a virtual cable
                 </button>
               )

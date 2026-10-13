@@ -118,7 +118,8 @@ function wireIpc(): void {
   ipcMain.handle(UI_SET_PREVIEW, (_e, enabled: boolean) => engine.setPreview(enabled));
 
   ipcMain.handle(UI_OPEN_EXTERNAL, (_e, url: string) => {
-    if (/^https?:\/\//.test(url)) return shell.openExternal(url);
+    // Web pages, plus Windows' Sound settings for the microphone guide; nothing else the OS could launch.
+    if (/^https?:\/\//.test(url) || url === 'ms-settings:sound') return shell.openExternal(url);
   });
 
   ipcMain.handle(UI_OPEN_LOGS, () => shell.openPath(logDir()));

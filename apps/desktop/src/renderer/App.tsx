@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Moon, Settings as SettingsIcon, Sun } from 'lucide-react';
 import type { ConnectionState, UpdateState } from '../shared/ipc';
 import { LiveView } from './components/LiveView';
+import { MicGuide } from './components/MicGuide';
 import { Mark } from './components/Mark';
 import { PairView } from './components/PairView';
 import { SettingsDialog, portFallback, portFallbackMessage } from './components/SettingsDialog';
@@ -32,6 +33,7 @@ export function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [updateOpen, setUpdateOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
+  const [micGuideOpen, setMicGuideOpen] = useState(false);
   const { toasts, push } = useToasts();
   const prevState = useRef<ConnectionState>('idle');
   const prevCheckedAt = useRef<number | null | undefined>(undefined);
@@ -126,7 +128,7 @@ export function App() {
             onSettings={(p) => void setSettings(p)}
             onControl={(m) => void control(m)}
             onShowQr={() => setQrOpen(true)}
-            onOpenSettings={() => setSettingsOpen(true)}
+            onOpenMicGuide={() => setMicGuideOpen(true)}
           />
         ) : (
           <PairView pairing={pairing} vcam={vcam} vcamError={vcamError} onOpenSettings={() => setSettingsOpen(true)} />
@@ -148,8 +150,15 @@ export function App() {
             setSettingsOpen(false);
             setUpdateOpen(true);
           }}
+          onOpenMicGuide={() => {
+            setSettingsOpen(false);
+            setMicGuideOpen(true);
+          }}
           onClose={() => setSettingsOpen(false)}
         />
+      )}
+      {micGuideOpen && (
+        <MicGuide stats={stats} settings={settings} onControl={(m) => void control(m)} onClose={() => setMicGuideOpen(false)} />
       )}
       {updateOpen && (
         <UpdateDialog update={state.update} version={state.version} stats={stats} vcam={vcam} onClose={() => setUpdateOpen(false)} />

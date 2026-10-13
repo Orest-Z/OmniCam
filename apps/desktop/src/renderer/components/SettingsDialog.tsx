@@ -18,13 +18,12 @@ interface Props {
   onSettings: (patch: Partial<AppSettings>) => void;
   onControl: (msg: DesktopToPhone) => void;
   onOpenUpdate: () => void;
+  onOpenMicGuide: () => void;
   onClose: () => void;
 }
 
 /** Where Android testers report how the 1080p60 beta did on their phone. */
 const BETA_FEEDBACK_URL = 'https://github.com/Orest-Z/OmniCam/discussions/20';
-/** The free virtual cable the phone's microphone plays into. Linked, never bundled: that needs VB-Audio's permission. */
-const VB_CABLE_URL = 'https://vb-audio.com/Cable/';
 
 /** The port in settings was taken, so the server is somewhere else — shown wherever the port is. */
 export function portFallback(pairing: PairingInfo | null): PairingInfo | null {
@@ -35,7 +34,7 @@ export function portFallbackMessage(requested: number, actual: number): string {
   return `Port ${requested} is used by another program, so OmniCam is on ${actual} instead. The QR code already points there, so pairing works; pick a free port if you need a fixed one.`;
 }
 
-export function SettingsDialog({ settings, pairing, vcam, vcamError, stats, update, version, onSettings, onControl, onOpenUpdate, onClose }: Props) {
+export function SettingsDialog({ settings, pairing, vcam, vcamError, stats, update, version, onSettings, onControl, onOpenUpdate, onOpenMicGuide, onClose }: Props) {
   const [port, setPort] = useState(String(settings.port));
   const live = stats.state === 'connected' || stats.state === 'stalled';
   const android = live && stats.device?.platform === 'Android';
@@ -174,28 +173,30 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, stats, upda
       </div>
 
       <div className="section">Phone microphone</div>
-      {loopbacks && !sink && (
-        <div className="notice warn">
-          <AlertTriangle />
-          <span>
-            To use the phone as a microphone, install the free VB-CABLE virtual audio cable and restart the computer. OmniCam plays the phone's
-            sound into it, and apps pick it as their microphone. Keep your speakers as the default playback device in Windows.
-            <br />
-            <button className="link" onClick={() => void window.omnicam.openExternal(VB_CABLE_URL)}>
-              Get VB-CABLE
-              <ArrowUpRight />
-            </button>
-          </span>
-        </div>
-      )}
       {loopbacks?.isDefault && (
         <div className="notice bad">
           <AlertTriangle />
           <span>
             A virtual cable is the default playback device in Windows, so everything this computer plays would reach apps through the phone's
-            microphone. In Windows Sound settings, make your speakers or headphones the default output again (and the default communication
-            device).
+            microphone. Make your speakers or headphones the default output again.
+            <br />
+            <button className="link" onClick={onOpenMicGuide}>
+              Show me how
+            </button>
           </span>
+        </div>
+      )}
+      {loopbacks && !sink && (
+        <div className="field">
+          <div className="k">
+            Use the phone as a microphone
+            <small>With or without its camera. It needs VB-CABLE, a free virtual audio cable; the guide walks you through it in four steps.</small>
+          </div>
+          <div className="v">
+            <button className="btn primary" onClick={onOpenMicGuide}>
+              Set up
+            </button>
+          </div>
         </div>
       )}
       {loopbacks && sink && (
@@ -203,9 +204,12 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, stats, upda
           <div className="k">
             Play the phone's sound into
             <small>
-              In Discord, Zoom or Teams, choose "{micNameFor(sink.label)}" as the microphone. Turn the microphone on from the phone's start
-              screen (Camera + microphone, or Microphone only) or with the microphone button here.
+              Apps pick "{micNameFor(sink.label)}" as their microphone. Choose Camera + microphone or Microphone only on the phone, or with the
+              buttons in the window.
             </small>
+            <button className="link" onClick={onOpenMicGuide}>
+              Setup guide
+            </button>
           </div>
           <div className="v">
             <select className="select" value={sink.label} onChange={(e) => onSettings({ micOutput: e.target.value })}>
