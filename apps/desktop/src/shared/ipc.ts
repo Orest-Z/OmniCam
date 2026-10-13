@@ -3,7 +3,6 @@ import {
   type DesktopToPhone,
   type DeviceInfo,
   type PhoneCapabilities,
-  type PhoneToDesktop,
   type TrackInfo,
 } from '@omnicam/protocol';
 
@@ -244,5 +243,4 @@ export interface UiApi {
   installUpdate(): Promise<void>;
   onState(cb: (patch: StatePatch) => void): () => void;
   onPreviewFrame(cb: (frame: PreviewFrame) => void): () => void;
-  onPhoneMessage(cb: (msg: PhoneToDesktop) => void): () => void;
 }
