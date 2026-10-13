@@ -28,7 +28,7 @@ export function LiveView({ stats, vcam, settings, onSettings, onControl, onShowQ
   const camera = stats.sources?.camera !== false;
   const mic = stats.sources?.mic === true;
   const speaking = mic && (stats.micLevel ?? 0) > SPEAKING_LEVEL;
-  const loopbacks = useLoopbacks();
+  const loopbacks = useLoopbacks(mic);
   const sink = loopbacks && pickSink(loopbacks.outputs, settings.micOutput);
   // The phone's sound has nowhere to go: say so where the microphone is switched on.
   const noCable = mic && loopbacks !== null && !sink;

@@ -69,6 +69,12 @@ PHONE (browser)                       DESKTOP (Electron)
   loopback outputs, never Chromium's follow-the-default entries. The track is attached only after
   `setSinkId` succeeds, only while the phone reports its microphone on, and is detached when the cable
   goes away. With nothing attached Chromium does not decode the audio (verified: `totalSamplesDuration` 0).
+- **Nothing while the microphone is off.** Listing or watching audio devices (`enumerateDevices`,
+  `devicechange`) makes Chromium start its audio service and list cameras as well, and both stay for the
+  rest of the session. So the engine and the live view only do it while the phone's microphone is on
+  (Settings does it while open), and the video-capture service runs in the main process
+  (`RunVideoCaptureServiceInBrowserProcess`): ~7 MB there instead of a ~64 MB process of its own.
+  Listing cameras briefly opens OmniCam's own, so the log shows "camera opened by an app" once.
 - **Switching without renegotiating.** The phone always offers one video and one audio transceiver and
   switches each with `replaceTrack(track | null)`; `setMic` / `setCamera` and the phone's `sources`
   message carry the state. The phone keeps at least one on. The tracks share no `MediaStream`, so Chromium

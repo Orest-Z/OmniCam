@@ -17,16 +17,20 @@ export class MicOutput {
   private preferred = '';
   private status = 'phone microphone off'; // last thing logged
   private queue = Promise.resolve();
+  /** A cable installed, removed or renamed while the microphone is on. */
+  private readonly onDeviceChange = () => this.route();
 
   constructor(log: (...a: unknown[]) => void) {
     this.log = log;
-    // A cable installed, removed or renamed while OmniCam runs.
-    navigator.mediaDevices.addEventListener('devicechange', () => this.route());
   }
 
   /** The phone's audio track while its microphone is on, null otherwise. */
   setTrack(track: MediaStreamTrack | null): void {
     if (track === this.track) return;
+    // Devices are listed and watched only while there is something to play: either one starts
+    // Chromium's audio and video-capture services (~25 MB), which an idle OmniCam doesn't need.
+    if (track && !this.track) navigator.mediaDevices.addEventListener('devicechange', this.onDeviceChange);
+    if (!track && this.track) navigator.mediaDevices.removeEventListener('devicechange', this.onDeviceChange);
     this.track = track;
     this.route();
   }

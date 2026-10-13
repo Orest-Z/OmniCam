@@ -8,10 +8,14 @@ export interface Loopbacks {
   isDefault: boolean;
 }
 
-/** The virtual cables on this computer, following devices as they are added or removed. Null until read. */
-export function useLoopbacks(): Loopbacks | null {
+/**
+ * The virtual cables on this computer, following devices as they are added or removed. Null until read.
+ * Listing devices starts Chromium's audio and video-capture services (~25 MB), so only while `enabled`.
+ */
+export function useLoopbacks(enabled = true): Loopbacks | null {
   const [loopbacks, setLoopbacks] = useState<Loopbacks | null>(null);
   useEffect(() => {
+    if (!enabled) return;
     let alive = true;
     const read = () =>
       void navigator.mediaDevices
@@ -24,6 +28,6 @@ export function useLoopbacks(): Loopbacks | null {
       alive = false;
       navigator.mediaDevices.removeEventListener('devicechange', read);
     };
-  }, []);
+  }, [enabled]);
   return loopbacks;
 }
