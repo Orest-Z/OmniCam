@@ -1,7 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
-import { installFonts } from './fonts';
+import { installFonts } from '../shared/fonts';
 import './styles.css';
 
 installFonts();

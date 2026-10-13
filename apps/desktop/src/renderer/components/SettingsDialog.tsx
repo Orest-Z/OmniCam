@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { AlertTriangle, ArrowUpRight, CheckCircle2 } from 'lucide-react';
-import type { AppSettings, DesktopToPhone, PairingInfo, StreamStats, VirtualCamStats } from '@omnicam/protocol';
-import type { UpdateState } from '../../shared/ipc';
+import type { DesktopToPhone } from '@omnicam/protocol';
+import type { AppSettings, PairingInfo, StreamStats, UpdateState, VirtualCamStats } from '../../shared/ipc';
 import { Dialog, Segmented, Switch } from './ui';
 import { updateOnOffer, updateSummary } from './UpdateDialog';
 

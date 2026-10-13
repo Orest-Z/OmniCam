@@ -1,7 +1,7 @@
 import { app } from 'electron';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { DEFAULT_SETTINGS, type AppSettings } from '@omnicam/protocol';
+import { DEFAULT_SETTINGS, type AppSettings } from '../shared/ipc';
 
 /** Tiny JSON-file settings store. Deliberately dependency-free (electron-store is ESM-only). */
 class SettingsStore {

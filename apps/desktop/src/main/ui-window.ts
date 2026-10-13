@@ -1,5 +1,5 @@
 import { app, BrowserWindow, nativeTheme, screen, shell } from 'electron';
-import type { AppSettings } from '@omnicam/protocol';
+import type { AppSettings } from '../shared/ipc';
 import { join } from 'node:path';
 import { restartBudget } from './engine-bridge';
 import { settings } from './settings';

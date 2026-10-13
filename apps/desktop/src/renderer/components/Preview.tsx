@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { StreamStats } from '@omnicam/protocol';
+import type { StreamStats } from '../../shared/ipc';
 
 interface Props {
   stats: StreamStats;

@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Moon, Settings as SettingsIcon, Sun } from 'lucide-react';
-import type { ConnectionState } from '@omnicam/protocol';
-import type { UpdateState } from '../shared/ipc';
+import type { ConnectionState, UpdateState } from '../shared/ipc';
 import { LiveView } from './components/LiveView';
 import { Mark } from './components/Mark';
 import { PairView } from './components/PairView';

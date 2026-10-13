@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Camera, Check, Copy, RefreshCw, ScanLine, ShieldAlert, Wifi } from 'lucide-react';
-import type { PairingInfo, VirtualCamStats } from '@omnicam/protocol';
+import type { PairingInfo, VirtualCamStats } from '../../shared/ipc';
 
 interface Props {
   pairing: PairingInfo | null;

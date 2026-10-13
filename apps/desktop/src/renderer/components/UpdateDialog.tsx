@@ -1,6 +1,5 @@
 import { AlertTriangle, ArrowUpRight, Download, RotateCcw } from 'lucide-react';
-import type { StreamStats, VirtualCamStats } from '@omnicam/protocol';
-import type { UpdateState } from '../../shared/ipc';
+import type { StreamStats, UpdateState, VirtualCamStats } from '../../shared/ipc';
 import { Dialog } from './ui';
 
 const RELEASES_URL = 'https://github.com/Orest-Z/OmniCam/releases';

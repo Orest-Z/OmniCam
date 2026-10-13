@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { AppSettings, DesktopToPhone, PhoneToDesktop } from '@omnicam/protocol';
+import type { DesktopToPhone } from '@omnicam/protocol';
 import {
   UI_CONTROL,
   UI_DISCONNECT,
@@ -15,6 +15,7 @@ import {
   UI_UPDATE_DOWNLOAD,
   UI_UPDATE_INSTALL,
   UI_VCAM_ERROR,
+  type AppSettings,
   type PreviewFrame,
   type StatePatch,
   type UiApi,
@@ -40,7 +41,6 @@ const api: UiApi = {
   installUpdate: () => ipcRenderer.invoke(UI_UPDATE_INSTALL),
   onState: (cb) => subscribe<StatePatch>(UI_STATE, cb),
   onPreviewFrame: (cb) => subscribe<PreviewFrame>(UI_PREVIEW_FRAME, cb),
-  onPhoneMessage: (cb) => subscribe<PhoneToDesktop>('ui:phone-message', cb),
 };
 
 contextBridge.exposeInMainWorld('omnicam', api);

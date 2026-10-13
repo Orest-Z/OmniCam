@@ -1,12 +1,5 @@
 import type { IpcRenderer } from 'electron';
-import {
-  CONTROL_CHANNEL_LABEL,
-  type ConnectionState,
-  type DesktopToPhone,
-  type PhoneToDesktop,
-  type StreamStats,
-  type VirtualCamStats,
-} from '@omnicam/protocol';
+import { CONTROL_CHANNEL_LABEL, type DesktopToPhone, type PhoneToDesktop } from '@omnicam/protocol';
 import {
   ENGINE_ANSWER,
   ENGINE_APPLY_SETTINGS,
@@ -22,12 +15,15 @@ import {
   ENGINE_STATS,
   ENGINE_VCAM_ERROR,
   ENGINE_VCAM_STATS,
+  type ConnectionState,
   type EngineAnswer,
   type EngineOffer,
   type EngineSettings,
+  type StreamStats,
+  type VirtualCamStats,
 } from '../shared/ipc';
 import { loadVcam, renderPlaceholder, type FrameFormat, type VcamAddon } from './vcam';
-import { installFonts } from '../renderer/fonts';
+import { installFonts } from '../shared/fonts';
 import { tuneAnswerSdp } from './sdp';
 
 installFonts();

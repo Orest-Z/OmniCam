@@ -1,5 +1,5 @@
 import { networkInterfaces } from 'node:os';
-import type { NetworkAddress } from '@omnicam/protocol';
+import type { NetworkAddress } from '../shared/ipc';
 
 const WIFI_HINT = /wi-?fi|wlan|wireless|802\.11|en0|airport/i;
 const VIRTUAL_HINT = /vmware|virtualbox|vbox|hyper-v|vethernet|docker|wsl|tailscale|zerotier|hamachi|loopback|bluetooth|npcap|tap-|tun/i;

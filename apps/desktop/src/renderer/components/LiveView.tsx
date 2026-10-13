@@ -1,5 +1,6 @@
 import { Flashlight, FlipHorizontal2, QrCode, RotateCw, Unplug } from 'lucide-react';
-import type { AppSettings, DesktopToPhone, StreamStats, VirtualCamStats } from '@omnicam/protocol';
+import type { DesktopToPhone } from '@omnicam/protocol';
+import type { AppSettings, StreamStats, VirtualCamStats } from '../../shared/ipc';
 import { activePreset } from '../../shared/stream-format';
 import { Preview } from './Preview';
 import { IconButton, Segmented } from './ui';

@@ -1,11 +1,9 @@
-import type {
-  AppSettings,
-  DesktopToPhone,
-  DeviceInfo,
-  PairingInfo,
-  PhoneToDesktop,
-  StreamStats,
-  VirtualCamStats,
+import {
+  DEFAULT_PORT,
+  type DesktopToPhone,
+  type DeviceInfo,
+  type PhoneCapabilities,
+  type TrackInfo,
 } from '@omnicam/protocol';
 
 /**
@@ -48,6 +46,112 @@ export const UI_VCAM_ERROR = 'ui:vcam-error';
 export const UI_UPDATE_CHECK = 'ui:update-check';
 export const UI_UPDATE_DOWNLOAD = 'ui:update-download';
 export const UI_UPDATE_INSTALL = 'ui:update-install';
+
+// Desktop state shared by main, engine and UI (the phone never sees these)
+export type ConnectionState =
+  | 'idle'          // no phone paired yet
+  | 'connecting'    // offer received, ICE in progress
+  | 'connected'     // receiving frames
+  | 'stalled'       // connected but no frames (phone backgrounded / muted)
+  | 'disconnected'; // was connected, waiting for reconnect
+
+export interface StreamStats {
+  state: ConnectionState;
+  width: number;
+  height: number;
+  fps: number;
+  bitrateKbps: number;
+  rttMs: number;
+  codec: string;
+  packetsLost: number;
+  jitterMs: number;
+  framesDecoded: number;
+  device?: DeviceInfo;
+  trackInfo?: TrackInfo;
+  caps?: PhoneCapabilities;
+}
+
+export interface VirtualCamStats {
+  running: boolean;
+  width: number;
+  height: number;
+  fps: number;
+  framesSent: number;
+  framesRepeated: number;
+  framesDropped: number;
+  consumers: number;
+}
+
+export interface PairingInfo {
+  url: string;
+  token: string;
+  /** Port the server actually listens on. */
+  port: number;
+  /** Port from settings. Differs from `port` when that one was taken and OmniCam fell back. */
+  requestedPort: number;
+  ip: string;
+  /** All candidate LAN IPs; the user can pick a different one in settings. */
+  addresses: NetworkAddress[];
+  qrDataUrl: string;
+}
+
+export interface NetworkAddress {
+  ip: string;
+  interfaceName: string;
+  /** Heuristic: looks like a Wi-Fi adapter. */
+  wifi: boolean;
+}
+
+export interface AppSettings {
+  port: number;
+  /** Preferred LAN IP for the QR; empty = auto. */
+  preferredIp: string;
+  /** Fixed output format of the virtual camera. */
+  outputPreset: '720p' | '1080p' | '4k';
+  outputFps: 30 | 60;
+  mirror: boolean;
+  rotation: 0 | 90 | 180 | 270;
+  /** fit = letterbox/pillarbox (never crops); fill = crop to fill the output like a webcam. */
+  scaleMode: 'fit' | 'fill';
+  /** When the phone stalls, hold the last frame instead of showing the placeholder. */
+  holdLastFrame: boolean;
+  /** Stream numbers over the preview: always, or only while hovered. */
+  streamDetails: 'always' | 'hover';
+  /** Desktop app colours; 'system' follows the Windows light/dark setting. */
+  theme: 'dark' | 'light' | 'system';
+  closeToTray: boolean;
+  launchAtLogin: boolean;
+  /**
+   * Decode the phone's video on the GPU. Off by default: the virtual camera needs frames in
+   * system memory anyway, and the GPU readback costs more than software decoding up to 1080p.
+   * Takes effect after a restart (Chromium command-line switch).
+   */
+  hardwareDecode: boolean;
+  /**
+   * Ask GitHub for a newer release at launch and once a day. Off = only when the user clicks
+   * "Check for updates". The only connection OmniCam makes beyond the local network.
+   */
+  autoUpdateCheck: boolean;
+  /** Last window geometry; restored on launch. */
+  windowBounds?: { x: number; y: number; width: number; height: number };
+}
+
+export const DEFAULT_SETTINGS: AppSettings = {
+  port: DEFAULT_PORT,
+  preferredIp: '',
+  outputPreset: '720p',
+  outputFps: 30,
+  mirror: false,
+  rotation: 0,
+  scaleMode: 'fill',
+  holdLastFrame: true,
+  streamDetails: 'always',
+  theme: 'dark',
+  closeToTray: true,
+  launchAtLogin: false,
+  hardwareDecode: false,
+  autoUpdateCheck: true,
+};
 
 export interface EngineOffer {
   id: string;
@@ -139,5 +243,4 @@ export interface UiApi {
   installUpdate(): Promise<void>;
   onState(cb: (patch: StatePatch) => void): () => void;
   onPreviewFrame(cb: (frame: PreviewFrame) => void): () => void;
-  onPhoneMessage(cb: (msg: PhoneToDesktop) => void): () => void;
 }

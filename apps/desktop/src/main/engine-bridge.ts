@@ -4,12 +4,9 @@ import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import {
   RESOLUTION_PRESETS,
-  type AppSettings,
   type DesktopToPhone,
   type DeviceInfo,
   type PhoneToDesktop,
-  type StreamStats,
-  type VirtualCamStats,
 } from '@omnicam/protocol';
 import {
   ENGINE_ANSWER,
@@ -26,10 +23,13 @@ import {
   ENGINE_STATS,
   ENGINE_VCAM_STATS,
   ENGINE_VCAM_ERROR,
+  type AppSettings,
   type EngineAnswer,
   type EngineOffer,
   type EngineSettings,
   type PreviewFrame,
+  type StreamStats,
+  type VirtualCamStats,
 } from '../shared/ipc';
 import { settings } from './settings';
 
