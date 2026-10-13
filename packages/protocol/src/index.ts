@@ -68,8 +68,6 @@ export const RESOLUTION_PRESETS: Record<string, ResolutionPreset> = {
   '1080p': { width: 1920, height: 1080, frameRate: 30 },
   // Phone browsers (all of iOS) only offer 60 fps below 1080p, so the high-rate preset is 720p.
   '720p60': { width: 1280, height: 720, frameRate: 60 },
-  /** Beta, Android only (offered in Settings): some Android browsers reach 60 fps at 1080p. */
-  '1080p60': { width: 1920, height: 1080, frameRate: 60 },
   '4k': { width: 3840, height: 2160, frameRate: 30 },
 };
 

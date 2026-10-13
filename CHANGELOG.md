@@ -18,8 +18,12 @@
   mark for the microphone, and both for camera and microphone.
 - **Settings in five sections:** Camera, Microphone, Connection, App and About, picked from a sidebar.
   Each section starts with how things stand, a dot marks the one that needs attention (Settings opens
-  there), and the long explanations moved into ⓘ tooltips, so nothing needs scrolling. The 1080p60 beta
-  and hardware decoding are under *Camera → Advanced*.
+  there), and the long explanations moved into ⓘ tooltips, so nothing needs scrolling. Hardware decoding
+  is under *Camera → Advanced*.
+
+### Removed
+- **The 1080p at 60 fps beta (Android).** It drew no feedback, so it is gone from Settings and the phone.
+  720p at 60 fps stays, and works on every phone.
 
 ## 1.3.0 — 2026-10-04
 

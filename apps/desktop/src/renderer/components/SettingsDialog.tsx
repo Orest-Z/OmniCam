@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from 'react';
-import { AlertTriangle, AppWindow, ArrowUpRight, CheckCircle2, ChevronRight, Info, Mic, Video, Wifi, type LucideIcon } from 'lucide-react';
-import type { DesktopToPhone } from '@omnicam/protocol';
-import type { AppSettings, PairingInfo, StreamStats, UpdateState, VirtualCamStats } from '../../shared/ipc';
+import { AlertTriangle, AppWindow, CheckCircle2, ChevronRight, Info, Mic, Video, Wifi, type LucideIcon } from 'lucide-react';
+import type { AppSettings, PairingInfo, UpdateState, VirtualCamStats } from '../../shared/ipc';
 import { micNameFor, pickSink } from '../../shared/audio-sink';
 import { useLoopbacks } from '../useLoopbacks';
 import { Dialog, Segmented, Switch } from './ui';
@@ -12,18 +11,13 @@ interface Props {
   pairing: PairingInfo | null;
   vcam: VirtualCamStats;
   vcamError: string | null;
-  stats: StreamStats;
   update: UpdateState;
   version: string;
   onSettings: (patch: Partial<AppSettings>) => void;
-  onControl: (msg: DesktopToPhone) => void;
   onOpenUpdate: () => void;
   onOpenMicGuide: () => void;
   onClose: () => void;
 }
-
-/** Where Android testers report how the 1080p60 beta did on their phone. */
-const BETA_FEEDBACK_URL = 'https://github.com/Orest-Z/OmniCam/discussions/20';
 
 /** The port in settings was taken, so the server is somewhere else — shown wherever the port is. */
 export function portFallback(pairing: PairingInfo | null): PairingInfo | null {
@@ -50,7 +44,7 @@ const SECTIONS: { id: SectionId; label: string; icon: LucideIcon }[] = [
  * Settings as five sections in a sidebar. Each opens with a status line, and a section that needs
  * attention carries a dot. Long explanations sit in ⓘ tooltips.
  */
-export function SettingsDialog({ settings, pairing, vcam, vcamError, stats, update, version, onSettings, onControl, onOpenUpdate, onOpenMicGuide, onClose }: Props) {
+export function SettingsDialog({ settings, pairing, vcam, vcamError, update, version, onSettings, onOpenUpdate, onOpenMicGuide, onClose }: Props) {
   const fallback = portFallback(pairing);
   const loopbacks = useLoopbacks();
   const sink = loopbacks && pickSink(loopbacks.outputs, settings.micOutput);
@@ -66,7 +60,7 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, stats, upda
   const [picked, setSection] = useState<SectionId | null>(null);
   const section = picked ?? SECTIONS.find((s) => attention[s.id] === 'bad' || attention[s.id] === 'warn')?.id ?? 'camera';
   const pane = {
-    camera: <CameraPane settings={settings} vcam={vcam} vcamError={vcamError} stats={stats} onSettings={onSettings} onControl={onControl} />,
+    camera: <CameraPane settings={settings} vcam={vcam} vcamError={vcamError} onSettings={onSettings} />,
     mic: <MicPane settings={settings} loopbacks={loopbacks} sink={sink} onSettings={onSettings} onOpenMicGuide={onOpenMicGuide} />,
     connection: <ConnectionPane settings={settings} pairing={pairing} onSettings={onSettings} />,
     app: <AppPane settings={settings} onSettings={onSettings} />,
@@ -93,10 +87,7 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, stats, upda
   );
 }
 
-function CameraPane({ settings, vcam, vcamError, stats, onSettings, onControl }: Pick<Props, 'settings' | 'vcam' | 'vcamError' | 'stats' | 'onSettings' | 'onControl'>) {
-  const live = stats.state === 'connected' || stats.state === 'stalled';
-  const android = live && stats.device?.platform === 'Android';
-  const track = stats.trackInfo;
+function CameraPane({ settings, vcam, vcamError, onSettings }: Pick<Props, 'settings' | 'vcam' | 'vcamError' | 'onSettings'>) {
   return (
     <>
       <h3>Camera</h3>
@@ -176,24 +167,6 @@ function CameraPane({ settings, vcam, vcamError, stats, onSettings, onControl }:
           info="Off is faster up to 1080p on most computers, because the camera needs frames in system memory anyway. Try On for 4K."
         >
           <Switch on={settings.hardwareDecode} onChange={(v) => onSettings({ hardwareDecode: v })} />
-        </Field>
-        <Field
-          title="1080p at 60 fps (beta)"
-          sub={live && track ? `Android only. The phone sends ${track.width}×${track.height} @ ${Math.round(track.frameRate)} fps.` : 'Android only.'}
-          info="Works on Android phones whose maker lets the browser use 60 fps at 1080p; others drop to the largest size that reaches 60. Not on iPhone: every iPhone browser only gives 60 fps up to 720p, so use 720p60 there."
-        >
-          <button className="link" onClick={() => void window.omnicam.openExternal(BETA_FEEDBACK_URL)}>
-            Share result
-            <ArrowUpRight />
-          </button>
-          <button
-            className="btn"
-            disabled={!android}
-            title={android ? '' : live ? 'Only for Android phones' : 'Connect an Android phone first'}
-            onClick={() => onControl({ type: 'setResolution', preset: '1080p60' })}
-          >
-            Try 1080p60
-          </button>
         </Field>
       </details>
     </>

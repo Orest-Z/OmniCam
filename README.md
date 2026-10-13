@@ -210,25 +210,30 @@ the camera, and it resumes when you come back (the last frame is held meanwhile,
   <tr>
     <td width="55%" valign="top">
 
-**Camera device**
+Five sections in a sidebar. Each starts with how things stand, and a dot marks the one that needs attention.
+
+**Camera**
 - **Output resolution** — what Discord, Zoom… receive: 720p, 1080p or 4K at 30 or 60 fps. The frame rate follows the phone (60 for 720p60). 4K is for OBS and recording; Discord, Zoom and Teams send at most 1080p. Consumer apps negotiate a format once, so this is fixed while they run; the phone picture is scaled into it.
 - **When the phone pauses** — hold the last frame or show a placeholder.
-- **Hardware video decoding** — off by default; software decoding measured faster up to 1080p. Try on for 4K.
 - **Stream details** — the resolution, real fps and bitrate over the preview: always (default) or on hover. The preview itself is a reduced 10 fps snapshot; apps get the full stream.
+- **Advanced → Hardware video decoding** — off by default; software decoding measured faster up to 1080p. Try on for 4K.
 
-**Phone camera**
-- **1080p at 60 fps (beta, Android only)** — some Android phones reach 60 fps at 1080p in the browser; others drop to a smaller size at 60. iPhones can't: every iPhone browser runs on Safari's engine, which only gives 60 fps up to 720p. [Share how your phone did.](https://github.com/Orest-Z/OmniCam/discussions/20)
+**Microphone**
+- **Set up** — opens the guide for [using the phone as a microphone](#the-phone-as-a-microphone). Once VB-CABLE is installed: which cable the phone's sound plays into, if you have several.
 
-**Network**
-- **Network interface** — the address embedded in the QR code. Pick your Wi-Fi adapter if you have VPNs or virtual adapters.
+**Connection**
+- **Network** — the address embedded in the QR code. Pick your Wi-Fi adapter if you have VPNs or virtual adapters.
 - **Port** — change it if something else uses it.
 
 **App**
 - **Appearance** — Dark (default), Light or System. The sun/moon button next to Settings switches it in one click.
 - **Keep running in the tray** — closing the window keeps the camera available. Off: closing the window quits OmniCam.
 - **Start with Windows.**
-- **Check for updates** — OmniCam also checks quietly when it starts and once a day, unless you turn off
+
+**About**
+- **Updates** — OmniCam also checks quietly when it starts and once a day, unless you turn off
   *Check for updates automatically*; that check is the only connection it makes beyond your network ([PRIVACY.md](PRIVACY.md)). When a new version is out, an *Update available* badge appears in the title bar; nothing is downloaded or installed until you click.
+- **Log file** — opens the folder with `omnicam.log`, for bug reports. Nothing is sent automatically.
 
 </td>
     <td width="45%" align="center">
