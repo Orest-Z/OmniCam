@@ -2,7 +2,7 @@ import { execFile, execFileSync, spawn, type ChildProcess } from 'node:child_pro
 import { createInterface } from 'node:readline';
 import type { Distro, VirtualMicState } from '../shared/ipc';
 import { pactlInstallCommand } from './os-release';
-import { isRelevantEvent, ownModules, parseDefaults, SINK_ARGS, SINK_NAME, SOURCE_ARGS, SOURCE_NAME } from './pactl';
+import { isRelevantEvent, LEVEL_ARGS, ownModules, parseDefaults, replacementSink, SINK_ARGS, SINK_NAME, SOURCE_ARGS, SOURCE_NAME } from './pactl';
 import type { VirtualMic } from './types';
 
 // English output whatever the desktop's language: parseDefaults reads pactl info's labels.
@@ -35,6 +35,8 @@ export function linuxVirtualMic(distro: Distro): VirtualMic {
   let onChange: (s: VirtualMicState) => void = () => {};
   /** Our module ids, source first: the order they must be unloaded in. */
   let modules: number[] = [];
+  /** The last default output that wasn't ours, to go back to if the feed becomes the default. */
+  let lastSink = '';
   let watcher: ChildProcess | null = null;
   let stopped = false;
   let retryTimer: NodeJS.Timeout | undefined;
@@ -76,6 +78,7 @@ export function linuxVirtualMic(distro: Distro): VirtualMic {
       return;
     }
     const before = parseDefaults(info);
+    if (before.sink && before.sink !== SINK_NAME) lastSink = before.sink;
     // A crash (or kill -9) leaves the devices behind; never make a second pair.
     await unload(ownModules(await pactl(['list', 'short', 'modules'])));
     modules = [];
@@ -89,6 +92,7 @@ export function linuxVirtualMic(distro: Distro): VirtualMic {
       set({ status: 'error', reason: `The sound server did not accept OmniCam's microphone: ${e.stderr || e.message}` });
       return;
     }
+    for (const args of LEVEL_ARGS) await pactl(args).catch((err: PactlError) => console.warn(`virtual mic: ${args[0]} failed`, err.stderr || err.message));
     console.log(`virtual mic: ${SINK_NAME} and ${SOURCE_NAME} ready (modules ${modules.join(', ')})`);
     await delay(SETTLE_MS);
     await restoreDefaults(before);
@@ -121,7 +125,22 @@ export function linuxVirtualMic(distro: Distro): VirtualMic {
       return create();
     }
     const { sink } = parseDefaults(await pactl(['info']));
-    set({ status: 'ready', feedIsDefault: sink === SINK_NAME });
+    if (sink !== SINK_NAME) {
+      if (sink) lastSink = sink;
+      set({ status: 'ready', feedIsDefault: false });
+      return;
+    }
+    // The feed as the computer's output silences the speakers and sends everything it plays into the
+    // phone's microphone; nobody wants that. It happens when WirePlumber falls back to it (the chosen
+    // output was unplugged and the feed was picked once before) or by a slip in the sound settings.
+    const next = replacementSink(await pactl(['list', 'short', 'sinks']), lastSink);
+    if (next) {
+      await pactl(['set-default-sink', next]);
+      console.log(`virtual mic: ${SINK_NAME} became the default output, switched back to ${next}`);
+      set({ status: 'ready', feedIsDefault: false });
+    } else {
+      set({ status: 'ready', feedIsDefault: true });
+    }
   }
 
   /** Follows default changes and removals as they happen, without polling. */

@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert';
 import { describe, test } from 'node:test';
 import { distroFrom, pactlInstallCommand } from '../src/platform/os-release.ts';
-import { isRelevantEvent, ownModules, parseDefaults, SINK_ARGS, SOURCE_ARGS } from '../src/platform/pactl.ts';
+import { isRelevantEvent, LEVEL_ARGS, ownModules, parseDefaults, replacementSink, SINK_ARGS, SOURCE_ARGS } from '../src/platform/pactl.ts';
 import { setupResult } from '../src/platform/setup-result.ts';
 
 describe('ownModules', () => {
@@ -32,8 +32,8 @@ describe('ownModules', () => {
 
 describe('module arguments', () => {
   test('descriptions are quoted the way pipewire-pulse keeps the space', () => {
-    assert.ok(SINK_ARGS.includes(`sink_properties='device.description="OmniCam Feed"'`));
-    assert.ok(SOURCE_ARGS.includes(`source_properties='device.description="OmniCam Microphone"'`));
+    assert.ok(SINK_ARGS.includes(`sink_properties='device.description="OmniCam Feed" priority.session=0'`));
+    assert.ok(SOURCE_ARGS.includes(`source_properties='device.description="OmniCam Microphone" priority.session=0'`));
     assert.ok(SOURCE_ARGS.includes('master=omnicam_feed.monitor'));
   });
 });
@@ -101,5 +101,40 @@ describe('setupResult', () => {
     });
     assert.deepEqual(setupResult(11, ''), { status: 'failed', exitCode: 11 });
     assert.deepEqual(setupResult(null, 'killed'), { status: 'failed', message: 'killed' });
+  });
+});
+
+describe('replacementSink', () => {
+  const SINKS = [
+    '58\talsa_output.pci.HDMI1__sink\tPipeWire\ts32le 2ch 48000Hz\tSUSPENDED',
+    '59\talsa_output.pci.Speaker__sink\tPipeWire\ts32le 2ch 48000Hz\tRUNNING',
+    '293\tomnicam_feed\tPipeWire\tfloat32le 2ch 48000Hz\tRUNNING',
+    '',
+  ].join('\n');
+
+  test('back to the output before the feed', () => {
+    assert.equal(replacementSink(SINKS, 'alsa_output.pci.Speaker__sink'), 'alsa_output.pci.Speaker__sink');
+  });
+
+  test('the first other output when that one is gone (headphones unplugged)', () => {
+    assert.equal(replacementSink(SINKS, 'alsa_output.usb-HyperX'), 'alsa_output.pci.HDMI1__sink');
+    assert.equal(replacementSink(SINKS, ''), 'alsa_output.pci.HDMI1__sink');
+  });
+
+  test('never the feed itself; nothing when it is alone', () => {
+    assert.equal(replacementSink('293\tomnicam_feed\tPipeWire\tfloat32le 2ch 48000Hz\tRUNNING\n', 'omnicam_feed'), '');
+  });
+});
+
+describe('levels', () => {
+  test('both devices at full volume and unmuted', () => {
+    assert.deepEqual(LEVEL_ARGS, [
+      ['set-sink-volume', 'omnicam_feed', '100%'],
+      ['set-sink-mute', 'omnicam_feed', '0'],
+      ['set-source-volume', 'omnicam_mic', '100%'],
+      ['set-source-mute', 'omnicam_mic', '0'],
+    ]);
+    assert.ok(SINK_ARGS.at(-1)!.includes('priority.session=0'));
+    assert.ok(SOURCE_ARGS.at(-1)!.includes('priority.session=0'));
   });
 });

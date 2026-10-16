@@ -12,15 +12,44 @@ export const SOURCE_NAME = 'omnicam_mic';
 /**
  * The property lists are single-quoted with a double-quoted description inside: PulseAudio's own syntax.
  * pipewire-pulse cuts an unquoted or only double-quoted description at its first space ("OmniCam").
+ * priority.session=0 puts both last when WirePlumber picks a default by itself (hardware is ~600–2000).
  */
-export const SINK_ARGS = ['load-module', 'module-null-sink', `sink_name=${SINK_NAME}`, `sink_properties='device.description="OmniCam Feed"'`];
+export const SINK_ARGS = [
+  'load-module',
+  'module-null-sink',
+  `sink_name=${SINK_NAME}`,
+  `sink_properties='device.description="OmniCam Feed" priority.session=0'`,
+];
 export const SOURCE_ARGS = [
   'load-module',
   'module-remap-source',
   `source_name=${SOURCE_NAME}`,
   `master=${SINK_NAME}.monitor`,
-  `source_properties='device.description="OmniCam Microphone"'`,
+  `source_properties='device.description="OmniCam Microphone" priority.session=0'`,
 ];
+
+/**
+ * Full volume, unmuted. WirePlumber restores a node's last volume by name, so one turn of the volume keys
+ * while the feed was the default output would otherwise make the microphone quiet on every later run.
+ */
+export const LEVEL_ARGS = [
+  ['set-sink-volume', SINK_NAME, '100%'],
+  ['set-sink-mute', SINK_NAME, '0'],
+  ['set-source-volume', SOURCE_NAME, '100%'],
+  ['set-source-mute', SOURCE_NAME, '0'],
+];
+
+/**
+ * The output to switch to when the feed became the default: the one before it if it is still there,
+ * else the first other sink in `pactl list short sinks`; empty when there is none.
+ */
+export function replacementSink(shortSinks: string, previous: string): string {
+  const names = shortSinks
+    .split('\n')
+    .map((l) => l.split('\t')[1])
+    .filter((n): n is string => Boolean(n) && n !== SINK_NAME);
+  return names.includes(previous) ? previous : (names[0] ?? '');
+}
 
 /**
  * OmniCam's modules in `pactl list short modules` (id, name, arguments, tab-separated), e.g. left by a
