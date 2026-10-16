@@ -151,6 +151,10 @@ h1 span, h2 span {
 .bento .card h3 { margin-top: 28px; }
 .dim { color: var(--text-3); font: 500 13px var(--mono); }
 .meta { color: var(--text-3); font: 13px var(--mono); margin: 16px 0 0; }
+.meta.other { margin-top: 6px; }
+.meta.other a { color: var(--text-2); }
+.card code { overflow-wrap: anywhere; }
+#linux > .sub:last-child { margin: 20px 0 0; font-size: 15px; }
 
 /* The player: a glowing slab that sits a little forward of the page. */
 .stage {
