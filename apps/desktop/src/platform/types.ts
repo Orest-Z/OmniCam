@@ -1,10 +1,11 @@
+import type { Distro, VirtualMicState } from '../shared/ipc';
+
 /**
  * What the main process needs from the operating system. One implementation per OS (win.ts,
  * linux.ts, a no-op fallback), chosen once by index.ts, so main never branches on process.platform
  * for these. Platform code may use src/shared, never main: main calls platform, not the other way.
  *
- * Still to come here: the virtual microphone (Linux: a PipeWire sink and source while OmniCam runs)
- * and the one-time camera setup (Linux: v4l2loopback through pkexec).
+ * Still to come here: the one-time camera setup (Linux: v4l2loopback through pkexec).
  */
 export interface Platform {
   /** Start OmniCam with --hidden when the user signs in, or stop doing so. */
@@ -21,4 +22,17 @@ export interface Platform {
   hasTray(): Promise<boolean>;
   /** The OS's sound settings for the microphone guide, or null where no URL opens them. */
   soundSettingsUrl: string | null;
+  /** Linux family for install commands; 'other' elsewhere. */
+  distro: Distro;
+  /** A microphone OmniCam creates itself, or null where the user installs one (Windows: VB-CABLE). */
+  virtualMic: VirtualMic | null;
+}
+
+/** The phone's microphone as a device apps can pick, for as long as OmniCam runs. */
+export interface VirtualMic {
+  /** Creates the devices in the background; `onChange` hears every state from then on. */
+  start(onChange: (state: VirtualMicState) => void): void;
+  /** Removes them. Synchronous, because it runs while the app quits. */
+  stop(): void;
+  state(): VirtualMicState;
 }

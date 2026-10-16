@@ -5,9 +5,24 @@ import { homedir } from 'node:os';
 import { dirname } from 'node:path';
 import { parseBooleanReply, STATUS_NOTIFIER_WATCHER } from './dbus';
 import { autostartEntry, autostartPath } from './desktop-entry';
+import { distroFrom } from './os-release';
 import type { Platform } from './types';
+import { linuxVirtualMic } from './virtual-mic-linux';
 
 const TRAY_CHECK_TIMEOUT_MS = 2000;
+
+function readOsRelease(): string {
+  for (const file of ['/etc/os-release', '/usr/lib/os-release']) {
+    try {
+      return readFileSync(file, 'utf8');
+    } catch {
+      /* try the next one */
+    }
+  }
+  return '';
+}
+
+const distro = distroFrom(readOsRelease());
 
 const autostartFile = () => autostartPath(process.env.XDG_CONFIG_HOME, homedir());
 
@@ -64,4 +79,6 @@ export const linux: Platform = {
       );
     }),
   soundSettingsUrl: null,
+  distro,
+  virtualMic: linuxVirtualMic(distro),
 };

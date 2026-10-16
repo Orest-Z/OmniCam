@@ -79,6 +79,8 @@ async function fullState(): Promise<AppState> {
     version: app.getVersion(),
     platform: process.platform,
     trayAvailable,
+    distro: platform.distro,
+    virtualMic: platform.virtualMic?.state() ?? null,
   };
 }
 
@@ -164,6 +166,9 @@ async function main(): Promise<void> {
   applyTheme(settings.get().theme);
   wireIpc();
   engine.create();
+  // Linux: "OmniCam Microphone" exists while OmniCam runs, whether or not the phone's mic is on, so apps
+  // can be set up before it is. The engine finds "OmniCam Feed" like any other loopback.
+  platform.virtualMic?.start((virtualMic) => broadcast({ virtualMic }));
   platform.syncLaunchAtLogin(settings.get().launchAtLogin);
   const trayCheck = platform.hasTray().then((has) => {
     trayAvailable = has;
@@ -224,6 +229,7 @@ async function main(): Promise<void> {
   app.on('before-quit', () => markQuitting());
   app.on('will-quit', () => {
     engine.shutdown();
+    platform.virtualMic?.stop();
     void phoneServer.stop();
   });
   // Keep running in the tray (or minimised) when the UI window is closed.

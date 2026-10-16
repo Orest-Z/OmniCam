@@ -10,4 +10,7 @@ export const windows: Platform = {
   syncLaunchAtLogin() {},
   hasTray: () => Promise.resolve(true),
   soundSettingsUrl: 'ms-settings:sound',
+  distro: 'other',
+  // The user installs VB-CABLE; Windows has no user-mode virtual microphone.
+  virtualMic: null,
 };

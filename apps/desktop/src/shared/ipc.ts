@@ -234,6 +234,23 @@ export interface ReleaseNote {
   html: string;
 }
 
+/** Linux distribution family, for the install commands the UI shows ('other' off Linux too). */
+export type Distro = 'fedora' | 'debian' | 'arch' | 'other';
+
+/**
+ * The microphone OmniCam adds on Linux while it runs: a PipeWire/PulseAudio sink "OmniCam Feed" the
+ * engine plays the phone into, and a source "OmniCam Microphone" apps record from.
+ */
+export interface VirtualMicState {
+  status: 'starting' | 'ready' | 'unavailable' | 'error';
+  /** Why it is not ready, one sentence. */
+  reason?: string;
+  /** A command that fixes it, when there is one (e.g. installing pactl). */
+  fix?: string;
+  /** "OmniCam Feed" is the default output, so everything the computer plays would reach the microphone. */
+  feedIsDefault?: boolean;
+}
+
 export interface AppState {
   pairing: PairingInfo | null;
   settings: AppSettings;
@@ -245,6 +262,9 @@ export interface AppState {
   platform: NodeJS.Platform;
   /** A tray icon is shown. False on desktops without a tray host (stock GNOME): closing minimises. */
   trayAvailable: boolean;
+  distro: Distro;
+  /** Null where OmniCam creates no microphone (Windows: the user installs VB-CABLE). */
+  virtualMic: VirtualMicState | null;
 }
 
 export type StatePatch = Partial<AppState>;
