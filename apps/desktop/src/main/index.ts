@@ -2,6 +2,8 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { cpus } from 'node:os';
 import type { DesktopToPhone, PhoneToDesktop } from '@omnicam/protocol';
 import {
+  UI_CAMERA_RETRY,
+  UI_CAMERA_SETUP,
   UI_CONTROL,
   UI_DISCONNECT,
   UI_GET_STATE,
@@ -17,6 +19,7 @@ import {
   UI_VCAM_ERROR,
   type AppSettings,
   type AppState,
+  type CameraSetupResult,
   type PreviewFrame,
 } from '../shared/ipc';
 import { broadcast, disconnectPhone } from './actions';
@@ -135,6 +138,15 @@ function wireIpc(): void {
   ipcMain.handle(UI_UPDATE_CHECK, () => checkForUpdates(true));
   ipcMain.handle(UI_UPDATE_DOWNLOAD, () => downloadUpdate());
   ipcMain.handle(UI_UPDATE_INSTALL, () => installUpdate());
+
+  ipcMain.handle(UI_CAMERA_SETUP, async (): Promise<CameraSetupResult> => {
+    if (!platform.setupCamera) return { status: 'failed', message: 'Nothing to set up on this system.' };
+    const result = await platform.setupCamera();
+    // The device exists now: start the camera without restarting OmniCam.
+    if (result.status === 'ok') engine.applySettings(settings.get());
+    return result;
+  });
+  ipcMain.handle(UI_CAMERA_RETRY, () => engine.applySettings(settings.get()));
 
   engine.on('stats', (s) => {
     updateTray(s);

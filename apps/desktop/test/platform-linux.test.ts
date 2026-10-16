@@ -2,6 +2,7 @@ import { strict as assert } from 'node:assert';
 import { describe, test } from 'node:test';
 import { distroFrom, pactlInstallCommand } from '../src/platform/os-release.ts';
 import { isRelevantEvent, ownModules, parseDefaults, SINK_ARGS, SOURCE_ARGS } from '../src/platform/pactl.ts';
+import { setupResult } from '../src/platform/setup-result.ts';
 
 describe('ownModules', () => {
   // `pactl list short modules` on Fedora 44 (pipewire-pulse), with OmniCam's pair and someone else's.
@@ -82,5 +83,23 @@ describe('distroFrom', () => {
     assert.equal(pactlInstallCommand('debian'), 'sudo apt install pulseaudio-utils');
     assert.equal(pactlInstallCommand('arch'), 'sudo pacman -S libpulse');
     assert.equal(pactlInstallCommand('other'), '');
+  });
+});
+
+describe('setupResult', () => {
+  test('success, and a dismissed or refused password prompt', () => {
+    assert.deepEqual(setupResult(0, ''), { status: 'ok' });
+    assert.deepEqual(setupResult(126, 'Error executing command as another user: Request dismissed'), { status: 'cancelled' });
+    assert.deepEqual(setupResult(127, 'Error executing command as another user: Not authorized'), { status: 'cancelled' });
+  });
+
+  test("a failure carries the script's code and its last stderr line", () => {
+    assert.deepEqual(setupResult(14, 'modprobe: ERROR: could not insert: Key was rejected by service\nSecure Boot rejected the v4l2loopback module.\n'), {
+      status: 'failed',
+      exitCode: 14,
+      message: 'Secure Boot rejected the v4l2loopback module.',
+    });
+    assert.deepEqual(setupResult(11, ''), { status: 'failed', exitCode: 11 });
+    assert.deepEqual(setupResult(null, 'killed'), { status: 'failed', message: 'killed' });
   });
 });

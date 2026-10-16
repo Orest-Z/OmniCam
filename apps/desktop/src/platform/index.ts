@@ -1,3 +1,4 @@
+import { app } from 'electron';
 import { linux } from './linux';
 import type { Platform } from './types';
 import { windows } from './win';
@@ -12,6 +13,8 @@ const fallback: Platform = {
   soundSettingsUrl: null,
   distro: 'other',
   virtualMic: null,
+  setupCamera: null,
+  updates: () => (app.isPackaged ? 'supported' : 'dev'),
 };
 
 export const platform: Platform = process.platform === 'win32' ? windows : process.platform === 'linux' ? linux : fallback;

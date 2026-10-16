@@ -167,7 +167,7 @@ export function App() {
             onOpenMicGuide={() => setMicGuideOpen(true)}
           />
         ) : (
-          <PairView pairing={pairing} vcam={vcam} vcamError={vcamError} onOpenSettings={() => setSettingsOpen(true)} />
+          <PairView pairing={pairing} vcam={vcam} vcamError={vcamError} platform={state.platform} distro={state.distro} onOpenSettings={() => setSettingsOpen(true)} />
         )}
       </main>
 
@@ -180,6 +180,7 @@ export function App() {
           update={state.update}
           version={state.version}
           platform={state.platform}
+          distro={state.distro}
           trayAvailable={state.trayAvailable}
           virtualMic={state.virtualMic}
           onSettings={(p) => void setSettings(p)}
@@ -211,7 +212,7 @@ export function App() {
         <MicGuide stats={stats} settings={settings} virtualMic={state.virtualMic} onControl={(m) => void control(m)} onClose={() => setMicGuideOpen(false)} />
       )}
       {updateOpen && (
-        <UpdateDialog update={state.update} version={state.version} stats={stats} vcam={vcam} onClose={() => setUpdateOpen(false)} />
+        <UpdateDialog update={state.update} version={state.version} stats={stats} vcam={vcam} platform={state.platform} onClose={() => setUpdateOpen(false)} />
       )}
       {qrOpen && pairing && (
         <Dialog className="qr" onClose={() => setQrOpen(false)}>

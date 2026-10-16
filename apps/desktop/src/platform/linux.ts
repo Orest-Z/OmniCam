@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from '
 import { homedir } from 'node:os';
 import { dirname } from 'node:path';
 import { parseBooleanReply, STATUS_NOTIFIER_WATCHER } from './dbus';
+import { setupCameraLinux } from './camera-setup-linux';
 import { autostartEntry, autostartPath } from './desktop-entry';
 import { distroFrom } from './os-release';
 import type { Platform } from './types';
@@ -81,4 +82,7 @@ export const linux: Platform = {
   soundSettingsUrl: null,
   distro,
   virtualMic: linuxVirtualMic(distro),
+  setupCamera: setupCameraLinux,
+  // electron-updater can only replace an AppImage; $APPIMAGE is set when running one.
+  updates: () => (!app.isPackaged ? 'dev' : process.env.APPIMAGE ? 'supported' : 'package'),
 };

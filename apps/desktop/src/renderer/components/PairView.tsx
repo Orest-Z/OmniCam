@@ -1,15 +1,18 @@
 import { useState } from 'react';
 import { Camera, Check, Copy, RefreshCw, ScanLine, ShieldAlert, Wifi } from 'lucide-react';
-import type { PairingInfo, VirtualCamStats } from '../../shared/ipc';
+import type { Distro, PairingInfo, VirtualCamStats } from '../../shared/ipc';
+import { CameraHelp } from './CameraHelp';
 
 interface Props {
   pairing: PairingInfo | null;
   vcam: VirtualCamStats;
   vcamError: string | null;
+  platform: NodeJS.Platform;
+  distro: Distro;
   onOpenSettings: () => void;
 }
 
-export function PairView({ pairing, vcam, vcamError, onOpenSettings }: Props) {
+export function PairView({ pairing, vcam, vcamError, platform, distro, onOpenSettings }: Props) {
   const [copied, setCopied] = useState(false);
   const [os, setOs] = useState<'iphone' | 'android'>('iphone');
 
@@ -108,7 +111,9 @@ export function PairView({ pairing, vcam, vcamError, onOpenSettings }: Props) {
       </div>
 
       <div className="foot">
-        {vcamError ? (
+        {vcamError && platform === 'linux' ? (
+          <CameraHelp vcamError={vcamError} platform={platform} distro={distro} />
+        ) : vcamError ? (
           <button className="notice bad" onClick={onOpenSettings}>
             <ShieldAlert />
             <span>

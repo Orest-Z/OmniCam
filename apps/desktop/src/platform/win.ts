@@ -13,4 +13,7 @@ export const windows: Platform = {
   distro: 'other',
   // The user installs VB-CABLE; Windows has no user-mode virtual microphone.
   virtualMic: null,
+  // The installer registers the camera.
+  setupCamera: null,
+  updates: () => (app.isPackaged ? 'supported' : 'dev'),
 };

@@ -47,6 +47,8 @@ export const UI_VCAM_ERROR = 'ui:vcam-error';
 export const UI_UPDATE_CHECK = 'ui:update-check';
 export const UI_UPDATE_DOWNLOAD = 'ui:update-download';
 export const UI_UPDATE_INSTALL = 'ui:update-install';
+export const UI_CAMERA_SETUP = 'ui:camera-setup';
+export const UI_CAMERA_RETRY = 'ui:camera-retry';
 
 // Desktop state shared by main, engine and UI (the phone never sees these)
 export type ConnectionState =
@@ -211,6 +213,8 @@ export type UpdateStatus =
 export interface UpdateState {
   status: UpdateStatus;
   manual: boolean;
+  /** Why updates are `unsupported`: a dev run, or an rpm/deb install that updates through Releases. */
+  unsupported?: 'dev' | 'package';
   /** Version on offer (set from 'available' on). */
   version?: string;
   /** Download progress, 0–100. */
@@ -232,6 +236,16 @@ export interface UpdateState {
 export interface ReleaseNote {
   version: string;
   html: string;
+}
+
+/** How the one-time camera setup (Linux) ended. */
+export interface CameraSetupResult {
+  /** `cancelled`: the password prompt was dismissed; nothing to report. */
+  status: 'ok' | 'cancelled' | 'failed';
+  /** The setup script's exit code when it failed. */
+  exitCode?: number;
+  /** Its last line on stderr: one sentence for the user. */
+  message?: string;
 }
 
 /** Linux distribution family, for the install commands the UI shows ('other' off Linux too). */
@@ -293,6 +307,10 @@ export interface UiApi {
   downloadUpdate(): Promise<void>;
   /** Quits, runs the downloaded installer and starts the new version. */
   installUpdate(): Promise<void>;
+  /** Linux: sets up the camera device once (a password prompt), then starts the camera. */
+  setupCamera(): Promise<CameraSetupResult>;
+  /** Tries to start the camera again, e.g. after closing the app that held it. */
+  retryCamera(): Promise<void>;
   onState(cb: (patch: StatePatch) => void): () => void;
   onPreviewFrame(cb: (frame: PreviewFrame) => void): () => void;
 }
