@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { DesktopToPhone } from '@omnicam/protocol';
 import {
+  UI_CAMERA_RETRY,
+  UI_CAMERA_SETUP,
   UI_CONTROL,
   UI_DISCONNECT,
   UI_GET_STATE,
@@ -39,6 +41,8 @@ const api: UiApi = {
   checkForUpdates: () => ipcRenderer.invoke(UI_UPDATE_CHECK),
   downloadUpdate: () => ipcRenderer.invoke(UI_UPDATE_DOWNLOAD),
   installUpdate: () => ipcRenderer.invoke(UI_UPDATE_INSTALL),
+  setupCamera: () => ipcRenderer.invoke(UI_CAMERA_SETUP),
+  retryCamera: () => ipcRenderer.invoke(UI_CAMERA_RETRY),
   onState: (cb) => subscribe<StatePatch>(UI_STATE, cb),
   onPreviewFrame: (cb) => subscribe<PreviewFrame>(UI_PREVIEW_FRAME, cb),
 };

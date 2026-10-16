@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>OmniCam — your phone as a webcam and microphone</title>
-  <meta name="description" content="Use your phone's camera and microphone on your Windows PC. Nothing to install on the phone: scan a QR code, tap Start. Free and open source (MIT).">
+  <meta name="description" content="Use your phone's camera and microphone on your Windows or Linux PC. Nothing to install on the phone: scan a QR code, tap Start. Free and open source (MIT).">
   <meta name="theme-color" content="#0a0a0d">
   <meta property="og:title" content="OmniCam — your phone as a webcam and microphone">
   <meta property="og:description" content="Scan a QR code, tap Start, and your phone is a webcam and microphone for Discord, Zoom, Meet and OBS. Nothing to install on the phone. Free, MIT.">
@@ -48,6 +48,7 @@
       <nav aria-label="Sections">
         <a href="#how">How it works</a>
         <a href="#mic">Microphone</a>
+        <a href="#linux">Linux</a>
         <a href="#trust">Security</a>
         <a href="#faq">FAQ</a>
         <a class="nav-gh" href="https://github.com/Orest-Z/OmniCam"><svg class="ico" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
@@ -58,7 +59,7 @@
   <main id="main">
     <section class="hero">
       <div class="wrap hero-copy">
-        <p class="eyebrow">Free · open source · Windows 10 / 11 <a class="new" href="#mic"><svg class="ico" aria-hidden="true"><use href="#i-mic"/></svg>New: microphone <span aria-hidden="true">→</span></a></p>
+        <p class="eyebrow">Free · open source · Windows 10 / 11 · Linux <a class="new" href="#linux"><svg class="ico" aria-hidden="true"><use href="#i-download"/></svg>New: Linux <span aria-hidden="true">→</span></a></p>
         <h1>Your phone is the webcam.<br><span>Nothing to install on it.</span></h1>
         <p class="lede">Scan a QR code, tap <b>Start camera</b>, and a camera named <b>OmniCam</b> shows up in Discord, Zoom,
           Google Meet, Chrome and OBS, with the phone's <b>microphone</b> too if you want it. Video and sound go from your phone
@@ -74,6 +75,7 @@
           </a>
         </div>
         <p class="meta" data-download-meta>64-bit installer · MIT license</p>
+        <p class="meta other" data-other-os><a href="#linux">Also for Linux: AppImage · rpm · deb</a></p>
       </div>
 
       <!-- The hosted demo, autoplaying muted until someone asks for sound.
@@ -95,7 +97,7 @@
     <!-- Filled in by site.js from GitHub's API; stays hidden if that fails, so no number is ever made up or stale. -->
     <section class="wrap stats-band" aria-label="Project numbers">
       <ul class="stats" id="stats" hidden>
-        <li><a href="https://github.com/Orest-Z/OmniCam/releases"><svg class="ico" aria-hidden="true"><use href="#i-download"/></svg><b data-stat="downloads"></b><span>installer downloads</span></a></li>
+        <li><a href="https://github.com/Orest-Z/OmniCam/releases"><svg class="ico" aria-hidden="true"><use href="#i-download"/></svg><b data-stat="downloads"></b><span>downloads</span></a></li>
         <li><a href="https://github.com/Orest-Z/OmniCam/stargazers"><svg class="ico" aria-hidden="true"><use href="#i-star"/></svg><b data-stat="stars"></b><span>stars on GitHub</span></a></li>
         <li><a href="https://github.com/Orest-Z/OmniCam/forks"><svg class="ico" aria-hidden="true"><use href="#i-fork"/></svg><b data-stat="forks"></b><span>forks</span></a></li>
         <li><a href="https://github.com/Orest-Z/OmniCam/releases"><svg class="ico" aria-hidden="true"><use href="#i-tag"/></svg><b data-stat="releases"></b><span data-stat="released"></span></a></li>
@@ -105,7 +107,7 @@
         <span>Launch thread on <b>r/software</b></span>
         <span><b>78K</b> views · <b>228</b> upvotes · <b>140</b> comments · <b>376</b> shares <i>(Oct 2026)</i></span>
       </a>
-      <p class="facts">Every installer built by <a href="https://github.com/Orest-Z/OmniCam/actions/workflows/build.yml">public CI</a> from tagged source · code scanned by <a href="https://github.com/Orest-Z/OmniCam/actions/workflows/codeql.yml">CodeQL</a> · zero telemetry · MIT</p>
+      <p class="facts">Every installer and package built by <a href="https://github.com/Orest-Z/OmniCam/actions/workflows/build.yml">public CI</a> from tagged source · code scanned by <a href="https://github.com/Orest-Z/OmniCam/actions/workflows/codeql.yml">CodeQL</a> · zero telemetry · MIT</p>
     </section>
 
     <section id="how" class="wrap">
@@ -115,7 +117,7 @@
         <li class="reveal">
           <span class="n">1</span>
           <h3>Install and open OmniCam</h3>
-          <p>The installer registers the OmniCam camera on your PC. The window shows a QR code.</p>
+          <p>The installer registers the OmniCam camera on your PC (on Linux, one click and your password). The window shows a QR code.</p>
         </li>
         <li class="reveal">
           <span class="n">2</span>
@@ -165,15 +167,17 @@
           <ol class="flow" aria-label="How the sound reaches your app">
             <li>Phone mic</li>
             <li>OmniCam</li>
-            <li>VB-CABLE</li>
+            <li>VB-CABLE · OmniCam Microphone</li>
             <li>Your app</li>
           </ol>
           <ul class="points">
             <li><b>Sent raw, like a USB mic.</b> Your call app's noise suppression and echo cancellation do the rest.</li>
             <li><b>Microphone only</b> keeps the camera off: far lighter on the phone's battery, nothing to decode on the PC.</li>
             <li><b>Stays on your network</b> like the video, and is never played on your speakers.</li>
-            <li><b>Needs VB-CABLE</b>, a free virtual audio cable from VB-Audio: Windows only lets a signed driver add a
-              microphone. OmniCam's setup guide shows each step with pictures, about two minutes.</li>
+            <li><b>On Windows it needs VB-CABLE</b>, a free virtual audio cable from VB-Audio: Windows only lets a signed
+              driver add a microphone. OmniCam's setup guide shows each step with pictures, about two minutes.</li>
+            <li><b>On Linux there is nothing to install:</b> while OmniCam runs, apps get a microphone called
+              <i>OmniCam Microphone</i>.</li>
           </ul>
         </div>
         <ol class="phones three">
@@ -184,14 +188,57 @@
       </div>
     </section>
 
+    <section id="linux" class="wrap">
+      <p class="label reveal">04 — Linux</p>
+      <h2 class="reveal">On Linux too</h2>
+      <p class="sub reveal">The same phone page, the same quality, and a microphone that needs nothing installed. The camera is
+        a v4l2loopback device, the standard virtual camera on Linux, which apps list like any webcam.</p>
+      <div class="grid two">
+        <div class="card reveal">
+          <svg class="ico" aria-hidden="true"><use href="#i-download"/></svg>
+          <h3>Pick a download</h3>
+          <ul>
+            <li><b>AppImage</b>, any distribution: make it executable and run it. It updates itself.</li>
+            <li><b>rpm</b> for Fedora: <code>sudo dnf install ./OmniCam-x.y.z.rpm</code></li>
+            <li><b>deb</b> for Debian and Ubuntu: <code>sudo apt install ./OmniCam-x.y.z.deb</code></li>
+          </ul>
+          <p>x64, from <a href="https://github.com/Orest-Z/OmniCam/releases/latest">GitHub Releases</a>, like the Windows installer.</p>
+        </div>
+        <div class="card reveal">
+          <svg class="ico" aria-hidden="true"><use href="#i-list"/></svg>
+          <h3>Which distributions</h3>
+          <ul>
+            <li><b>Fedora 44</b> (GNOME, Wayland): tested end to end.</li>
+            <li><b>Ubuntu, Debian, Mint, Pop!_OS</b>: the deb or the AppImage. Supported, not tested yet.</li>
+            <li><b>Arch, Manjaro, EndeavourOS</b> and the rest: the AppImage. Supported, not tested yet.</li>
+          </ul>
+          <p>Tried one of those? <a href="https://github.com/Orest-Z/OmniCam/issues">Say how it went</a>.</p>
+        </div>
+        <div class="card reveal">
+          <svg class="ico" aria-hidden="true"><use href="#i-frame"/></svg>
+          <h3>The camera: one module, one click</h3>
+          <p>Install <b>v4l2loopback</b> from your distribution (Fedora: <code>akmod-v4l2loopback</code> from RPM Fusion; Debian
+            and Ubuntu: <code>v4l2loopback-dkms</code>), then click <b>Set up camera</b> in OmniCam and enter your password once.
+            It stays set up after restarts. With Secure Boot on, OmniCam shows the one-time key enrolment: free, no BIOS change.</p>
+        </div>
+        <div class="card reveal">
+          <svg class="ico" aria-hidden="true"><use href="#i-mic"/></svg>
+          <h3>The microphone: nothing to install</h3>
+          <p>While OmniCam runs, your apps get <b>OmniCam Microphone</b>, made with PipeWire or PulseAudio, no root. Your speakers
+            stay the sound output. On GNOME without a tray extension, closing the window minimises OmniCam instead of hiding it.</p>
+        </div>
+      </div>
+      <p class="sub reveal"><a href="https://github.com/Orest-Z/OmniCam#install-linux">Step-by-step Linux install, Secure Boot and troubleshooting</a></p>
+    </section>
+
     <section class="wrap">
       <div class="split">
         <div class="reveal">
-          <p class="label">04 — Settings</p>
+          <p class="label">05 — Settings</p>
           <h2>Settings you'll actually use</h2>
           <p>Five sections: Camera, Microphone, Connection, App and About. Each says how things stand, and a dot marks the
             one that needs you. Output resolution up to 4K, what to show when the phone pauses, which cable the phone's
-            microphone plays into, light or dark, start with Windows, updates. The frame rate follows the phone on its own.</p>
+            microphone plays into, light or dark, start when you sign in, updates. The frame rate follows the phone on its own.</p>
         </div>
         <div class="settings-shot">
           <img class="reveal" src="../docs/media/screenshots/desktop-settings.webp" loading="lazy" width="1560" height="1120" alt="OmniCam Settings, Camera section: output resolution, when the phone pauses, stream details">
@@ -201,7 +248,7 @@
     </section>
 
     <section id="trust" class="wrap">
-      <p class="label reveal">05 — Trust</p>
+      <p class="label reveal">06 — Trust</p>
       <h2 class="reveal">Security and privacy, plainly</h2>
       <p class="sub reveal">OmniCam asks for administrator rights and opens a port on your network. Here is exactly what it does with them.</p>
       <div class="grid two">
@@ -213,6 +260,8 @@
             <li>Adds one Windows Firewall rule so your phone can reach OmniCam on your local network.</li>
           </ul>
           <p>Both are listed on the installer's first page and removed when you uninstall. Nothing else runs as administrator.</p>
+          <p>On Linux, root is asked for once, through your desktop's password prompt, to set up the camera module: two small
+            config files, removed with the package. The microphone needs no root.</p>
         </div>
         <div class="card reveal">
           <svg class="ico" aria-hidden="true"><use href="#i-swap"/></svg>
@@ -226,7 +275,7 @@
         <div class="card reveal">
           <svg class="ico" aria-hidden="true"><use href="#i-branch"/></svg>
           <h3>Where the installer comes from</h3>
-          <p>Every installer is built by the project's public GitHub Actions workflow from the tagged source, and published on
+          <p>Every installer and Linux package is built by the project's public GitHub Actions workflow from the tagged source, and published on
             <a href="https://github.com/Orest-Z/OmniCam/releases">GitHub Releases</a>. This site links there; it hosts no downloads of its own.</p>
           <p class="mono small" id="checksum" hidden></p>
         </div>
@@ -242,7 +291,7 @@
     </section>
 
     <section id="warning" class="wrap">
-      <p class="label reveal">06 — First run</p>
+      <p class="label reveal">07 — First run</p>
       <h2 class="reveal">About the warning on your phone</h2>
       <div class="stack">
         <div class="reveal">
@@ -264,12 +313,13 @@
     </section>
 
     <section class="wrap">
-      <p class="label reveal">07 — Limits</p>
+      <p class="label reveal">08 — Limits</p>
       <h2 class="reveal">What it doesn't do yet</h2>
       <ul class="limits">
-        <li class="reveal"><b>The microphone needs VB-CABLE.</b> A free virtual cable from VB-Audio; an "OmniCam" microphone of its own needs a signed driver and is on the roadmap.</li>
-        <li class="reveal"><b>Windows only.</b> macOS and Linux are on the roadmap.</li>
-        <li class="reveal"><b>DirectShow apps only.</b> The Windows Camera app and the new Microsoft Teams won't list it yet.</li>
+        <li class="reveal"><b>On Windows the microphone needs VB-CABLE.</b> A free virtual cable from VB-Audio; an "OmniCam" microphone of its own needs a signed driver and is on the roadmap. Linux has one already.</li>
+        <li class="reveal"><b>Windows and Linux, 64-bit.</b> macOS is on the roadmap.</li>
+        <li class="reveal"><b>DirectShow apps only on Windows.</b> The Windows Camera app and the new Microsoft Teams won't list it yet.</li>
+        <li class="reveal"><b>A kernel module on Linux.</b> The camera needs v4l2loopback installed once, and with Secure Boot a key enrolled once.</li>
         <li class="reveal"><b>One phone at a time</b>, and the page must stay open with the screen on, so long calls want a charger.</li>
         <li class="reveal"><b>No USB.</b> Wi-Fi, or a phone hotspot with the PC on it.</li>
       </ul>
@@ -277,16 +327,16 @@
 
     <section id="faq" class="wrap faq">
       <div class="reveal">
-        <p class="label">08 — FAQ</p>
+        <p class="label">09 — FAQ</p>
         <h2>Questions</h2>
         <p class="sub">Something else? <a href="https://github.com/Orest-Z/OmniCam/issues">Open an issue</a>.</p>
       </div>
       <div class="reveal">
         <details><summary>Is it really free?</summary><p>Yes. MIT license, no paid tier, no account, no ads. If it helps you, a star on GitHub or a bug report is the best thanks.</p></details>
         <details><summary>The phone can't open the page</summary><p>Phone and PC must be on the same Wi-Fi, not a guest network or mobile data. Some routers isolate Wi-Fi devices from each other; use another network or a phone hotspot. With VPNs or virtual adapters, pick your Wi-Fi under Settings → Network interface.</p></details>
-        <details><summary>"OmniCam" doesn't show up in my app</summary><p>Restart the app; apps list cameras when they start. If it's still missing, run the installer again to re-register the camera.</p></details>
-        <details><summary>How do I use my phone as a microphone?</summary><p>Install <a href="https://vb-audio.com/Cable/">VB-CABLE</a> (free) and restart. On the phone pick <i>Camera + microphone</i> or <i>Microphone only</i>, then choose <b>CABLE Output</b> as the microphone in Discord, Zoom or Teams. <i>Settings → Microphone → Set up</i> in OmniCam walks through it with pictures and ticks each step off as you go.</p></details>
-        <details><summary>Why does the microphone need VB-CABLE?</summary><p>Call apps only list microphones that come from an audio driver, and Windows only loads drivers Microsoft has signed. VB-CABLE is a free, signed virtual cable: OmniCam plays the phone's sound into one end and your app records from the other. The camera needs nothing like it, because Windows lets an app add a camera without a driver.</p></details>
+        <details><summary>"OmniCam" doesn't show up in my app</summary><p>Restart the app; apps list cameras when they start. If it's still missing, run the installer again to re-register the camera. On Linux, OmniCam's own window says what is missing and how to fix it; apps installed from Flathub need device access.</p></details>
+        <details><summary>How do I use my phone as a microphone?</summary><p>Install <a href="https://vb-audio.com/Cable/">VB-CABLE</a> (free) and restart. On the phone pick <i>Camera + microphone</i> or <i>Microphone only</i>, then choose <b>CABLE Output</b> as the microphone in Discord, Zoom or Teams. <i>Settings → Microphone → Set up</i> in OmniCam walks through it with pictures and ticks each step off as you go. On Linux skip VB-CABLE: choose <b>OmniCam Microphone</b>.</p></details>
+        <details><summary>Why does the microphone need VB-CABLE?</summary><p>Call apps only list microphones that come from an audio driver, and Windows only loads drivers Microsoft has signed. VB-CABLE is a free, signed virtual cable: OmniCam plays the phone's sound into one end and your app records from the other. The camera needs nothing like it, because Windows lets an app add a camera without a driver. Linux lets an app add a microphone without a driver, so there OmniCam makes its own.</p></details>
         <details><summary>Does any video or sound go through the internet?</summary><p>No. Video and sound go peer-to-peer from your phone to your PC on your local network. There are no relay servers.</p></details>
         <details><summary>How was it built?</summary><p>By one developer, with AI assistance for parts of the implementation, documentation and testing. The <a href="https://github.com/Orest-Z/OmniCam#ai-involvement">README</a> says where it helped and where it didn't, and the <a href="https://github.com/Orest-Z/OmniCam/blob/main/ARCHITECTURE.md">architecture notes</a> explain every design decision.</p></details>
       </div>
@@ -302,6 +352,7 @@
         <a class="btn ghost" href="https://github.com/Orest-Z/OmniCam"><svg class="ico" aria-hidden="true"><use href="#i-github"/></svg>View source</a>
       </div>
       <p class="meta" data-download-meta>64-bit installer · MIT license</p>
+      <p class="meta other" data-other-os><a href="#linux">Also for Linux: AppImage · rpm · deb</a></p>
     </section>
   </main>
 

@@ -14,7 +14,7 @@ server. Nothing about you, your phone or your video is sent to the developer.
 
 - Video and sound never leave your network: there are no STUN, TURN or relay servers, and WebRTC only uses
   your PC's local addresses. On the PC the phone's sound goes only into the virtual audio cable you
-  installed, never to your speakers, and nothing is recorded.
+  installed (on Linux, OmniCam's own *OmniCam Microphone*), never to your speakers, and nothing is recorded.
 - The phone page is served by your PC and loads nothing from the internet (fonts and scripts are built in).
 - An update check is an ordinary request to GitHub for the latest release's `latest.yml`. GitHub sees your
   IP address and that an OmniCam install asked; [GitHub's privacy statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement)
@@ -23,13 +23,14 @@ server. Nothing about you, your phone or your video is sent to the developer.
 
 ## What stays on your PC
 
-- Settings: `%APPDATA%\OmniCam\settings.json`
+- Settings: `%APPDATA%\OmniCam\settings.json` (Linux: `~/.config/OmniCam/settings.json`)
 - The self-signed HTTPS certificate for the phone page: generated on your PC, never uploaded
-- Logs: `%APPDATA%\OmniCam\logs\omnicam.log` (connections, camera device state, errors; never the pairing
+- Logs: `%APPDATA%\OmniCam\logs\omnicam.log`, on Linux `~/.config/OmniCam/logs/omnicam.log` (connections, camera device state, errors; never the pairing
   token in installed builds). Nothing reads them but you; attach them to a bug report only if you want to.
 
 Uninstalling removes the program, the camera device and the firewall rule. Settings and logs in
-`%APPDATA%\OmniCam` stay until you delete that folder.
+`%APPDATA%\OmniCam` stay until you delete that folder (Linux: `~/.config/OmniCam`; the AppImage also leaves its
+camera setup in `/etc/modprobe.d/omnicam.conf` and `/etc/modules-load.d/omnicam.conf`).
 
 ## The website
 

@@ -1,10 +1,14 @@
-// Points the download buttons at the newest installer, shows its version, size and SHA-256, and fills the
-// numbers strip (downloads, stars, forks, releases) from GitHub's API, so they are always current.
-// Without JavaScript, or if the API is unreachable, the buttons still open the latest release and the strip stays hidden.
+// Points the download buttons at the newest installer for the visitor's system (the AppImage on Linux, the Windows
+// installer otherwise), shows its version, size and SHA-256, and fills the numbers strip (downloads, stars, forks,
+// releases) from GitHub's API, so they are always current. Without JavaScript, or if the API is unreachable, the
+// buttons still open the latest release and the strip stays hidden.
 const api = (path) =>
   fetch(`https://api.github.com/repos/Orest-Z/OmniCam${path}`, { headers: { Accept: 'application/vnd.github+json' } })
     .then((res) => (res.ok ? res.json() : Promise.reject(res.status)));
-const installer = (a) => /^OmniCam-Setup-.+\.exe$/.test(a.name);
+const windowsInstaller = (a) => /^OmniCam-Setup-.+\.exe$/.test(a.name);
+const linuxPackage = (a) => /^OmniCam-.+\.(AppImage|rpm|deb)$/.test(a.name);
+const installer = (a) => windowsInstaller(a) || linuxPackage(a);
+const onLinux = /Linux/.test(navigator.userAgent) && !/Android/.test(navigator.userAgent);
 const count = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
 
 (async () => {
@@ -12,7 +16,7 @@ const count = new Intl.NumberFormat('en', { notation: 'compact', maximumFraction
     const [repo, releases] = await Promise.all([api(''), api('/releases?per_page=100')]);
     const published = releases.filter((r) => !r.draft && !r.prerelease);
 
-    // Only installer downloads count; latest.yml is fetched by every update check and would inflate the number.
+    // Only installer and package downloads count; latest.yml is fetched by every update check and would inflate the number.
     const downloads = published.flatMap((r) => r.assets).filter(installer).reduce((n, a) => n + a.download_count, 0);
     const since = new Date(published.at(-1).published_at).toLocaleDateString('en', { month: 'long', year: 'numeric' });
     const set = (key, text) => (document.querySelector(`[data-stat="${key}"]`).textContent = text);
@@ -24,16 +28,30 @@ const count = new Intl.NumberFormat('en', { notation: 'compact', maximumFraction
     document.getElementById('stats').hidden = false;
 
     const release = published[0];
-    const asset = release.assets.find(installer);
+    const exe = release.assets.find(windowsInstaller);
+    const appImage = release.assets.find((a) => /\.AppImage$/.test(a.name));
+    // A Linux visitor gets the AppImage, once a release has one; everyone else the Windows installer.
+    const linux = onLinux && Boolean(appImage);
+    const asset = linux ? appImage : exe;
     if (!asset) return;
 
     const version = release.tag_name.replace(/^v/, '');
     const mb = (asset.size / 1024 / 1024).toFixed(0);
     for (const a of document.querySelectorAll('[data-download]')) {
       a.href = asset.browser_download_url;
-      a.querySelector('span').textContent = `Download OmniCam ${version}`;
+      a.querySelector('span').textContent = linux ? `Download OmniCam ${version} for Linux` : `Download OmniCam ${version}`;
     }
-    for (const p of document.querySelectorAll('[data-download-meta]')) p.textContent = `Windows 10 / 11 · 64-bit · ${mb} MB · MIT license`;
+    for (const p of document.querySelectorAll('[data-download-meta]')) {
+      p.textContent = linux ? `Linux x64 · AppImage · ${mb} MB · MIT license` : `Windows 10 / 11 · 64-bit · ${mb} MB · MIT license`;
+    }
+    // The other system's download, under each button.
+    if (linux && exe) {
+      for (const p of document.querySelectorAll('[data-other-os]')) {
+        const win = Object.assign(document.createElement('a'), { href: exe.browser_download_url, textContent: 'Windows installer' });
+        const pkgs = Object.assign(document.createElement('a'), { href: '#linux', textContent: 'rpm and deb' });
+        p.replaceChildren(pkgs, ' · ', win);
+      }
+    }
 
     // GitHub computes this digest itself when the file is uploaded.
     if (asset.digest?.startsWith('sha256:')) {

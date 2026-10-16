@@ -32,6 +32,48 @@ nsis:
   runAfterFinish: true
   artifactName: ${productName}-Setup-${version}.${ext}
   shortcutName: OmniCam
+# Linux: AppImage (updates in the app, like the Windows installer), rpm and deb (updates come from
+# GitHub Releases). The camera is the v4l2loopback kernel module: the packages set it up at install
+# (they run as root already), the AppImage from the app (Settings → Camera, one password prompt).
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: rpm
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+  # One PNG per icon-theme size, drawn by build/icons.mjs (hicolor has no 1024x1024).
+  icon: build/linux/icons
+  category: AudioVideo
+  # Also the icon's name in the system theme, which the autostart entry refers to.
+  executableName: omnicam
+  # package.json desktopName is omnicam.desktop: Electron uses it as the Wayland app_id / WM_CLASS,
+  # so GNOME links the running window to the installed omnicam.desktop (its icon in the dash).
+  syncDesktopName: true
+  artifactName: ${productName}-${version}.${ext}
+  synopsis: Your phone's camera as a webcam
+  description: OmniCam turns your phone into a webcam and microphone over Wi-Fi, with nothing to install on the phone.
+  maintainer: Orest-Z <200836342+Orest-Z@users.noreply.github.com>
+  extraResources:
+    - from: build/linux/omnicam-camera-setup.sh
+      to: linux/omnicam-camera-setup.sh
+# The module itself is only recommended: RPM Fusion may be off, and the app explains how to get it.
+# pactl (pulseaudio-utils) creates the "OmniCam Microphone" device.
+rpm:
+  afterInstall: build/linux/after-install.tpl
+  afterRemove: build/linux/after-remove.tpl
+  fpm:
+    - --rpm-tag
+    - 'Recommends: akmod-v4l2loopback'
+    - --rpm-tag
+    - 'Recommends: pulseaudio-utils'
+deb:
+  afterInstall: build/linux/after-install.tpl
+  afterRemove: build/linux/after-remove.tpl
+  recommends:
+    - v4l2loopback-dkms
+    - pulseaudio-utils
 electronVersion: 44.5.0
 # GitHub Releases feed for the in-app updater: makes electron-builder write latest.yml (CI attaches it
 # to the release) and resources/app-update.yml (tells the installed app where to look). The dist

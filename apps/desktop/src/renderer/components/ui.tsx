@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
+import { Check, Copy } from 'lucide-react';
 
 export function Segmented<T extends string | number>({
   value,
@@ -70,6 +71,24 @@ export function Dialog({ title, onClose, children, className = '' }: { title?: s
         )}
         {children}
       </div>
+    </div>
+  );
+}
+
+/** A shell command to paste into a terminal, with a copy button. */
+export function Command({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () =>
+    void navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  return (
+    <div className="cmd">
+      <code>{text}</code>
+      <button className="btn ghost sm" title={copied ? 'Copied' : 'Copy'} aria-label="Copy the command" onClick={copy}>
+        {copied ? <Check /> : <Copy />}
+      </button>
     </div>
   );
 }

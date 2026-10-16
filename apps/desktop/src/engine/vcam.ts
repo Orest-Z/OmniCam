@@ -63,7 +63,7 @@ export function loadVcam(addonPath: string): { addon: VcamAddon | null; reason?:
     const addon = window.require(addonPath) as VcamAddon;
     return { addon };
   } catch (err) {
-    return { addon: null, reason: `native addon not available: ${(err as Error).message}` };
+    return { addon: null, reason: `no-addon: native addon not available: ${(err as Error).message}` };
   }
 }
 

@@ -2,6 +2,8 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { cpus } from 'node:os';
 import type { DesktopToPhone, PhoneToDesktop } from '@omnicam/protocol';
 import {
+  UI_CAMERA_RETRY,
+  UI_CAMERA_SETUP,
   UI_CONTROL,
   UI_DISCONNECT,
   UI_GET_STATE,
@@ -17,6 +19,7 @@ import {
   UI_VCAM_ERROR,
   type AppSettings,
   type AppState,
+  type CameraSetupResult,
   type PreviewFrame,
 } from '../shared/ipc';
 import { broadcast, disconnectPhone } from './actions';
@@ -28,9 +31,10 @@ import { phoneServer } from './server';
 import { session } from './session';
 import { settings } from './settings';
 import { createTray, updateTray } from './tray';
-import { applyTheme, createOrShowUiWindow, markQuitting, uiWindow } from './ui-window';
+import { applyTheme, createOrShowUiWindow, markQuitting, resendPreview, setPreviewWanted, setTrayAvailable, trayAvailable, uiWindow } from './ui-window';
 import { checkForUpdates, downloadUpdate, initUpdater, installUpdate, updateState } from './updater';
 import { outputFpsFor } from '../shared/stream-format';
+import { platform } from '../platform';
 
 // --- Chromium switches: must be set before 'ready' -------------------------------------------
 // The engine's ICE host candidate must be a real LAN IP, not an mDNS name: phones on networks
@@ -75,6 +79,9 @@ async function fullState(): Promise<AppState> {
     update: updateState(),
     version: app.getVersion(),
     platform: process.platform,
+    trayAvailable: trayAvailable(),
+    distro: platform.distro,
+    virtualMic: platform.virtualMic?.state() ?? null,
   };
 }
 
@@ -97,7 +104,7 @@ async function changeSettings(patch: Partial<AppSettings>): Promise<AppSettings>
   engine.applySettings(next);
   if (next.theme !== prev.theme) applyTheme(next.theme);
   if (next.launchAtLogin !== prev.launchAtLogin) {
-    app.setLoginItemSettings({ openAtLogin: next.launchAtLogin, args: ['--hidden'] });
+    platform.setLaunchAtLogin(next.launchAtLogin);
   }
   broadcast({ settings: next });
   return next;
@@ -117,11 +124,11 @@ function wireIpc(): void {
     broadcast({ pairing: await session.pairingInfo() });
   });
 
-  ipcMain.handle(UI_SET_PREVIEW, (_e, enabled: boolean) => engine.setPreview(enabled));
+  ipcMain.handle(UI_SET_PREVIEW, (_e, enabled: boolean) => setPreviewWanted(enabled));
 
   ipcMain.handle(UI_OPEN_EXTERNAL, (_e, url: string) => {
-    // Web pages, plus Windows' Sound settings for the microphone guide; nothing else the OS could launch.
-    if (/^https?:\/\//.test(url) || url === 'ms-settings:sound') return shell.openExternal(url);
+    // Web pages, plus the OS's sound settings for the microphone guide; nothing else the OS could launch.
+    if (/^https?:\/\//.test(url) || (platform.soundSettingsUrl !== null && url === platform.soundSettingsUrl)) return shell.openExternal(url);
   });
 
   ipcMain.handle(UI_OPEN_LOGS, () => shell.openPath(logDir()));
@@ -129,6 +136,15 @@ function wireIpc(): void {
   ipcMain.handle(UI_UPDATE_CHECK, () => checkForUpdates(true));
   ipcMain.handle(UI_UPDATE_DOWNLOAD, () => downloadUpdate());
   ipcMain.handle(UI_UPDATE_INSTALL, () => installUpdate());
+
+  ipcMain.handle(UI_CAMERA_SETUP, async (): Promise<CameraSetupResult> => {
+    if (!platform.setupCamera) return { status: 'failed', message: 'Nothing to set up on this system.' };
+    const result = await platform.setupCamera();
+    // The device exists now: start the camera without restarting OmniCam.
+    if (result.status === 'ok') engine.applySettings(settings.get());
+    return result;
+  });
+  ipcMain.handle(UI_CAMERA_RETRY, () => engine.applySettings(settings.get()));
 
   engine.on('stats', (s) => {
     updateTray(s);
@@ -150,7 +166,10 @@ function wireIpc(): void {
     vcamError = message;
     uiWindow()?.webContents.send(UI_VCAM_ERROR, message);
   });
-  engine.on('restarted', () => broadcast({ stats: engine.stats, vcam: engine.vcam }));
+  engine.on('restarted', () => {
+    broadcast({ stats: engine.stats, vcam: engine.vcam });
+    resendPreview();
+  });
 }
 
 async function main(): Promise<void> {
@@ -160,8 +179,19 @@ async function main(): Promise<void> {
   applyTheme(settings.get().theme);
   wireIpc();
   engine.create();
-  createTray();
+  // Linux: "OmniCam Microphone" exists while OmniCam runs, whether or not the phone's mic is on, so apps
+  // can be set up before it is. The engine finds "OmniCam Feed" like any other loopback.
+  platform.virtualMic?.start((virtualMic) => broadcast({ virtualMic }));
+  platform.syncLaunchAtLogin(settings.get().launchAtLogin);
+  const trayCheck = platform.hasTray().then((has) => {
+    setTrayAvailable(has);
+    if (has) createTray();
+    broadcast({ trayAvailable: has });
+    return has;
+  });
   if (!process.argv.includes('--hidden')) createOrShowUiWindow();
+  // With no tray to come back from, a hidden start would leave OmniCam out of reach: start minimised.
+  else if (!(await trayCheck)) createOrShowUiWindow({ minimized: true });
   if (!app.isPackaged) {
     setTimeout(() => console.log(`[pids] main=${process.pid} engine=${engine.osPid()} ui=${uiWindow()?.webContents.getOSProcessId()}`), 4000);
   }
@@ -211,9 +241,10 @@ async function main(): Promise<void> {
   app.on('before-quit', () => markQuitting());
   app.on('will-quit', () => {
     engine.shutdown();
+    platform.virtualMic?.stop();
     void phoneServer.stop();
   });
-  // Keep running in the tray when the UI window is closed.
+  // Keep running in the tray (or minimised) when the UI window is closed.
   app.on('window-all-closed', () => {
     /* intentionally empty */
   });

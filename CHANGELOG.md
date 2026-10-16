@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.1.0 — 2026-10-16
+
+OmniCam now runs on Linux too, with the same phone page, the same camera quality and a microphone that needs nothing
+installed. On Windows nothing changes in how OmniCam works, apart from the fix below.
+
+### New
+- **Linux (x64).** Download the **AppImage** for any distribution (it updates itself, like the Windows app), or
+  the **rpm** for Fedora or the **deb** for Debian and Ubuntu. Tested on Fedora 44 with GNOME on Wayland.
+- **The "OmniCam" camera on Linux** is a v4l2loopback device. Once the module is installed, **Set up camera** in
+  OmniCam does the rest after one password prompt, and it stays set up after restarts. If something is missing,
+  OmniCam says what and shows the command for your distribution, Secure Boot's key enrolment included.
+- **OmniCam Microphone on Linux.** While OmniCam runs, your apps get a microphone of OmniCam's own: no VB-CABLE,
+  no driver, no password. Your speakers stay the sound output, and OmniCam puts them back if anything else tries.
+- **Desktops without a tray** (GNOME without the AppIndicator extension): closing the window minimises OmniCam
+  instead of hiding it, and *Start OmniCam when I sign in* starts it minimised, so it is never out of reach.
+- **Phone can't open the page?** On Linux, *Settings → Connection* has the firewall command for your port.
+
+### Fixed
+- **After a camera problem**, changing any setting tries the camera again; before, only changing the output
+  resolution (or restarting OmniCam) did.
+
 ## 2.0.0 — 2026-10-14
 
 The biggest update yet: your phone can now be your computer's microphone too, with or without its camera.

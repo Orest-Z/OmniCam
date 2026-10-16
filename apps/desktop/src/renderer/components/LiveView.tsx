@@ -1,6 +1,6 @@
 import { Flashlight, FlipHorizontal2, Mic, MicOff, QrCode, RotateCw, Unplug, Video, VideoOff } from 'lucide-react';
 import type { DesktopToPhone } from '@omnicam/protocol';
-import type { AppSettings, StreamStats, VirtualCamStats } from '../../shared/ipc';
+import type { AppSettings, StreamStats, VirtualCamStats, VirtualMicState } from '../../shared/ipc';
 import { micNameFor, pickSink } from '../../shared/audio-sink';
 import { activePreset } from '../../shared/stream-format';
 import { useLoopbacks } from '../useLoopbacks';
@@ -11,6 +11,8 @@ interface Props {
   stats: StreamStats;
   vcam: VirtualCamStats;
   settings: AppSettings;
+  /** Linux: OmniCam's own microphone; null on Windows (VB-CABLE). */
+  virtualMic: VirtualMicState | null;
   onSettings: (patch: Partial<AppSettings>) => void;
   onControl: (msg: DesktopToPhone) => void;
   onShowQr: () => void;
@@ -23,7 +25,7 @@ interface Props {
  */
 export const SPEAKING_LEVEL = 0.02;
 
-export function LiveView({ stats, vcam, settings, onSettings, onControl, onShowQr, onOpenMicGuide }: Props) {
+export function LiveView({ stats, vcam, settings, virtualMic, onSettings, onControl, onShowQr, onOpenMicGuide }: Props) {
   const live = stats.state === 'connected' || stats.state === 'stalled';
   const facing = stats.trackInfo?.facing ?? 'user';
   const preset = activePreset(stats.trackInfo);
@@ -43,7 +45,7 @@ export function LiveView({ stats, vcam, settings, onSettings, onControl, onShowQ
           <Preview stats={stats} alwaysShowStats={settings.streamDetails === 'always'}>
             {noCable && (
               <button className="overhint" onClick={onOpenMicGuide}>
-                The phone's microphone needs a virtual cable: set it up
+                {virtualMic ? "OmniCam Microphone isn't ready: see why" : "The phone's microphone needs a virtual cable: set it up"}
               </button>
             )}
           </Preview>
@@ -60,7 +62,7 @@ export function LiveView({ stats, vcam, settings, onSettings, onControl, onShowQ
             ) : (
               loopbacks && (
                 <button className="link" onClick={onOpenMicGuide}>
-                  Set up the microphone: it needs a virtual cable
+                  {virtualMic ? "OmniCam Microphone isn't ready: see why" : 'Set up the microphone: it needs a virtual cable'}
                 </button>
               )
             )}

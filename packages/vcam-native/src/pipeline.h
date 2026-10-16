@@ -91,9 +91,11 @@ private:
     };
 
     void workerLoop();
-    // Converts `raw` into `outBgr` (BGR24 at output size) honoring `t`. Returns false on error.
-    bool convert(const RawFrame& raw, const Transform& t, std::vector<uint8_t>& outBgr);
-    void makePreview(const std::vector<uint8_t>& bgr);
+    // Converts `raw` into `out` (the device's format at output size) honoring `t`. Returns false on error.
+    bool convert(const RawFrame& raw, const Transform& t, std::vector<uint8_t>& out);
+    void makePreview(const std::vector<uint8_t>& frame);
+    size_t frameBytes() const;
+    void fillBlack(std::vector<uint8_t>& frame) const;
 
     std::unique_ptr<IVirtualCamera> device_;
     std::thread worker_;
@@ -103,7 +105,7 @@ private:
     std::condition_variable cv_;
     RawFrame pending_;                 // newest raw frame from JS (guarded by mtx_)
     RawFrame placeholderRaw_;          // RGBA as given by JS (guarded by mtx_)
-    std::vector<uint8_t> placeholder_; // BGR24 at output size, worker-rendered (guarded by mtx_)
+    std::vector<uint8_t> placeholder_; // output format and size, worker-rendered (guarded by mtx_)
     bool placeholderSet_ = false;
     bool usePlaceholder_ = true;
     bool holdLastFrame_ = true;
@@ -121,13 +123,14 @@ private:
     std::vector<uint8_t> argb_, argbScaled_; // worker scratch
 
     // Worker-owned buffers
-    std::vector<uint8_t> out_;   // BGR24 output
+    std::vector<uint8_t> out_;   // output frame in format_
     std::vector<uint8_t> i420_;  // scratch: source converted to I420 (only for RGB sources)
     std::vector<uint8_t> rot_;   // scratch: rotated / mirrored I420
     std::vector<uint8_t> fit_;   // scratch: scaled into the output canvas (I420)
     bool haveOut_ = false;
 
     int width_ = 0, height_ = 0, fps_ = 0;
+    OutputFormat format_ = OutputFormat::BGR24; // the device's preferredFormat()
     std::atomic<uint64_t> sent_{0}, repeated_{0}, dropped_{0};
     std::atomic<uint64_t> convertUs_{0}, convertN_{0};
     std::atomic<int> consumers_{0};

@@ -3,13 +3,14 @@ import type { StreamStats, UpdateState, VirtualCamStats } from '../../shared/ipc
 import { Dialog } from './ui';
 import { ReleaseNotes } from './ReleaseNotes';
 
-const RELEASES_URL = 'https://github.com/Orest-Z/OmniCam/releases';
+export const RELEASES_URL = 'https://github.com/Orest-Z/OmniCam/releases';
 
 interface Props {
   update: UpdateState;
   version: string;
   stats: StreamStats;
   vcam: VirtualCamStats;
+  platform: NodeJS.Platform;
   onClose: () => void;
 }
 
@@ -22,7 +23,7 @@ export function updateOnOffer(update: UpdateState): boolean {
 }
 
 /** The update prompt: offer → download progress → restart. Opened from the title-bar badge or Settings. */
-export function UpdateDialog({ update, version, stats, vcam, onClose }: Props) {
+export function UpdateDialog({ update, version, stats, vcam, platform, onClose }: Props) {
   const next = update.version;
   const failed = update.status === 'error' ? update.failed : undefined;
   const cameraBusy = vcam.consumers > 0 || stats.state === 'connected' || stats.state === 'stalled';
@@ -87,7 +88,11 @@ export function UpdateDialog({ update, version, stats, vcam, onClose }: Props) {
       )}
 
       {update.status === 'downloaded' && (
-        <p className="muted small">OmniCam will close, install the update and start again. Windows asks for permission because the installer registers the camera.</p>
+        <p className="muted small">
+          {platform === 'win32'
+            ? 'OmniCam will close, install the update and start again. Windows asks for permission because the installer registers the camera.'
+            : 'OmniCam will close, replace its AppImage with the new version and start again.'}
+        </p>
       )}
 
       {update.status !== 'downloading' && busyNote}
@@ -146,7 +151,7 @@ export function WhatsNewDialog({ version, onClose }: { version: string; onClose:
 export function updateSummary(update: UpdateState): string {
   switch (update.status) {
     case 'unsupported':
-      return 'Updates work in the installed app.';
+      return update.unsupported === 'package' ? 'Installed from a package: get new versions from GitHub Releases.' : 'Updates work in the installed app.';
     case 'idle':
       return 'OmniCam checks for updates when it starts.';
     case 'checking':

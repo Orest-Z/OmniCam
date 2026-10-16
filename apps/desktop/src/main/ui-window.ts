@@ -1,12 +1,19 @@
 import { app, BrowserWindow, nativeTheme, screen, shell } from 'electron';
 import type { AppSettings } from '../shared/ipc';
 import { join } from 'node:path';
-import { restartBudget } from './engine-bridge';
+import { engine, restartBudget } from './engine-bridge';
 import { settings } from './settings';
 
 let win: BrowserWindow | null = null;
 let quitting = false;
+// Until the check answers; Windows answers at once.
+let withTray = true;
 const restarts: number[] = [];
+/** Minimised as far as OmniCam knows (see syncPreview). */
+let minimized = false;
+/** The live view shows the preview and its page is visible. */
+let previewWanted = false;
+let previewOn = false;
 
 // Must match --bg / --text-2 in renderer/styles.css, for each theme.
 export const THEME = {
@@ -38,8 +45,41 @@ export function markQuitting(): void {
   quitting = true;
 }
 
+/** Without a tray, closing the window minimises it instead of hiding it where nobody could find it. */
+export function setTrayAvailable(available: boolean): void {
+  withTray = available;
+}
+
+export function trayAvailable(): boolean {
+  return withTray;
+}
+
 export function uiWindow(): BrowserWindow | null {
   return win;
+}
+
+/** What the UI asks for: Preview.tsx while the live view is up and its page visible. */
+export function setPreviewWanted(wanted: boolean): void {
+  previewWanted = wanted;
+  syncPreview();
+}
+
+/** A reloaded engine starts with the preview off: tell it again. */
+export function resendPreview(): void {
+  previewOn = false;
+  syncPreview();
+}
+
+/**
+ * The preview runs only while the window is on screen: open, not hidden in the tray, not minimised. The
+ * page's own visibility can't tell on Wayland, where a minimised window stays 'visible' to it (xdg-shell
+ * has no minimised state a client can see), so the preview would never stop and the phone never go idle.
+ */
+function syncPreview(): void {
+  const on = previewWanted && Boolean(win && win.isVisible() && !minimized);
+  if (on === previewOn) return;
+  previewOn = on;
+  engine.setPreview(on);
 }
 
 export function iconPath(name: string): string {
@@ -57,7 +97,8 @@ function restoredBounds() {
   return visible ? b : { width: b.width, height: b.height };
 }
 
-export function createOrShowUiWindow(): BrowserWindow {
+/** `minimized`: a --hidden start on a desktop without a tray. */
+export function createOrShowUiWindow(opts: { minimized?: boolean } = {}): BrowserWindow {
   if (win) {
     if (win.isMinimized()) win.restore();
     win.show();
@@ -75,7 +116,8 @@ export function createOrShowUiWindow(): BrowserWindow {
     title: 'OmniCam',
     backgroundColor: themeColors().bg,
     autoHideMenuBar: true,
-    icon: iconPath('icon.ico'),
+    // Windows: multi-size .ico. Linux takes a png (a desktop entry's icon wins where there is one).
+    icon: iconPath(process.platform === 'win32' ? 'icon.ico' : 'icon.png'),
     // Native caption buttons drawn over our own header (see renderer .titlebar).
     titleBarStyle: 'hidden',
     titleBarOverlay: { color: themeColors().bg, symbolColor: themeColors().symbol, height: THEME.titlebarHeight },
@@ -87,7 +129,19 @@ export function createOrShowUiWindow(): BrowserWindow {
     },
   });
 
-  win.once('ready-to-show', () => win?.show());
+  win.once('ready-to-show', () => {
+    if (opts.minimized) {
+      win?.showInactive();
+      // Wayland drops a minimise sent before the compositor has mapped the window, and nothing says
+      // when it has (GNOME: 100–300 ms). Ask again until it takes, for at most 2 s.
+      const minimize = (tries: number) => {
+        if (!win || win.isMinimized() || tries === 0) return;
+        win.minimize();
+        setTimeout(() => minimize(tries - 1), 100);
+      };
+      minimize(20);
+    } else win?.show();
+  });
   // Renderer warnings/errors go to the log file; in dev everything does.
   win.webContents.on('console-message', (e) => {
     if (!app.isPackaged || e.level === 'warning' || e.level === 'error') console.log(`[ui:${e.level}]`, e.message);
@@ -129,12 +183,27 @@ export function createOrShowUiWindow(): BrowserWindow {
   win.on('resize', saveBounds);
   win.on('move', saveBounds);
 
+  win.on('minimize', () => {
+    minimized = true;
+    syncPreview();
+  });
+  // Wayland may not report a restore from the dock, but the window always gets focus then.
+  const back = () => {
+    minimized = false;
+    syncPreview();
+  };
+  win.on('restore', back);
+  win.on('focus', back);
+  win.on('show', back);
+  win.on('hide', syncPreview);
+
   win.on('close', (e) => {
     // Closing the window must not kill the camera: hide to tray instead.
     if (quitting) return;
     if (settings.get().closeToTray) {
       e.preventDefault();
-      win?.hide();
+      if (withTray) win?.hide();
+      else win?.minimize();
     } else {
       // The hidden engine window keeps 'window-all-closed' from ever firing, so quit explicitly.
       app.quit();
@@ -142,6 +211,8 @@ export function createOrShowUiWindow(): BrowserWindow {
   });
   win.on('closed', () => {
     win = null;
+    minimized = false;
+    syncPreview();
   });
 
   if (!app.isPackaged && process.env.ELECTRON_RENDERER_URL) {

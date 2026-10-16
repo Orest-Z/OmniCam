@@ -4,9 +4,11 @@ import type { ReleaseNote, UpdateState } from '../shared/ipc';
 import { broadcast } from './actions';
 import { settings } from './settings';
 import { markQuitting } from './ui-window';
+import { platform } from '../platform';
 
 /**
- * In-app updates from GitHub Releases (electron-updater + the NSIS installer).
+ * In-app updates from GitHub Releases (electron-updater + the NSIS installer on Windows, the AppImage on
+ * Linux; an rpm or deb install gets new versions from Releases instead).
  *
  * Nothing is downloaded or installed without a click: OmniCam checks quietly at launch and once a
  * day, the UI shows a badge, and the user decides. The installer is verified against the sha512 in
@@ -18,7 +20,8 @@ const FIRST_CHECK_DELAY_MS = 15_000; // let startup (server, engine, camera devi
 const RECHECK_INTERVAL_MS = 24 * 60 * 60 * 1000; // the app can live in the tray for weeks
 const PROGRESS_THROTTLE_MS = 250;
 
-let state: UpdateState = { status: app.isPackaged ? 'idle' : 'unsupported', manual: false };
+const support = platform.updates();
+let state: UpdateState = support === 'supported' ? { status: 'idle', manual: false } : { status: 'unsupported', manual: false, unsupported: support };
 let lastProgressAt = 0;
 
 function set(patch: Partial<UpdateState>): void {
@@ -96,7 +99,8 @@ export function installUpdate(): void {
 }
 
 export function initUpdater(): void {
-  if (!app.isPackaged) return; // no app-update.yml in dev; the UI says updates need the installed app
+  // Dev has no app-update.yml; an rpm or deb is updated by installing the new package.
+  if (support !== 'supported') return;
 
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = false;

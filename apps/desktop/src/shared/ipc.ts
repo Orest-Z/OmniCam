@@ -47,6 +47,8 @@ export const UI_VCAM_ERROR = 'ui:vcam-error';
 export const UI_UPDATE_CHECK = 'ui:update-check';
 export const UI_UPDATE_DOWNLOAD = 'ui:update-download';
 export const UI_UPDATE_INSTALL = 'ui:update-install';
+export const UI_CAMERA_SETUP = 'ui:camera-setup';
+export const UI_CAMERA_RETRY = 'ui:camera-retry';
 
 // Desktop state shared by main, engine and UI (the phone never sees these)
 export type ConnectionState =
@@ -132,8 +134,9 @@ export interface AppSettings {
   notesSeen: string;
   /** Stream numbers over the preview: always, or only while hovered. */
   streamDetails: 'always' | 'hover';
-  /** Desktop app colours; 'system' follows the Windows light/dark setting. */
+  /** Desktop app colours; 'system' follows the OS light/dark setting. */
   theme: 'dark' | 'light' | 'system';
+  /** Closing the window keeps OmniCam running: hidden in the tray, or minimised where there is none. */
   closeToTray: boolean;
   launchAtLogin: boolean;
   /**
@@ -210,6 +213,8 @@ export type UpdateStatus =
 export interface UpdateState {
   status: UpdateStatus;
   manual: boolean;
+  /** Why updates are `unsupported`: a dev run, or an rpm/deb install that updates through Releases. */
+  unsupported?: 'dev' | 'package';
   /** Version on offer (set from 'available' on). */
   version?: string;
   /** Download progress, 0–100. */
@@ -233,6 +238,33 @@ export interface ReleaseNote {
   html: string;
 }
 
+/** How the one-time camera setup (Linux) ended. */
+export interface CameraSetupResult {
+  /** `cancelled`: the password prompt was dismissed; nothing to report. */
+  status: 'ok' | 'cancelled' | 'failed';
+  /** The setup script's exit code when it failed. */
+  exitCode?: number;
+  /** Its last line on stderr: one sentence for the user. */
+  message?: string;
+}
+
+/** Linux distribution family, for the install commands the UI shows ('other' off Linux too). */
+export type Distro = 'fedora' | 'debian' | 'arch' | 'other';
+
+/**
+ * The microphone OmniCam adds on Linux while it runs: a PipeWire/PulseAudio sink "OmniCam Feed" the
+ * engine plays the phone into, and a source "OmniCam Microphone" apps record from.
+ */
+export interface VirtualMicState {
+  status: 'starting' | 'ready' | 'unavailable' | 'error';
+  /** Why it is not ready, one sentence. */
+  reason?: string;
+  /** A command that fixes it, when there is one (e.g. installing pactl). */
+  fix?: string;
+  /** "OmniCam Feed" is the default output, so everything the computer plays would reach the microphone. */
+  feedIsDefault?: boolean;
+}
+
 export interface AppState {
   pairing: PairingInfo | null;
   settings: AppSettings;
@@ -242,6 +274,11 @@ export interface AppState {
   update: UpdateState;
   version: string;
   platform: NodeJS.Platform;
+  /** A tray icon is shown. False on desktops without a tray host (stock GNOME): closing minimises. */
+  trayAvailable: boolean;
+  distro: Distro;
+  /** Null where OmniCam creates no microphone (Windows: the user installs VB-CABLE). */
+  virtualMic: VirtualMicState | null;
 }
 
 export type StatePatch = Partial<AppState>;
@@ -270,6 +307,10 @@ export interface UiApi {
   downloadUpdate(): Promise<void>;
   /** Quits, runs the downloaded installer and starts the new version. */
   installUpdate(): Promise<void>;
+  /** Linux: sets up the camera device once (a password prompt), then starts the camera. */
+  setupCamera(): Promise<CameraSetupResult>;
+  /** Tries to start the camera again, e.g. after closing the app that held it. */
+  retryCamera(): Promise<void>;
   onState(cb: (patch: StatePatch) => void): () => void;
   onPreviewFrame(cb: (frame: PreviewFrame) => void): () => void;
 }

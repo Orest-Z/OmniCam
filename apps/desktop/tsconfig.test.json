@@ -5,5 +5,5 @@
     "allowImportingTsExtensions": true,
     "erasableSyntaxOnly": true
   },
-  "include": ["test", "src/main/pairing-guard.ts", "src/shared/stream-format.ts", "src/shared/audio-sink.ts", "src/engine/sdp.ts", "build/release-notes.ts"]
+  "include": ["test", "src/main/pairing-guard.ts", "src/shared/stream-format.ts", "src/shared/audio-sink.ts", "src/engine/sdp.ts", "src/platform/desktop-entry.ts", "src/platform/dbus.ts", "src/platform/pactl.ts", "src/platform/os-release.ts", "src/platform/setup-result.ts", "src/shared/vcam-error.ts", "src/shared/firewall.ts", "build/release-notes.ts"]
 }

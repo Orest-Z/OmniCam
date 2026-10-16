@@ -1,6 +1,6 @@
 {
   "name": "omnicam",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "description": "Use your phone's camera as a virtual webcam â€” no app install on the phone.",
   "workspaces": [
@@ -11,6 +11,7 @@
     "dev": "npm run build -w @omnicam/phone && npm run dev -w @omnicam/desktop",
     "build": "npm run build -w @omnicam/phone && npm run build -w @omnicam/desktop",
     "dist": "npm run build -w @omnicam/phone && npm run dist -w @omnicam/desktop",
+    "dist:linux": "npm run build -w @omnicam/phone && npm run dist:linux -w @omnicam/desktop",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "native:build": "npm run build -w @omnicam/vcam-native",

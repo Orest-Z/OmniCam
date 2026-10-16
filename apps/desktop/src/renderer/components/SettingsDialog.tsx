@@ -1,10 +1,12 @@
 import { useState, type ReactNode } from 'react';
 import { AlertTriangle, AppWindow, CheckCircle2, ChevronRight, Info, Mic, Video, Wifi, type LucideIcon } from 'lucide-react';
-import type { AppSettings, PairingInfo, UpdateState, VirtualCamStats } from '../../shared/ipc';
-import { micNameFor, pickSink } from '../../shared/audio-sink';
+import type { AppSettings, Distro, PairingInfo, UpdateState, VirtualCamStats, VirtualMicState } from '../../shared/ipc';
+import { micNameFor, OMNICAM_MIC, pickSink } from '../../shared/audio-sink';
+import { firewallSteps } from '../../shared/firewall';
 import { useLoopbacks } from '../useLoopbacks';
-import { Dialog, Segmented, Switch } from './ui';
-import { updateOnOffer, updateSummary } from './UpdateDialog';
+import { CameraHelp } from './CameraHelp';
+import { Command, Dialog, Segmented, Switch } from './ui';
+import { RELEASES_URL, updateOnOffer, updateSummary } from './UpdateDialog';
 
 interface Props {
   settings: AppSettings;
@@ -13,6 +15,11 @@ interface Props {
   vcamError: string | null;
   update: UpdateState;
   version: string;
+  platform: NodeJS.Platform;
+  distro: Distro;
+  trayAvailable: boolean;
+  /** Linux: OmniCam's own microphone; null on Windows (VB-CABLE). */
+  virtualMic: VirtualMicState | null;
   onSettings: (patch: Partial<AppSettings>) => void;
   onOpenUpdate: () => void;
   onOpenMicGuide: () => void;
@@ -45,13 +52,13 @@ const SECTIONS: { id: SectionId; label: string; icon: LucideIcon }[] = [
  * Settings as five sections in a sidebar. Each opens with a status line, and a section that needs
  * attention carries a dot. Long explanations sit in ⓘ tooltips.
  */
-export function SettingsDialog({ settings, pairing, vcam, vcamError, update, version, onSettings, onOpenUpdate, onOpenMicGuide, onOpenWhatsNew, onClose }: Props) {
+export function SettingsDialog({ settings, pairing, vcam, vcamError, update, version, platform, distro, trayAvailable, virtualMic, onSettings, onOpenUpdate, onOpenMicGuide, onOpenWhatsNew, onClose }: Props) {
   const fallback = portFallback(pairing);
   const loopbacks = useLoopbacks();
   const sink = loopbacks && pickSink(loopbacks.outputs, settings.micOutput);
   const attention: Record<SectionId, Attention> = {
     camera: vcamError ? 'bad' : null,
-    mic: loopbacks?.isDefault ? 'bad' : null,
+    mic: virtualMic ? (virtualMic.status === 'unavailable' || virtualMic.status === 'error' || virtualMic.feedIsDefault ? 'bad' : null) : loopbacks?.isDefault ? 'bad' : null,
     connection: fallback ? 'warn' : null,
     app: null,
     about: updateOnOffer(update) ? 'new' : null,
@@ -61,10 +68,14 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, update, ver
   const [picked, setSection] = useState<SectionId | null>(null);
   const section = picked ?? SECTIONS.find((s) => attention[s.id] === 'bad' || attention[s.id] === 'warn')?.id ?? 'camera';
   const pane = {
-    camera: <CameraPane settings={settings} vcam={vcam} vcamError={vcamError} onSettings={onSettings} />,
-    mic: <MicPane settings={settings} loopbacks={loopbacks} sink={sink} onSettings={onSettings} onOpenMicGuide={onOpenMicGuide} />,
-    connection: <ConnectionPane settings={settings} pairing={pairing} onSettings={onSettings} />,
-    app: <AppPane settings={settings} onSettings={onSettings} />,
+    camera: <CameraPane settings={settings} vcam={vcam} vcamError={vcamError} platform={platform} distro={distro} onSettings={onSettings} />,
+    mic: virtualMic ? (
+      <LinuxMicPane virtualMic={virtualMic} onOpenMicGuide={onOpenMicGuide} />
+    ) : (
+      <MicPane settings={settings} loopbacks={loopbacks} sink={sink} onSettings={onSettings} onOpenMicGuide={onOpenMicGuide} />
+    ),
+    connection: <ConnectionPane settings={settings} pairing={pairing} platform={platform} distro={distro} onSettings={onSettings} />,
+    app: <AppPane settings={settings} platform={platform} trayAvailable={trayAvailable} onSettings={onSettings} />,
     about: <AboutPane settings={settings} update={update} version={version} onSettings={onSettings} onOpenUpdate={onOpenUpdate} onOpenWhatsNew={onOpenWhatsNew} />,
   }[section];
 
@@ -88,11 +99,13 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, update, ver
   );
 }
 
-function CameraPane({ settings, vcam, vcamError, onSettings }: Pick<Props, 'settings' | 'vcam' | 'vcamError' | 'onSettings'>) {
+function CameraPane({ settings, vcam, vcamError, platform, distro, onSettings }: Pick<Props, 'settings' | 'vcam' | 'vcamError' | 'platform' | 'distro' | 'onSettings'>) {
   return (
     <>
       <h3>Camera</h3>
-      {vcamError ? (
+      {vcamError && platform === 'linux' ? (
+        <CameraHelp vcamError={vcamError} platform={platform} distro={distro} />
+      ) : vcamError ? (
         <div className="notice bad">
           <AlertTriangle />
           <span>
@@ -242,7 +255,42 @@ function MicPane({
   );
 }
 
-function ConnectionPane({ settings, pairing, onSettings }: Pick<Props, 'settings' | 'pairing' | 'onSettings'>) {
+/** Linux: OmniCam adds "OmniCam Microphone" itself, so there is nothing to choose, only its state. */
+function LinuxMicPane({ virtualMic, onOpenMicGuide }: Pick<Props, 'onOpenMicGuide'> & { virtualMic: VirtualMicState }) {
+  return (
+    <>
+      <h3>Microphone</h3>
+      {virtualMic.status === 'starting' ? (
+        <Status>Adding {OMNICAM_MIC}…</Status>
+      ) : virtualMic.status !== 'ready' ? (
+        <div className="notice bad">
+          <AlertTriangle />
+          <span>
+            {virtualMic.reason}
+            {virtualMic.fix && <Command text={virtualMic.fix} />}
+          </span>
+        </div>
+      ) : virtualMic.feedIsDefault ? (
+        <div className="notice bad">
+          <AlertTriangle />
+          <span>
+            OmniCam Feed is the default sound output, so apps would hear everything this computer plays through the phone. Make your speakers
+            or headphones the default again in your sound settings.
+          </span>
+        </div>
+      ) : (
+        <Status ok>Ready · apps pick "{OMNICAM_MIC}"</Status>
+      )}
+      <Field title="Camera, microphone or both" sub="Switch on the phone, or with the buttons in the window.">
+        <button className="btn" onClick={onOpenMicGuide}>
+          Setup guide
+        </button>
+      </Field>
+    </>
+  );
+}
+
+function ConnectionPane({ settings, pairing, platform, distro, onSettings }: Pick<Props, 'settings' | 'pairing' | 'platform' | 'distro' | 'onSettings'>) {
   const [port, setPort] = useState(String(settings.port));
   const fallback = portFallback(pairing);
   const commitPort = () => {
@@ -274,15 +322,31 @@ function ConnectionPane({ settings, pairing, onSettings }: Pick<Props, 'settings
       <Field title="Port" sub="Changes the QR code." info="Pick another if something else on this computer uses it.">
         <input className="input" value={port} onChange={(e) => setPort(e.target.value)} onBlur={commitPort} onKeyDown={(e) => e.key === 'Enter' && commitPort()} />
       </Field>
+      {platform === 'linux' && (
+        // Windows' installer adds the firewall rule; on Linux a firewall that blocks the port is the user's.
+        <details className="advanced">
+          <summary>
+            <ChevronRight />
+            Phone can't open the page?
+          </summary>
+          <p className="muted small">Check the phone is on the same Wi-Fi, then let the port through the firewall.</p>
+          {firewallSteps(distro, pairing?.port ?? settings.port).map((s) => (
+            <div key={s.command}>
+              <p className="muted small">{s.when}</p>
+              <Command text={s.command} />
+            </div>
+          ))}
+        </details>
+      )}
     </>
   );
 }
 
-function AppPane({ settings, onSettings }: Pick<Props, 'settings' | 'onSettings'>) {
+function AppPane({ settings, platform, trayAvailable, onSettings }: Pick<Props, 'settings' | 'platform' | 'trayAvailable' | 'onSettings'>) {
   return (
     <>
       <h3>App</h3>
-      <Field title="Appearance" sub="System follows Windows.">
+      <Field title="Appearance" sub={platform === 'win32' ? 'System follows Windows.' : 'System follows your desktop.'}>
         <Segmented
           value={settings.theme}
           options={[
@@ -293,9 +357,16 @@ function AppPane({ settings, onSettings }: Pick<Props, 'settings' | 'onSettings'
           onChange={(v) => onSettings({ theme: v })}
         />
       </Field>
-      <Field title="Keep running in the tray" sub="Closing the window keeps the camera available.">
-        <Switch on={settings.closeToTray} onChange={(v) => onSettings({ closeToTray: v })} />
-      </Field>
+      {trayAvailable ? (
+        <Field title="Keep running in the tray" sub="Closing the window keeps the camera available.">
+          <Switch on={settings.closeToTray} onChange={(v) => onSettings({ closeToTray: v })} />
+        </Field>
+      ) : (
+        // No tray to hide in (stock GNOME): the window minimises instead. Off is the way to quit.
+        <Field title="Keep running when the window closes" sub="No tray here, so the window minimises." info="GNOME needs the AppIndicator extension for a tray icon.">
+          <Switch on={settings.closeToTray} onChange={(v) => onSettings({ closeToTray: v })} />
+        </Field>
+      )}
       <Field title="Start OmniCam when I sign in">
         <Switch on={settings.launchAtLogin} onChange={(v) => onSettings({ launchAtLogin: v })} />
       </Field>
@@ -328,6 +399,10 @@ function AboutPane({
         {updateOnOffer(update) ? (
           <button className="btn primary" onClick={onOpenUpdate}>
             {update.status === 'downloaded' ? 'Restart to update' : `Update to ${update.version}`}
+          </button>
+        ) : update.unsupported === 'package' ? (
+          <button className="btn" onClick={() => void window.omnicam.openExternal(RELEASES_URL)}>
+            Open Releases
           </button>
         ) : (
           <button className="btn" disabled={update.status === 'checking' || update.status === 'unsupported'} onClick={() => void window.omnicam.checkForUpdates()}>

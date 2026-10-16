@@ -6,7 +6,8 @@ import { join } from 'node:path';
  * 1.0.0 derived the user-data folder from the package name ("@omnicam/desktop"), so settings
  * and the TLS certificate ended up in %APPDATA%\@omnicam\desktop. Later versions use
  * %APPDATA%\OmniCam. Carry the two things worth keeping over once; the phone keeps its
- * certificate exception that way. Must run before anything reads settings.
+ * certificate exception that way. Must run before anything reads settings. Linux never had 1.0.0, so
+ * ~/.config/@omnicam/desktop does not exist there and this does nothing.
  */
 export function migrateLegacyUserData(): void {
   const current = app.getPath('userData');

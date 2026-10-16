@@ -2,18 +2,19 @@
 
 ## What this is
 
-A desktop app (Windows first; macOS/Linux later) that turns a phone's camera into a **virtual
+A desktop app (Windows and Linux; macOS later) that turns a phone's camera into a **virtual
 webcam** for Discord, Zoom, Teams, Chrome, OBS… with **nothing installed on the phone**:
 
 1. Desktop app shows a QR code.
 2. Phone (same Wi-Fi) scans it → a web page opens in the phone browser.
 3. User accepts a one-time browser certificate warning, taps *Start camera*, allows camera access.
-4. Video streams over WebRTC (LAN, peer-to-peer) into the desktop app, which feeds a
-   DirectShow virtual camera device named **"OmniCam"**.
+4. Video streams over WebRTC (LAN, peer-to-peer) into the desktop app, which feeds a virtual
+   camera device named **"OmniCam"**: a DirectShow filter on Windows, a v4l2loopback device on Linux.
 
 Priorities, in order: it must *just work* for non-technical users; video quality and latency on
 par with native camera apps; front/back camera switching; robust reconnects. The phone's microphone
-can come along, or replace the camera: it is played into a virtual audio cable (see **Phone microphone**).
+can come along, or replace the camera: it is played into a virtual audio cable on Windows, and into OmniCam's own
+PipeWire microphone on Linux (see **Phone microphone**).
 
 ## Non-negotiable product constraints and the decisions they forced
 
@@ -27,6 +28,11 @@ can come along, or replace the camera: it is played into a virtual audio cable (
 | Some Wi-Fi blocks mDNS | Electron runs with `--disable-features=WebRtcHideLocalIpsWithMdns` so the desktop's ICE candidate is a real LAN IP. |
 | Camera must survive closing the window | Hidden **engine** window owns WebRTC + native addon; UI window is optional; app lives in the tray. |
 | Windows has no user-mode virtual microphone; audio drivers must be signed by Microsoft | The phone's audio is **played into a virtual audio cable** (VB-CABLE, installed by the user) with `setSinkId`; apps pick the cable's other end. An own signed driver is roadmap. |
+| Linux has one virtual camera every consumer sees: v4l2loopback, an out-of-tree kernel module | One device labelled `OmniCam` (`exclusive_caps=1`, `video_nr=63`), **found by its label**, never by number. Root **once**, through polkit or the rpm/deb scriptlet, for a fixed setup script; never at launch, never `sudo` from the app. |
+| Secure Boot rejects unsigned modules | The setup reports it (exit 14) and the UI shows the distro's key-enrolment steps (Fedora: akmods key + `mokutil`). Free, no BIOS change. |
+| Linux audio needs no driver for a microphone | While OmniCam runs, `pactl` adds a null sink **OmniCam Feed** and a source **OmniCam Microphone** remapped from its monitor; no root. The engine is the same as on Windows. |
+| Stock GNOME has no tray (no StatusNotifier host) | A tray only where `org.kde.StatusNotifierWatcher` has an owner; otherwise closing the window **minimises** it and `--hidden` starts minimised, so the app is never invisible. |
+| electron-updater only replaces AppImages on Linux | AppImage updates in the app (`latest-linux.yml`); rpm and deb point to Releases. No Flatpak or Snap: a sandbox cannot set up a kernel module. |
 
 ## Architecture
 
@@ -39,10 +45,13 @@ PHONE (browser)                       DESKTOP (Electron)
                                           → VideoFrame.copyTo → addon.pushFrame()
                                           audio track → <audio>.setSinkId(cable) → apps' microphone
                                        native addon   (packages/vcam-native)  [C++]
-                                          pacing thread, libyuv convert/scale/rotate → BGR24
-                                          → softcam shared memory → omnicam_vcam.dll (DirectShow)
+                                          pacing thread, libyuv convert/scale/rotate → the backend's format
+                                          Windows: BGR24 → softcam shared memory → omnicam_vcam.dll (DirectShow)
+                                          Linux:   YUYV  → write() → /dev/videoN (v4l2loopback "OmniCam")
                                        UI window      (apps/desktop/src/renderer)  [sandboxed React]
                                           talks to main only via preload bridge (window.omnicam)
+                                       platform       (apps/desktop/src/platform), called by main only
+                                          autostart, tray support, camera setup, Linux microphone
 ```
 
 - **Frames never cross Electron IPC.** The engine loads the addon in-process.
@@ -54,7 +63,8 @@ PHONE (browser)                       DESKTOP (Electron)
 - **Crash recovery:** both renderers are reloaded on `render-process-gone` (at most 3 times per
   minute, then the UI shows an error). The engine re-attaches the addon and the phone's own
   reconnect loop restores the stream. Everything `console.*` in main (engine logs are relayed)
-  goes to `%APPDATA%\OmniCam\logs\omnicam.log`, 2 MB with one rotation.
+  goes to `%APPDATA%\OmniCam\logs\omnicam.log` (Linux: `~/.config/OmniCam/logs/omnicam.log`), 2 MB with one
+  rotation.
 
 ## Phone microphone
 
@@ -63,8 +73,18 @@ PHONE (browser)                       DESKTOP (Electron)
   microphone. Chromium's WebRTC jitter buffer already absorbs network jitter, the phone-vs-device clock
   drift and resampling in native code, so there is no Web Audio graph and no native audio code. An own
   signed "OmniCam Microphone" driver would be one more loopback for `shared/audio-sink.ts` to recognise;
-  the engine would not change. Linux could create one at runtime without root (a PipeWire null sink plus
-  a remapped source).
+  the engine would not change. Linux already works that way (below).
+- **Linux: OmniCam's own pair** (`platform/virtual-mic-linux.ts`, `platform/pactl.ts`). At start `pactl`
+  loads `module-null-sink` (`sink_name=omnicam_feed`, "OmniCam Feed") and `module-remap-source`
+  (`source_name=omnicam_mic`, "OmniCam Microphone", from the feed's monitor); quitting unloads them, and a crash's
+  leftovers are found by those names in `pactl list short modules` and unloaded first. Chromium labels the sink
+  with its description, so `audio-sink.ts` simply knows "OmniCam Feed". The descriptions are quoted
+  `'device.description="…"'`: pipewire-pulse cuts any other form at the first space. Both nodes get
+  `priority.session=0` and are set to 100%, unmuted, twice (WirePlumber restores saved volumes by name, on its own
+  schedule). A `pactl subscribe` watcher re-creates them if they vanish and, if the feed ever becomes the default
+  output (WirePlumber falling back through its history, or a slip in the sound settings), switches back to the
+  previous output: that would mute the speakers and send everything into the phone's microphone. All `pactl`
+  calls run with `LC_ALL=C`, since `pactl info` is parsed.
 - **Never the speakers.** `shared/audio-sink.ts` (shared by engine and UI, tested) only returns known
   loopback outputs, never Chromium's follow-the-default entries. The track is attached only after
   `setSinkId` succeeds, only while the phone reports its microphone on, and is detached when the cable
@@ -97,19 +117,25 @@ apps/desktop/                Electron app (electron-vite, React, TS)
   src/main/                  index.ts, server.ts, cert.ts, network.ts, session.ts, settings.ts,
                              engine-bridge.ts (only thing that talks to the engine), tray.ts, ui-window.ts,
                              log.ts (%APPDATA%\OmniCam\logs), user-data.ts (1.0.0 folder migration)
+  src/platform/              per-OS services main calls (never the other way): types.ts (the interface), win.ts,
+                             linux.ts (XDG autostart, tray check over D-Bus, camera setup, virtual-mic-linux.ts),
+                             and pure, tested helpers (desktop-entry, dbus, pactl, os-release, setup-result)
   src/engine/                engine.ts (WebRTC receiver, stats, preview JPEGs, frame pump), vcam.ts (addon API),
                              mic.ts (phone audio → virtual cable), sdp.ts (answer tuning)
   src/renderer/              React UI (Pairing, Preview, Controls, Settings)
   src/preload/               contextBridge → window.omnicam (typed in shared/ipc.ts)
   src/shared/ipc.ts          IPC channel names + payload types, settings and stats (single source of truth)
   src/shared/audio-sink.ts   which audio outputs the phone's microphone may play into (engine and UI)
+  src/shared/vcam-error.ts   camera error codes → title, line, commands and the Set up button (tested)
   resources/phone/           built phone page (generated, git-ignored)
   resources/native/          built addon + DLLs (generated, git-ignored)
-  build/                     installer hooks, icon generator
+  build/                     installer hooks, icon generator; build/linux: omnicam-camera-setup.sh, rpm/deb
+                             scriptlets, icon theme sizes
 apps/phone/                  Vanilla TS page (camera.ts, mic.ts, signaling.ts, main.ts). No framework — it must load instantly.
 packages/protocol/           Wire types the phone and desktop exchange (HTTP API, DataChannel messages)
 packages/vcam-native/        C++: addon.cc (N-API), pipeline.cc (double buffer + pacing + libyuv),
-                             backend/ivcam.h (per-OS interface), backend/win_softcam.cc,
+                             backend/ivcam.h (per-OS interface), backend/win_softcam.cc, backend/linux_v4l2.cc,
+                             tools/vcam_selftest.cc (Linux: pushes a test pattern without Electron),
                              filter/omnicam_filter.cpp (DirectShow DLL entry), third_party/{softcam,libyuv} submodules
 ```
 
@@ -131,6 +157,11 @@ npm run dist                # NSIS installer (registers DLLs + firewall rule)
 Without the native build the app still runs (QR, phone connection, preview) and reports
 "native addon not available" in the UI — useful for working on the web/UI parts.
 
+On Linux: Node ≥ 20, g++, make, CMake, plus `v4l-utils` and `pulseaudio-utils` (CONTRIBUTING lists the packages),
+and the v4l2loopback module for the camera. `native:register` is not needed: the app's *Set up camera* button
+runs `build/linux/omnicam-camera-setup.sh`. `npm run dist:linux` builds the AppImage, rpm and deb.
+`apps/desktop/test/e2e/fake-phone.cjs` stands in for a phone (Chromium's fake camera and microphone).
+
 ## Conventions
 
 - TypeScript strict everywhere; shared types live in `packages/protocol` (only what crosses to the
@@ -138,11 +169,27 @@ Without the native build the app still runs (QR, phone connection, preview) and 
 - Main ↔ engine IPC goes through `engine-bridge.ts` only. UI ↔ main goes through the preload
   bridge only (UI is sandboxed; no Node in the renderer).
 - Which folder may import which is written down in `al-dente.json`: main, engine, preload and the
-  UI only meet through `src/shared`, and the phone page only uses `packages/protocol`.
+  UI only meet through `src/shared`, and the phone page only uses `packages/protocol`. `platform` may use
+  `src/shared` only; main calls it, never the other way, and main does not branch on `process.platform` for
+  anything platform covers.
 - Phone page: no dependencies, no framework, must work on iOS Safari 15+ and Android Chrome.
   Every browser API call that can be unsupported is wrapped (wake lock, torch, codec prefs…).
 - Native code: never touch `third_party/` submodules; adapt at build time (see
-  `cmake/patch_softcam.cmake`) or wrap. New platforms implement `IVirtualCamera`.
+  `cmake/patch_softcam.cmake`) or wrap. New platforms implement `IVirtualCamera`, and say which pixel format they
+  want (`preferredFormat()`); the pipeline produces it.
+- **Camera errors start with a code**, `"<code>: <sentence for the log>"`: `not-registered`, `busy` (both),
+  `no-module`, `not-loaded`, `no-device`, `permission`, `format`, `io` (Linux), `no-addon` (engine).
+  `shared/vcam-error.ts` turns them into what the UI shows; anything without a known code is shown as it is.
+- **Root, and every other process OmniCam starts.** Root only through polkit (`pkexec`) for
+  `omnicam-camera-setup.sh install`, or from the rpm/deb scriptlets. An rpm or deb runs its root-owned copy in
+  place (checked: root's, no group or other write bit); an AppImage or dev build passes the script's text to
+  `bash -c`, so there is never a user-owned file for root to run. The script's exit codes are a contract with the
+  UI: 0 ok, 10 no module for this kernel, 11 load failed, 12 usage, 13 busy, 14 Secure Boot, 15 another
+  `options v4l2loopback` would override OmniCam's (named in the last stderr line); pkexec's 126/127 mean cancelled.
+  Its module options are `devices=1 video_nr=63 card_label="OmniCam" exclusive_caps=1 max_buffers=2`. After a
+  setup, main runs `udevadm settle` before the engine opens the new device: until udev applies the seat user's
+  ACL, the node is root's and opening it fails with EACCES. `pactl`, `gdbus`, `udevadm` run through `execFile`
+  with fixed arguments, never a shell. `~/.config/OmniCam` is 0700 and the certificate key 0600.
 - Frame pixel formats accepted by the addon mirror WebCodecs names (`I420`, `NV12`, `RGBA`, `BGRA`…).
   libyuv's "RGB24" is B,G,R in memory — that *is* DirectShow RGB24; don't "fix" it.
 - Errors that a user can act on (driver not registered, port busy, firewall) must surface in
@@ -154,7 +201,9 @@ Without the native build the app still runs (QR, phone connection, preview) and 
 - **Tests** run on Node's built-in runner with type stripping, so a tested module must not import
   Electron and must use erasable TypeScript only (no enums, no parameter properties). Security checks
   that the LAN can reach live in `src/main/pairing-guard.ts` for that reason.
-- **Updates** (`src/main/updater.ts`): electron-updater against GitHub Releases. Checks quietly 15 s
+- **Updates** (`src/main/updater.ts`): electron-updater against GitHub Releases. On Linux only the AppImage
+  updates itself (`$APPIMAGE` set; it reads `latest-linux.yml`); an rpm or deb reports `unsupported: 'package'`
+  and links to Releases. Checks quietly 15 s
   after launch and every 24 h; never downloads or installs without a click. The installer is verified
   against the sha512 in `latest.yml`, then runs silently (one UAC prompt) and restarts OmniCam.
   A release is only offered once it is **published** (not a draft) and carries `latest.yml` next to
@@ -241,11 +290,39 @@ Numbers from the perf pass on 2026-09-12; re-measure before changing any of thes
   `nocopy` / `nopreview` to bisect the pipeline; `OMNICAM_UI_DEBUG=metrics` logs renderer
   layout/style counters. `scripts`: see `packages/vcam-native/scripts`.
 
+## Performance notes (measured, Linux)
+
+Measured on 2026-10-16: Fedora 44, Intel Core i7-1185G7, dev build (not packaged), 1080p YUYV output, Chromium's
+fake phone camera at 1080p **20 fps**, software H.264 decoding. CPU is OmniCam's whole process tree as a share of one
+core, averaged over 30 s; memory is PSS (RSS double-counts shared pages). A 30 fps phone costs more while streaming.
+Re-measure before changing any of these decisions.
+
+| State | CPU | Processes | PSS |
+|---|---|---|---|
+| Idle, no phone | 2.1% | 8 | 389 MB |
+| Phone connected, no reader, window minimised | 13.0% | 10 | 364 MB |
+| Streaming 1080p into a reader (ffmpeg), window minimised | 22.8% | 10 | 376 MB |
+
+Per 1080p frame in the native pipeline: I420→YUYV 0.65–0.77 ms (I420→I420 0.39 ms); `VideoFrame.copyTo` ~0.55 ms.
+
+- **YUYV out, no RGB.** The pipeline converts the phone's I420 straight to YUYV (`I420ToYUY2`), the one format
+  every V4L2 consumer accepts; `OMNICAM_V4L2_FORMAT=i420` writes I420 for testing.
+- **Who is watching:** v4l2loopback 0.13+ sends a client-usage event when a reader starts or stops; older modules
+  fall back to counting other processes holding the device in `/proc/*/fd`, at most once a second. That count
+  drives "convert nothing while nobody watches" and the phone's 5 fps idle mode, as on Windows.
+- **A minimised window is still "visible" on Wayland** (xdg-shell has no minimised state a client sees), so main
+  runs the preview only while the window is shown and not minimised by its own account
+  (`ui-window.ts`, `syncPreview`). Without that the preview never stopped and the phone never went idle:
+  47% → 13% of a core with a phone connected and nobody watching. Only a minimise OmniCam makes itself counts (its
+  close button without a tray, a `--hidden` start): one the desktop makes (Super+H, a dock click) reaches the app as
+  a mere blur, with page visibility and animation frames unchanged (checked on GNOME 50), so the preview runs on.
+
 ## Roadmap (not built yet)
 
 Sizes, reasoning and contribution notes are in [ROADMAP.md](ROADMAP.md); this is the short technical list.
 
 - Windows 11 Media Foundation virtual camera backend (for UWP/MF-only apps).
-- macOS: CoreMediaIO Camera Extension backend (needs Apple signing). Linux: v4l2loopback.
+- macOS: CoreMediaIO Camera Extension backend (needs Apple signing). Linux: a PipeWire camera as a
+  second backend next to v4l2loopback.
 - "No-warning mode": real domain + per-install certificate (requires internet + a small service).
 - An own signed microphone driver, replacing VB-CABLE. Code signing (in progress, SignPath).

@@ -3,6 +3,7 @@
 //
 //   apps/desktop/resources/icons/  icon.png (1024)  icon.ico  tray.ico  tray-live.ico
 //                                  tray.png tray@2x.png tray-live.png tray-live@2x.png
+//   apps/desktop/build/linux/icons/ 16x16.png … 512x512.png (the Linux packages' icon theme set)
 //   apps/phone/public/             apple-touch-icon.png icon-192.png icon-512.png favicon.svg
 //   assets/brand/                  mark.svg  contact-sheet.png (reference sheet for eyeballing small sizes)
 //
@@ -17,7 +18,9 @@ const here = dirname(fileURLToPath(import.meta.url));
 const iconsDir = resolve(here, '..', 'resources', 'icons');
 const phoneDir = resolve(here, '..', '..', 'phone', 'public');
 const brandDir = resolve(here, '..', '..', '..', 'assets', 'brand');
+const linuxIconsDir = resolve(here, 'linux', 'icons');
 mkdirSync(iconsDir, { recursive: true });
+mkdirSync(linuxIconsDir, { recursive: true });
 mkdirSync(phoneDir, { recursive: true });
 
 export const BRAND = {
@@ -97,6 +100,11 @@ async function main() {
   const icoSizes = [16, 24, 32, 48, 64, 128, 256];
   const icoPngs = await Promise.all(icoSizes.map((s) => png(appIconSvg(s), s)));
   writeFileSync(join(iconsDir, 'icon.ico'), await pngToIco(icoPngs));
+  // Linux: one PNG per hicolor size. The icon theme stops at 512, so a lone 1024 PNG would never be
+  // found and GNOME would show a generic icon.
+  for (const s of [16, 24, 32, 48, 64, 128, 256, 512]) {
+    writeFileSync(join(linuxIconsDir, `${s}x${s}.png`), await png(appIconSvg(s), s));
+  }
   writeFileSync(join(brandDir, 'mark.svg'), svg(256, mark()));
 
   // --- tray icons (Windows uses the .ico; the PNG pairs serve macOS/Linux later) ---
