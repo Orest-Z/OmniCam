@@ -10,6 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/Orest-Z/OmniCam/releases/latest"><img alt="Download for Windows" src="https://img.shields.io/badge/Download-Windows%20installer-8a5cf3?style=for-the-badge"></a>
+  <a href="#install-linux"><img alt="Download for Linux" src="https://img.shields.io/badge/Download-Linux%20AppImage%20·%20rpm%20·%20deb-8a5cf3?style=for-the-badge"></a>
 </p>
 
 <p align="center">
@@ -22,6 +23,7 @@
 <p align="center">
   <a href="https://github.com/Orest-Z/OmniCam/actions/workflows/build.yml"><img alt="Build" src="https://github.com/Orest-Z/OmniCam/actions/workflows/build.yml/badge.svg"></a>
   <img alt="Windows 10 / 11, 64-bit" src="https://img.shields.io/badge/Windows-10%20%2F%2011%20·%2064--bit-3b3552?style=flat-square">
+  <img alt="Linux x64" src="https://img.shields.io/badge/Linux-x64%20·%20Fedora%2C%20Ubuntu%2C%20Debian-3b3552?style=flat-square">
   <img alt="Phone: no app needed" src="https://img.shields.io/badge/Phone-no%20app%20needed-3b3552?style=flat-square">
   <img alt="Video: WebRTC on your LAN" src="https://img.shields.io/badge/Video-WebRTC%20on%20your%20LAN-3b3552?style=flat-square">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-3b3552?style=flat-square"></a>
@@ -47,6 +49,8 @@ Scan a QR code, tap **Start camera**, and a camera named **OmniCam** appears in 
 Chrome, OBS — anything that lists webcams. Video goes phone → PC directly over your Wi-Fi with hardware-encoded
 H.264; nothing leaves your network, and there is no account, no cloud and no app store.
 
+- **Windows and Linux** — Windows 10/11, and Linux x64 as an AppImage, rpm or deb ([which distributions](#install-linux)).
+  On Linux the phone's microphone needs nothing extra installed.
 - **Phone side** — any modern browser: iPhone (Safari) or Android (Chrome). It's just a web page served by your PC.
 - **Quality** — 720p, 720p60, 1080p or 4K from the phone's camera, hardware H.264, latency on par with a native camera app.
 - **Controls** — front/back camera, torch (a screen light on the front camera), resolution, mirror, rotate, Fill/Fit — from the PC or from the phone. Light or dark desktop app.
@@ -64,7 +68,7 @@ H.264; nothing leaves your network, and there is no account, no cloud and no app
 | Open source              | **yes**                  | no                | no                | no                | no                |
 | Account / cloud          | **none**                 | none              | none              | account           | none              |
 | Video path               | phone → PC on your Wi-Fi | Wi-Fi / USB       | Wi-Fi / USB       | Wi-Fi / USB       | Wi-Fi / USB       |
-| Microphone               | yes, through VB-CABLE    | yes               | yes               | yes               | yes               |
+| Microphone               | yes (Windows: VB-CABLE)  | yes               | yes               | yes               | yes               |
 
 The trade-off for "no app" is a browser security warning the first time (explained below), and USB is not an option
 yet — a phone hotspot or USB tethering with the PC on it works as a stand-in.
@@ -97,13 +101,20 @@ cable's other end:
 installed, when it has become the default output, and when the phone's sound arrives. The microphone is sent raw, like
 a USB mic: the app's own noise suppression and echo cancellation do the rest. It is never played on your speakers.
 
+**On Linux there is nothing to install:** while OmniCam runs, your apps get a microphone called **OmniCam
+Microphone** (OmniCam adds it to PipeWire or PulseAudio without root and removes it when it quits). Pick it in
+Discord, Zoom or Meet. Your speakers stay the sound output: if *OmniCam Feed*, the side OmniCam plays into, ever
+becomes the default output, OmniCam switches it back.
+
 ### What it doesn't do (yet)
 
-- **No microphone device of its own.** The phone's microphone reaches apps through VB-CABLE (above). An "OmniCam"
-  microphone needs a signed Windows audio driver and is on the roadmap.
-- **Windows only.** Windows 10 (1809+) and Windows 11, 64-bit. macOS and Linux are on the roadmap.
-- **DirectShow cameras only.** The Windows Camera app and the new Microsoft Teams use the newer Windows camera stack
-  and will not list OmniCam. Discord, Zoom, Google Meet, Chrome, Firefox, OBS and Slack do.
+- **No microphone device of its own on Windows.** The phone's microphone reaches apps through VB-CABLE (above). An
+  "OmniCam" microphone needs a signed Windows audio driver and is on the roadmap. (Linux has one.)
+- **Windows and Linux only.** Windows 10 (1809+) and Windows 11, 64-bit; Linux x64. macOS is on the roadmap.
+- **DirectShow cameras only on Windows.** The Windows Camera app and the new Microsoft Teams use the newer Windows
+  camera stack and will not list OmniCam. Discord, Zoom, Google Meet, Chrome, Firefox, OBS and Slack do.
+- **A kernel module on Linux.** The camera is a v4l2loopback device, which needs the module installed once, and
+  with Secure Boot on, a signing key enrolled once ([Install (Linux)](#install-linux)).
 - **A browser warning the first time** on each phone, per network — unavoidable without a public certificate, and
   explained step by step below.
 - **One phone at a time.** Scanning the code with another phone replaces the current one.
@@ -125,6 +136,84 @@ Windows 10 (1809 or newer) and Windows 11, 64-bit.
 Want to check what you downloaded? Each release lists the installer's SHA-256, and every installer
 carries a signed attestation that it was built by this repository's GitHub Actions from the tagged
 commit: `gh attestation verify OmniCam-Setup-x.y.z.exe --repo Orest-Z/OmniCam`.
+
+---
+
+## Install (Linux)
+
+x64. Any distribution with the v4l2loopback module (for the camera) and PipeWire or PulseAudio (for the microphone),
+which is nearly all of them:
+
+| Distribution | Download | Status |
+|---|---|---|
+| **Fedora** 44 (GNOME, Wayland) | rpm or AppImage | **Tested** end to end |
+| Fedora 42–43, Nobara and other Fedora-likes | rpm or AppImage | Same packages as the tested setup; expected to work |
+| **Ubuntu** 22.04 / 24.04, **Debian** 12+, Linux Mint, Pop!_OS | deb or AppImage | Supported, not tested yet |
+| Arch, Manjaro, EndeavourOS | AppImage | Supported, not tested yet |
+| Anything else (x64) | AppImage | Works if v4l2loopback is available for your kernel |
+
+Tried it on one that says "not tested yet"? An issue saying it works (or doesn't) helps everyone.
+
+1. Download one of these from the [latest release](https://github.com/Orest-Z/OmniCam/releases/latest):
+
+   | File | For | Install |
+   |---|---|---|
+   | **`OmniCam-x.y.z.AppImage`** | any distribution | `chmod +x OmniCam-x.y.z.AppImage`, then run it. It updates itself, like the Windows app. It needs FUSE 2: if it doesn't start, install `fuse-libs` (Fedora) or `libfuse2t64` (Ubuntu 24.04), or run it with `--appimage-extract-and-run`. |
+   | **`OmniCam-x.y.z.rpm`** | Fedora, RHEL-likes | `sudo dnf install ./OmniCam-x.y.z.rpm` |
+   | **`OmniCam-x.y.z.deb`** | Debian, Ubuntu, Mint | `sudo apt install ./OmniCam-x.y.z.deb` |
+
+   The rpm and deb put OmniCam in your app list; their new versions come from the same Releases page
+   (Settings → About links there).
+
+2. Install **v4l2loopback**, the kernel module that provides the camera device:
+
+   | Distribution | Command |
+   |---|---|
+   | Fedora | Enable [RPM Fusion](https://rpmfusion.org/Configuration) free, then `sudo dnf install akmod-v4l2loopback` |
+   | Debian, Ubuntu | `sudo apt install v4l2loopback-dkms` |
+   | Arch | `sudo pacman -S v4l2loopback-dkms linux-headers` |
+
+   On Fedora, update and restart first (`sudo dnf upgrade --refresh`): the module is built for the newest kernel,
+   so it only loads once you run that kernel. akmods may still be building it for a minute after the install; if
+   OmniCam keeps saying the module is missing, run `sudo akmods --force`.
+
+3. **Set up the camera.** Open OmniCam: if the camera isn't ready it says why, and **Set up camera** does the rest
+   after one password prompt. It adds a camera device named **OmniCam** that stays after restarts
+   (`/etc/modprobe.d/omnicam.conf` and `/etc/modules-load.d/omnicam.conf`). The rpm and deb do this during install
+   when the module is already there.
+
+<details>
+<summary><strong>Secure Boot on?</strong> Enroll the module's signing key once — free, no BIOS change.</summary>
+
+With Secure Boot the kernel only loads modules signed with a key it trusts. OmniCam says so and shows these commands.
+On Fedora:
+
+```
+sudo kmodgenca -a
+sudo mokutil --import /etc/pki/akmods/certs/public_key.der   # pick a one-time password
+systemctl reboot
+```
+
+At the restart a blue *MOK management* screen appears once: **Enroll MOK → Continue → Yes →** the password
+**→ Reboot**. Then click **Set up camera** again. (If it still says Secure Boot, the module was built before the key
+existed: `sudo akmods --force`, then Set up camera.) On Ubuntu, installing `v4l2loopback-dkms` asks for a password
+and enrolls its key at the next boot the same way; `sudo update-secureboot-policy --enroll-key` starts it again.
+</details>
+
+**Microphone:** nothing to install. *OmniCam Microphone* appears while OmniCam runs (it needs `pactl`, from
+`pulseaudio-utils`, which the packages pull in).
+
+**Tray:** GNOME shows no tray icons without the AppIndicator extension, so OmniCam minimises instead of hiding when
+you close the window. For a tray icon on Fedora: `sudo dnf install gnome-shell-extension-appindicator`, sign out and
+in, and turn it on in *Extensions*. Ubuntu, KDE, Cinnamon and Xfce have a tray already.
+
+**Apps from Flathub** (Discord, Zoom…) only see cameras they have been allowed to: if one doesn't list OmniCam, run
+`flatpak override --user --device=all com.discordapp.Discord` (Zoom: `us.zoom.Zoom`), or switch on *All devices* for
+it in Flatseal, and restart the app.
+
+**Firewall:** Fedora Workstation already lets phones reach OmniCam. Elsewhere, if the phone can't open the page,
+*Settings → Connection → Phone can't open the page?* has the command with your port, for example
+`sudo firewall-cmd --permanent --add-port=28441/tcp && sudo firewall-cmd --reload` or `sudo ufw allow 28441/tcp`.
 
 ---
 
@@ -257,6 +346,7 @@ Five sections in a sidebar. Each starts with how things stand, and a dot marks t
   rule for you; re-run it if in doubt.
 - Several network interfaces (VPN, virtual adapters)? Pick the Wi-Fi one under **Settings → Network interface** so the
   QR code uses the right address.
+- On Linux, a firewall may block the port: *Settings → Connection → Phone can't open the page?* shows the command.
 </details>
 
 <details>
@@ -266,6 +356,14 @@ Five sections in a sidebar. Each starts with how things stand, and a dot marks t
 - The installer registers the camera driver; run it again if the device is missing.
 - Apps that only use the newer Windows camera stack (the Windows Camera app, the new Microsoft Teams) don't see
   DirectShow cameras. Discord, Zoom, Google Meet, Chrome, Firefox, OBS, Slack and most others do.
+- **Linux:** OmniCam's pairing screen and *Settings → Camera* say what is missing (the module, the setup, Secure
+  Boot, or an app holding the device) with the command or button that fixes it. `v4l2-ctl --list-devices` (from
+  `v4l-utils`) should list *OmniCam*. Apps from Flathub need device access ([Install (Linux)](#install-linux)).
+- **Linux, "in use":** setting up the camera, or changing its size, waits for every app with a camera open to let
+  go. Close them (OBS's virtual camera counts) and OmniCam carries on by itself.
+- **Linux, with OBS's virtual camera:** Fedora's v4l2loopback package makes one device, *OBS Virtual Camera*.
+  OmniCam's setup sets the module to make one *OmniCam* device instead (from the next restart, or the next time the
+  module loads), so OBS's own virtual camera then has no device of its own.
 </details>
 
 <details>
@@ -278,7 +376,7 @@ bars. Holding the phone in landscape avoids both.
 <details>
 <summary><strong>Something else — where are the logs?</strong></summary>
 
-Settings → **Open log folder** (`%APPDATA%\OmniCam\logs\omnicam.log`). It records connections, the camera device
+Settings → **Open log folder** (`%APPDATA%\OmniCam\logs\omnicam.log`; on Linux `~/.config/OmniCam/logs/omnicam.log`). It records connections, the camera device
 state and any crashes, and nothing is ever uploaded. Attach it when you
 [open an issue](https://github.com/Orest-Z/OmniCam/issues).
 </details>
@@ -287,6 +385,10 @@ state and any crashes, and nothing is ever uploaded. Attach it when you
 <summary><strong>Uninstall</strong></summary>
 
 Settings → Apps → OmniCam → Uninstall. This removes the camera device and the firewall rule.
+
+Linux: `sudo dnf remove OmniCam` or `sudo apt remove omnicam` removes the program, OmniCam's module settings and the
+camera device (at the next restart if an app has it open). An AppImage is just the file; its camera setup stays
+until you delete `/etc/modprobe.d/omnicam.conf` and `/etc/modules-load.d/omnicam.conf`.
 </details>
 
 ---
@@ -296,7 +398,8 @@ Settings → Apps → OmniCam → Uninstall. This removes the camera device and 
 ```
 PHONE (browser)                                DESKTOP
   camera ── H.264 ── WebRTC over Wi-Fi ──────►  Electron engine ──► native pipeline ──► "OmniCam" camera
-                       peer-to-peer                (WebRTC receiver)   (libyuv, C++)      (DirectShow, x64 + x86)
+                       peer-to-peer                (WebRTC receiver)   (libyuv, C++)      Windows: DirectShow (x64 + x86)
+                                                                                         Linux: v4l2loopback (YUYV)
 ```
 
 - The PC runs a tiny HTTPS server that serves the phone page and a one-shot signaling endpoint. The QR code carries a
@@ -304,7 +407,8 @@ PHONE (browser)                                DESKTOP
 - Video is WebRTC, peer-to-peer on your LAN. The desktop's ICE candidate is a real LAN IP so it also works on Wi-Fi
   that blocks mDNS.
 - Frames never cross process boundaries as pixels: the native pipeline scales, rotates and converts them and hands
-  them to OmniCam's own DirectShow virtual camera filter (built on [softcam](https://github.com/tshino/softcam)).
+  them to OmniCam's own DirectShow virtual camera filter (built on [softcam](https://github.com/tshino/softcam)), or on
+  Linux writes them to the v4l2loopback device in YUYV, straight from the phone's YUV with no RGB step.
 - Nothing is copied or converted while no app reads the camera; the phone is told to drop to 5 fps to save battery.
 
 Typical cost while streaming 1080p into an app: about a quarter of a CPU core and flat memory over long sessions.
@@ -328,12 +432,13 @@ npm run dist              # NSIS installer
 ```
 
 Without the native build the app still runs (QR, phone connection, preview) and reports "native addon not available"
-— handy for working on the web and UI parts.
+— handy for working on the web and UI parts. On Linux the same commands work without `native:register`;
+[CONTRIBUTING.md](CONTRIBUTING.md#on-linux) lists the packages and how to test without a phone.
 
 ## Roadmap
 
 - Windows 11 Media Foundation virtual camera (for the Windows Camera app and new Teams)
-- macOS (CoreMediaIO camera extension) and Linux (v4l2loopback)
+- macOS (CoreMediaIO camera extension); on Linux, a PipeWire camera next to v4l2loopback
 - Code signing (in progress, through SignPath Foundation)
 - Optional "no-warning mode" with a real certificate
 - An "OmniCam" microphone device of its own, so VB-CABLE isn't needed

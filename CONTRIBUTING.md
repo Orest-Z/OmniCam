@@ -7,7 +7,7 @@ yet are all welcome.
 
 [Open an issue](https://github.com/Orest-Z/OmniCam/issues) and include:
 
-- the OmniCam version (shown in Settings) and your Windows version
+- the OmniCam version (shown in Settings) and your Windows version, or your Linux distribution and desktop
 - the phone model and browser (for example iPhone 14, Safari, or Pixel 7, Chrome)
 - the app you are using the camera in (Discord, Zoom, OBS…)
 - what you did, what you expected and what happened instead
@@ -32,7 +32,7 @@ the short version:
 
 ## Setting up
 
-The full app builds on Windows 10 or 11 (64-bit). You need:
+The full app builds on Windows 10 or 11 (64-bit) and on Linux x64 ([below](#on-linux)). On Windows you need:
 
 - Node.js 20 or newer
 - Visual Studio 2022 Build Tools with the **Desktop development with C++** workload
@@ -52,16 +52,47 @@ Already cloned without `--recursive`? Run `git submodule update --init --recursi
 You can skip the native steps if you are working on the UI or the phone page. The app still runs
 (QR code, phone connection, preview) and reports "native addon not available".
 
+### On Linux
+
+Fedora:
+
+```
+sudo dnf install nodejs npm gcc-c++ make cmake git v4l-utils pulseaudio-utils
+```
+
+Debian or Ubuntu: `sudo apt install nodejs npm g++ make cmake git v4l-utils pulseaudio-utils` (Node 20 or newer;
+use NodeSource if your release ships an older one).
+
+Then the same steps as above, without `native:register`. The camera needs the v4l2loopback module (see
+[Install (Linux)](README.md#install-linux), including Secure Boot); once it is installed, the app's **Set up camera**
+button runs `apps/desktop/build/linux/omnicam-camera-setup.sh` for you. `v4l2-ctl --list-devices` should then list
+*OmniCam*.
+
+```
+npm run native:build      # N-API addon with the v4l2loopback backend
+npm run dev
+npm run dist:linux        # AppImage, rpm and deb in apps/desktop/release
+```
+
+Building the rpm and deb on Fedora also needs `sudo dnf install rpm-build libxcrypt-compat` (electron-builder's
+bundled fpm needs `libcrypt.so.1`). `shellcheck apps/desktop/build/linux/omnicam-camera-setup.sh` runs in CI.
+
+**No phone at hand?** `npx electron apps/desktop/test/e2e/fake-phone.cjs '<phone URL>' both` opens the phone page in
+Chromium with its fake camera (a moving pattern) and fake microphone (beeps) and starts streaming. `npm run dev`
+logs the phone URL with its token. Then `ffmpeg -f v4l2 -i /dev/video63 -frames:v 30 grab-%02d.png` grabs frames
+from the camera, and `parecord -d omnicam_mic --file-format=wav mic.wav` records the microphone.
+
 ## Where things live
 
 | Path | What it is |
 |---|---|
 | `apps/desktop/src/main/` | Electron main process: HTTPS server, pairing token, certificate, tray, settings |
+| `apps/desktop/src/platform/` | Per-OS services for main: autostart, tray support, camera setup, the Linux microphone |
 | `apps/desktop/src/engine/` | Hidden window that receives the WebRTC stream and feeds the native addon |
 | `apps/desktop/src/renderer/` | The React UI (sandboxed; talks to main through the preload bridge) |
 | `apps/phone/` | The page the phone opens: camera capture and WebRTC sender |
 | `packages/protocol/` | Message types the phone and desktop exchange |
-| `packages/vcam-native/` | C++ addon, frame pipeline (libyuv) and the DirectShow camera filter |
+| `packages/vcam-native/` | C++ addon, frame pipeline (libyuv), the DirectShow camera filter and the v4l2loopback backend |
 
 The layout and the reasoning behind it are in [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -86,8 +117,8 @@ The layout and the reasoning behind it are in [ARCHITECTURE.md](ARCHITECTURE.md)
 
 ## Testing your change
 
-There are no automated tests yet; unit tests for `packages/protocol` and
-`apps/desktop/src/engine/sdp.ts` would be a great first contribution. Until then:
+`npm test` runs the unit tests in `apps/desktop/test` on Node's built-in runner (pure modules only: no Electron, no
+hardware). Add one when you change logic that can be tested that way. Beyond that:
 
 - `npm run typecheck` and `npm test` must pass.
 - If your change touches streaming, test with at least one phone (iPhone Safari or Android Chrome)
@@ -105,7 +136,8 @@ Say in the pull request what you tested and on which devices.
   `Engine: …`, `Phone: …`, `Native: …`, `README: …`.
 - Add user-visible changes to `CHANGELOG.md` under **Unreleased** (add that heading if the last
   release took it). Those entries become the release notes once the version is bumped.
-- CI must pass. It typechecks and builds the native parts and the installer on Windows.
+- CI must pass. It typechecks, runs the tests and builds the native parts and the packages on Windows and Linux.
+  A change to Windows behaviour can only be checked there, so say in the pull request if you couldn't test it.
 - Looking for something to pick up? [ROADMAP.md](ROADMAP.md) lists good first issues with the file they
   live in, and says which larger items need a Linux box, a Mac or C++.
 

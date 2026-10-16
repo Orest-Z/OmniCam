@@ -14,7 +14,7 @@ Each item carries a rough size and who can realistically take it:
 | **S** | a day or two |
 | **M** | a week or two |
 | **L** | a month or more |
-| *anyone* | needs only a Windows machine and a phone |
+| *anyone* | needs only a Windows or Linux machine and a phone |
 | *C++* | touches `packages/vcam-native` |
 | *hardware* | needs a Linux box, a Mac, or a paid developer account |
 
@@ -79,35 +79,22 @@ Worth knowing: the end-to-end path *is* testable without a phone. Chrome with
 second browser can open the OmniCam device and confirm the pixels arrive. That is a genuine smoke test
 for a self-hosted Windows runner, or a documented manual script until then.
 
-### 2 · Let a backend choose its pixel format — S, *C++*
+### 2 · Let a backend choose its pixel format — done
 
-`IVirtualCamera` (`packages/vcam-native/src/backend/ivcam.h`) declares that frames are BGR24, because
-that is what DirectShow wants, and `pipeline.cc` converts with `I420ToRGB24Matrix` to produce it. v4l2
-consumers want YUV420 or YUYV, so a Linux backend would otherwise pay I420 → BGR24 → YUV420: roughly
-3 ms a frame of pointless work at 1080p. Adding a `preferredFormat()` to the interface and honouring it
-in the pipeline is small and self-contained, and it unblocks Linux cleanly. **Worth doing before anyone
-writes the Linux backend.**
+`IVirtualCamera::preferredFormat()` lets each backend take frames in its own format. Windows keeps BGR24 for
+DirectShow; the Linux backend takes YUYV (I420 for testing), straight from the phone's YUV with no RGB round trip.
 
-### 3 · Linux: v4l2loopback — L, *C++ and hardware*
+### 3 · Linux: v4l2loopback — done
 
-The seam is ready and `ivcam.h` already names this backend. The code is the easy part:
+Shipped: `backend/linux_v4l2.cc` writes YUYV to a v4l2loopback device labelled *OmniCam*, found by its label; a
+one-time setup (one polkit prompt, or the rpm/deb install) makes it survive restarts; every camera problem shows its
+fix in the UI, Secure Boot included. The phone's microphone needs no driver there: OmniCam adds *OmniCam Microphone*
+to PipeWire while it runs. Packages are an AppImage (updates itself), an rpm and a deb, built and attached to each
+release by CI. The tray falls back to a minimised window where GNOME has no tray.
 
-- `backend/linux_v4l2.cc` — open `/dev/videoN`, `VIDIOC_S_FMT`, write frames (M)
-- `CMakeLists.txt` is unconditionally Windows today (`add_compile_definitions(WIN32 _WINDOWS …)`, the
-  DirectShow filter, the x86 build). It needs per-OS branches and a Linux CI job (S)
-- Tray on GNOME has no StatusNotifier by default, so "the window is optional, it lives in the tray"
-  needs a fallback. Autostart needs an XDG `.desktop` file — `setLoginItemSettings` does not cover
-  Linux. electron-updater supports AppImage only, so in-app updates would be AppImage-only (M)
-
-What costs the time is the install story, not the code. v4l2loopback is an out-of-tree DKMS module: root
-to install, kernel headers, **re-signing under Secure Boot or it will not load**, and persistent options
-(`exclusive_caps=1`, `card_label=OmniCam`) through `modules-load.d` and `modprobe.d`. A `.deb` can depend
-on `v4l2loopback-dkms`; an AppImage cannot install anything. Then the matrix: Ubuntu and Fedora, X11 and
-Wayland, GNOME and KDE, against Chrome, Firefox, OBS, Zoom and Discord — and Flatpak'd consumers need
-`/dev/video*` granted.
-
-Realistically: a week or two for "works on my Ubuntu", four to six focused weeks for something
-shippable. The code is maybe 40% of that.
+Tested end to end on Fedora 44 (GNOME, Wayland) with TODO-RESULTS-APPS. What remains is the matrix nobody has
+run yet: Ubuntu and Debian, KDE, X11, and more consumer apps (Zoom, Discord, Flatpak'd apps). Reports welcome,
+*hardware*. A sandboxed Flatpak of OmniCam itself is not possible: it has to set up a kernel module.
 
 ### 4 · Windows 11 Media Foundation backend — M to L, *C++*
 
@@ -142,7 +129,7 @@ Microsoft's SysVAD sample. The engine would not change; `shared/audio-sink.ts` w
 The code is the smaller part. Windows only loads kernel drivers that Microsoft has signed, which takes
 attestation signing through a Partner Center account with an EV certificate (paid, yearly; SignPath's free
 signing does not cover drivers), and a driver bug blue-screens the user's PC, so development needs a
-test-signing VM. On Linux the same idea needs no driver at all: a PipeWire null sink plus a remapped source,
+test-signing VM. On Linux this is done and needs no driver at all: a PipeWire null sink plus a remapped source,
 created at runtime without root. macOS would need a HAL plug-in, BlackHole-style.
 
 ### 8 · "No-warning mode" — L, *needs a service*
@@ -162,8 +149,8 @@ reputation. Left after that: signing the uninstaller, and `publisherName` so upd
 ### 10 · PipeWire camera node on Linux — M, *hardware*
 
 The nicer Linux path, with no kernel module at all. Consumer support is still patchy — Chrome and Firefox
-reliably enumerate v4l2 devices, while the PipeWire camera portal is improving but not universal. Worth
-revisiting once v4l2loopback works.
+reliably enumerate v4l2 devices, while the PipeWire camera portal is improving but not universal. v4l2loopback
+works now, so this would be a second `IVirtualCamera` backend next to it, not a replacement.
 
 ---
 
@@ -180,9 +167,10 @@ Small, verified, and each one has a known home in the code.
 - **The phone's status pill contradicts its own overlay** after Disconnect: the overlay says the code
   expired while the pill still says "Reconnecting…", because `stopSession()` never calls `setStatus`.
   `apps/phone/src/main.ts`. *(S, anyone.)*
-- **No retry after a failed virtual-camera start.** If `vcam.start()` throws — a stale OmniCam process
-  still holding the shared memory, say — nothing retries until the output format changes, so restarting
-  the app is the only way out. `apps/desktop/src/engine/engine.ts`, in `applySettings`. *(S.)*
+- **No retry after a failed virtual-camera start on Windows.** If `vcam.start()` throws — a stale OmniCam
+  process still holding the shared memory, say — it is tried again only when a setting changes. Linux retries a
+  busy device every 3 s; Windows would want the same for its `busy:` case, or a *Try again* button like Linux's.
+  `apps/desktop/src/engine/engine.ts`, in `applySettings`. *(S.)*
 - **Documentation and translation.** The phone page is the only part of OmniCam a phone user ever sees,
   and it is English-only. The strings are few and live in one file.
 
