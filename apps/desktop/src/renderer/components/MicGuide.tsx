@@ -2,11 +2,11 @@ import { useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { AppWindow, ArrowUpRight, AudioLines, Cable, Check, ChevronDown, Mic, Smartphone, Video } from 'lucide-react';
 import type { DesktopToPhone } from '@omnicam/protocol';
-import type { AppSettings, StreamStats } from '../../shared/ipc';
+import type { AppSettings, StreamStats, VirtualMicState } from '../../shared/ipc';
 import { micNameFor, pickSink } from '../../shared/audio-sink';
 import { useLoopbacks } from '../useLoopbacks';
 import { SPEAKING_LEVEL } from './LiveView';
-import { Dialog } from './ui';
+import { Command, Dialog } from './ui';
 import downloadShot from '../assets/vb-cable/download.webp';
 import unzipShot from '../assets/vb-cable/unzip.webp';
 import runAsAdminShot from '../assets/vb-cable/run-as-admin.webp';
@@ -19,6 +19,8 @@ const VB_CABLE_URL = 'https://vb-audio.com/Cable/';
 const SOUND_SETTINGS = 'ms-settings:sound';
 /** What apps call the cable's microphone side until a cable is found. */
 const VB_CABLE_MIC = 'CABLE Output (VB-Audio Virtual Cable)';
+/** The microphone OmniCam adds on Linux (platform/pactl.ts names it). */
+const OMNICAM_MIC = 'OmniCam Microphone';
 
 /** Installing VB-CABLE, one screen at a time. The screenshots circle what to click. */
 const INSTALL: { tab: string; text: string; shot?: string; alt?: string }[] = [
@@ -57,6 +59,8 @@ const INSTALL: { tab: string; text: string; shot?: string; alt?: string }[] = [
 interface Props {
   stats: StreamStats;
   settings: AppSettings;
+  /** Linux: the microphone OmniCam makes itself. Null on Windows, where VB-CABLE does the job. */
+  virtualMic: VirtualMicState | null;
   onControl: (msg: DesktopToPhone) => void;
   onClose: () => void;
 }
@@ -67,24 +71,19 @@ type State = 'done' | 'todo' | 'bad';
  * Setting up the phone as a microphone, as a live checklist: the path the sound takes (phone →
  * OmniCam → VB-CABLE → app) lights up part by part, and each step ticks itself once OmniCam can see
  * it done. Only the last step, picking the microphone in the app, can't be seen from here.
+ * On Linux there is nothing to install: OmniCam's own microphone takes VB-CABLE's place.
  */
-export function MicGuide({ stats, settings, onControl, onClose }: Props) {
+export function MicGuide(props: Props) {
+  return props.virtualMic ? <LinuxMicGuide {...props} virtualMic={props.virtualMic} /> : <WindowsMicGuide {...props} />;
+}
+
+function WindowsMicGuide({ stats, settings, onControl, onClose }: Props) {
   const loopbacks = useLoopbacks();
   const sink = loopbacks && pickSink(loopbacks.outputs, settings.micOutput);
-  const live = stats.state === 'connected' || stats.state === 'stalled';
-  const camera = stats.sources?.camera !== false;
-  const mic = live && stats.sources?.mic === true;
-  const level = stats.micLevel ?? 0;
-  // Sound only gets measured while it plays into the cable, so this also proves phone → OmniCam → cable.
-  const flowing = mic && level > SPEAKING_LEVEL;
+  const { mic, flowing } = micFlow(stats);
   const cable: State = !sink ? 'todo' : loopbacks?.isDefault ? 'bad' : 'done';
   const micName = sink ? micNameFor(sink.label) : VB_CABLE_MIC;
   const open = (url: string) => void window.omnicam.openExternal(url);
-  // The phone keeps one source on, and handles commands in order: microphone first, then the camera.
-  const choose = (cameraToo: boolean) => {
-    if (!mic) onControl({ type: 'setMic', on: true });
-    if (camera !== cameraToo) onControl({ type: 'setCamera', on: cameraToo });
-  };
 
   return (
     <Dialog title="Use your phone as a microphone" className="guide" onClose={onClose}>
@@ -132,55 +131,11 @@ export function MicGuide({ stats, settings, onControl, onClose }: Props) {
         </Step>
 
         <Step n={3} state={mic ? 'done' : 'todo'} title="Turn on the phone's microphone">
-          <div className="modes">
-            <button className={'mode' + (mic && camera ? ' on' : '')} disabled={!live} onClick={() => choose(true)}>
-              <span>
-                <Video />
-                <Mic />
-              </span>
-              Camera + microphone
-            </button>
-            <button className={'mode' + (mic && !camera ? ' on' : '')} disabled={!live} onClick={() => choose(false)}>
-              <span>
-                <Mic />
-              </span>
-              Microphone only
-            </button>
-          </div>
-          <p>{live ? 'Click one to switch the phone now.' : 'Pick one on the phone before tapping Start, or here once the phone is connected.'}</p>
-          {mic && (
-            <div className={'meter' + (flowing ? ' on' : '')}>
-              <span>
-                <i style={{ transform: `scaleX(${Math.min(1, level / 0.25)})` }} />
-              </span>
-              <small>{!sink ? 'The level shows once VB-CABLE is installed.' : flowing ? 'Hearing the phone' : 'Say something to the phone'}</small>
-            </div>
-          )}
+          <MicModes stats={stats} onControl={onControl} level={mic && !sink ? 'The level shows once VB-CABLE is installed.' : null} />
         </Step>
 
         <Step n={4} state="todo" title="Choose it as the microphone in your app">
-          <div className="mockselect">
-            <span>Microphone</span>
-            <b>
-              <Mic />
-              {micName}
-              <ChevronDown />
-            </b>
-          </div>
-          <ul className="where">
-            <li>
-              <b>Discord</b> User Settings → Voice & Video → Input Device
-            </li>
-            <li>
-              <b>Zoom</b> Settings → Audio → Microphone
-            </li>
-            <li>
-              <b>Teams</b> Settings → Devices → Microphone
-            </li>
-            <li>
-              <b>Google Meet</b> Settings → Audio → Microphone
-            </li>
-          </ul>
+          <AppPicker micName={micName} />
         </Step>
       </ol>
 
@@ -190,6 +145,157 @@ export function MicGuide({ stats, settings, onControl, onClose }: Props) {
         </button>
       </div>
     </Dialog>
+  );
+}
+
+/** OmniCam's own microphone on Linux: ready while OmniCam runs, so the guide is about the app and the sound. */
+function LinuxMicGuide({ stats, onControl, onClose, virtualMic }: Props & { virtualMic: VirtualMicState }) {
+  const loopbacks = useLoopbacks();
+  // The engine plays into "OmniCam Feed" once Chromium lists it, a moment after it is created.
+  const sink = loopbacks && pickSink(loopbacks.outputs, '');
+  const { mic, flowing } = micFlow(stats);
+  const ready = virtualMic.status === 'ready';
+  const device: State = virtualMic.status === 'starting' ? 'todo' : !ready || virtualMic.feedIsDefault ? 'bad' : 'done';
+  const sending = mic && ready && Boolean(sink);
+
+  return (
+    <Dialog title="Use your phone as a microphone" className="guide" onClose={onClose}>
+      <p className="lead">
+        With or without its camera. While OmniCam runs, your apps get a microphone called <b>{OMNICAM_MIC}</b>; there is nothing to install.
+        Each step ticks itself when it's done.
+      </p>
+
+      <div className="flow" aria-hidden="true">
+        <Node state={mic ? 'done' : 'todo'} icon={<Smartphone />} label="Phone mic" sub={mic ? 'on' : 'off'} />
+        <Link on={sending} flowing={flowing} />
+        <Node state={sending ? 'done' : 'todo'} icon={<AudioLines />} label="OmniCam" sub={sending ? 'sending' : 'waiting'} />
+        <Link on={sending} flowing={flowing} />
+        <Node
+          state={device}
+          icon={<Mic />}
+          label={OMNICAM_MIC}
+          sub={virtualMic.status === 'starting' ? 'starting' : !ready ? 'not available' : virtualMic.feedIsDefault ? 'is the default output' : 'ready'}
+        />
+        <Link on={device === 'done'} flowing={flowing} />
+        <Node state="todo" icon={<AppWindow />} label="Your app" sub="picks it" />
+      </div>
+
+      <ol className="gsteps">
+        <Step n={1} state={device} title={`${OMNICAM_MIC} is ready`}>
+          {virtualMic.status === 'starting' ? (
+            <p>Adding it…</p>
+          ) : !ready ? (
+            <>
+              <p>{virtualMic.reason}</p>
+              {virtualMic.fix && <Command text={virtualMic.fix} />}
+            </>
+          ) : virtualMic.feedIsDefault ? (
+            <p>
+              <b>OmniCam Feed</b> is now the default sound output, so apps would hear your whole computer through the phone. Choose your speakers
+              or headphones as the output again in your sound settings.
+            </p>
+          ) : (
+            <p>OmniCam adds it when it starts and removes it when it quits. Your speakers stay the sound output.</p>
+          )}
+        </Step>
+
+        <Step n={2} state="todo" title={`Choose ${OMNICAM_MIC} in your app`}>
+          <AppPicker micName={OMNICAM_MIC} />
+        </Step>
+
+        <Step n={3} state={flowing ? 'done' : 'todo'} title="Sound arrives">
+          <MicModes stats={stats} onControl={onControl} level={mic && !sending ? `The level shows once ${OMNICAM_MIC} is ready.` : null} />
+        </Step>
+      </ol>
+
+      <div className="actions">
+        <button className="btn" onClick={onClose}>
+          Done
+        </button>
+      </div>
+    </Dialog>
+  );
+}
+
+/** The phone's microphone is on, and sound is getting through. */
+function micFlow(stats: StreamStats) {
+  const live = stats.state === 'connected' || stats.state === 'stalled';
+  const mic = live && stats.sources?.mic === true;
+  // Sound only gets measured while it plays into the loopback, so this also proves phone → OmniCam → loopback.
+  const flowing = mic && (stats.micLevel ?? 0) > SPEAKING_LEVEL;
+  return { live, mic, flowing };
+}
+
+/**
+ * Camera + microphone or microphone only, and the level once the microphone is on. `level`: what the
+ * meter says instead while the sound has nowhere to go.
+ */
+function MicModes({ stats, onControl, level: blocked }: { stats: StreamStats; onControl: Props['onControl']; level: string | null }) {
+  const { live, mic, flowing } = micFlow(stats);
+  const camera = stats.sources?.camera !== false;
+  const level = stats.micLevel ?? 0;
+  // The phone keeps one source on, and handles commands in order: microphone first, then the camera.
+  const choose = (cameraToo: boolean) => {
+    if (!mic) onControl({ type: 'setMic', on: true });
+    if (camera !== cameraToo) onControl({ type: 'setCamera', on: cameraToo });
+  };
+  return (
+    <>
+      <div className="modes">
+        <button className={'mode' + (mic && camera ? ' on' : '')} disabled={!live} onClick={() => choose(true)}>
+          <span>
+            <Video />
+            <Mic />
+          </span>
+          Camera + microphone
+        </button>
+        <button className={'mode' + (mic && !camera ? ' on' : '')} disabled={!live} onClick={() => choose(false)}>
+          <span>
+            <Mic />
+          </span>
+          Microphone only
+        </button>
+      </div>
+      <p>{live ? 'Click one to switch the phone now.' : 'Pick one on the phone before tapping Start, or here once the phone is connected.'}</p>
+      {mic && (
+        <div className={'meter' + (flowing ? ' on' : '')}>
+          <span>
+            <i style={{ transform: `scaleX(${Math.min(1, level / 0.25)})` }} />
+          </span>
+          <small>{blocked ?? (flowing ? 'Hearing the phone' : 'Say something to the phone')}</small>
+        </div>
+      )}
+    </>
+  );
+}
+
+/** Where the microphone is chosen in the usual apps. */
+function AppPicker({ micName }: { micName: string }) {
+  return (
+    <>
+      <div className="mockselect">
+        <span>Microphone</span>
+        <b>
+          <Mic />
+          {micName}
+          <ChevronDown />
+        </b>
+      </div>
+      <ul className="where">
+        <li>
+          <b>Discord</b> User Settings → Voice & Video → Input Device
+        </li>
+        <li>
+          <b>Zoom</b> Settings → Audio → Microphone
+        </li>
+        <li>
+          <b>Teams</b> Settings → Devices → Microphone
+        </li>
+        <li>
+          <b>Google Meet</b> Settings → Audio → Microphone
+        </li>
+      </ul>
+    </>
   );
 }
 

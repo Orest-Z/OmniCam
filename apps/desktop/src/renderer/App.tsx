@@ -160,6 +160,7 @@ export function App() {
             stats={stats}
             vcam={vcam}
             settings={settings}
+            virtualMic={state.virtualMic}
             onSettings={(p) => void setSettings(p)}
             onControl={(m) => void control(m)}
             onShowQr={() => setQrOpen(true)}
@@ -180,6 +181,7 @@ export function App() {
           version={state.version}
           platform={state.platform}
           trayAvailable={state.trayAvailable}
+          virtualMic={state.virtualMic}
           onSettings={(p) => void setSettings(p)}
           onOpenUpdate={() => {
             setSettingsOpen(false);
@@ -206,7 +208,7 @@ export function App() {
         />
       )}
       {micGuideOpen && (
-        <MicGuide stats={stats} settings={settings} onControl={(m) => void control(m)} onClose={() => setMicGuideOpen(false)} />
+        <MicGuide stats={stats} settings={settings} virtualMic={state.virtualMic} onControl={(m) => void control(m)} onClose={() => setMicGuideOpen(false)} />
       )}
       {updateOpen && (
         <UpdateDialog update={state.update} version={state.version} stats={stats} vcam={vcam} onClose={() => setUpdateOpen(false)} />

@@ -1,9 +1,9 @@
 import { useState, type ReactNode } from 'react';
 import { AlertTriangle, AppWindow, CheckCircle2, ChevronRight, Info, Mic, Video, Wifi, type LucideIcon } from 'lucide-react';
-import type { AppSettings, PairingInfo, UpdateState, VirtualCamStats } from '../../shared/ipc';
+import type { AppSettings, PairingInfo, UpdateState, VirtualCamStats, VirtualMicState } from '../../shared/ipc';
 import { micNameFor, pickSink } from '../../shared/audio-sink';
 import { useLoopbacks } from '../useLoopbacks';
-import { Dialog, Segmented, Switch } from './ui';
+import { Command, Dialog, Segmented, Switch } from './ui';
 import { updateOnOffer, updateSummary } from './UpdateDialog';
 
 interface Props {
@@ -15,6 +15,8 @@ interface Props {
   version: string;
   platform: NodeJS.Platform;
   trayAvailable: boolean;
+  /** Linux: OmniCam's own microphone; null on Windows (VB-CABLE). */
+  virtualMic: VirtualMicState | null;
   onSettings: (patch: Partial<AppSettings>) => void;
   onOpenUpdate: () => void;
   onOpenMicGuide: () => void;
@@ -47,13 +49,13 @@ const SECTIONS: { id: SectionId; label: string; icon: LucideIcon }[] = [
  * Settings as five sections in a sidebar. Each opens with a status line, and a section that needs
  * attention carries a dot. Long explanations sit in ⓘ tooltips.
  */
-export function SettingsDialog({ settings, pairing, vcam, vcamError, update, version, platform, trayAvailable, onSettings, onOpenUpdate, onOpenMicGuide, onOpenWhatsNew, onClose }: Props) {
+export function SettingsDialog({ settings, pairing, vcam, vcamError, update, version, platform, trayAvailable, virtualMic, onSettings, onOpenUpdate, onOpenMicGuide, onOpenWhatsNew, onClose }: Props) {
   const fallback = portFallback(pairing);
   const loopbacks = useLoopbacks();
   const sink = loopbacks && pickSink(loopbacks.outputs, settings.micOutput);
   const attention: Record<SectionId, Attention> = {
     camera: vcamError ? 'bad' : null,
-    mic: loopbacks?.isDefault ? 'bad' : null,
+    mic: virtualMic ? (virtualMic.status === 'unavailable' || virtualMic.status === 'error' || virtualMic.feedIsDefault ? 'bad' : null) : loopbacks?.isDefault ? 'bad' : null,
     connection: fallback ? 'warn' : null,
     app: null,
     about: updateOnOffer(update) ? 'new' : null,
@@ -64,7 +66,11 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, update, ver
   const section = picked ?? SECTIONS.find((s) => attention[s.id] === 'bad' || attention[s.id] === 'warn')?.id ?? 'camera';
   const pane = {
     camera: <CameraPane settings={settings} vcam={vcam} vcamError={vcamError} onSettings={onSettings} />,
-    mic: <MicPane settings={settings} loopbacks={loopbacks} sink={sink} onSettings={onSettings} onOpenMicGuide={onOpenMicGuide} />,
+    mic: virtualMic ? (
+      <LinuxMicPane virtualMic={virtualMic} onOpenMicGuide={onOpenMicGuide} />
+    ) : (
+      <MicPane settings={settings} loopbacks={loopbacks} sink={sink} onSettings={onSettings} onOpenMicGuide={onOpenMicGuide} />
+    ),
     connection: <ConnectionPane settings={settings} pairing={pairing} onSettings={onSettings} />,
     app: <AppPane settings={settings} platform={platform} trayAvailable={trayAvailable} onSettings={onSettings} />,
     about: <AboutPane settings={settings} update={update} version={version} onSettings={onSettings} onOpenUpdate={onOpenUpdate} onOpenWhatsNew={onOpenWhatsNew} />,
@@ -240,6 +246,41 @@ function MicPane({
           </>
         )
       )}
+    </>
+  );
+}
+
+/** Linux: OmniCam adds "OmniCam Microphone" itself, so there is nothing to choose, only its state. */
+function LinuxMicPane({ virtualMic, onOpenMicGuide }: Pick<Props, 'onOpenMicGuide'> & { virtualMic: VirtualMicState }) {
+  return (
+    <>
+      <h3>Microphone</h3>
+      {virtualMic.status === 'starting' ? (
+        <Status>Adding OmniCam Microphone…</Status>
+      ) : virtualMic.status !== 'ready' ? (
+        <div className="notice bad">
+          <AlertTriangle />
+          <span>
+            {virtualMic.reason}
+            {virtualMic.fix && <Command text={virtualMic.fix} />}
+          </span>
+        </div>
+      ) : virtualMic.feedIsDefault ? (
+        <div className="notice bad">
+          <AlertTriangle />
+          <span>
+            OmniCam Feed is the default sound output, so apps would hear everything this computer plays through the phone. Make your speakers
+            or headphones the default again in your sound settings.
+          </span>
+        </div>
+      ) : (
+        <Status ok>Ready · apps pick "OmniCam Microphone"</Status>
+      )}
+      <Field title="Camera, microphone or both" sub="Switch on the phone, or with the buttons in the window.">
+        <button className="btn" onClick={onOpenMicGuide}>
+          Setup guide
+        </button>
+      </Field>
     </>
   );
 }
