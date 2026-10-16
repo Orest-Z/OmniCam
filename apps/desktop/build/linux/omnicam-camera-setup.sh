@@ -111,11 +111,16 @@ unload_module() {
   fail 13 "A program is using a loopback camera (an app with a camera open, or OBS's virtual camera): close it and try again."
 }
 
-# udev creates the node shortly after the module or v4l2loopback-ctl returns: allow 5 s.
+# udev creates the node shortly after the module or v4l2loopback-ctl returns: allow 5 s. A new node
+# is root:video 0660 until udev has also given the logged-in user access (uaccess), so wait for udev
+# to finish before saying the camera is ready, or the app's first open fails with EACCES.
 wait_for_device() {
   local tries=20
   while [ "$tries" -gt 0 ]; do
-    omnicam_device >/dev/null && return 0
+    if omnicam_device >/dev/null; then
+      udevadm settle --timeout=10 || true
+      return 0
+    fi
     sleep 0.25
     tries=$((tries - 1))
   done
