@@ -43,7 +43,8 @@ linux:
       arch: [x64]
     - target: deb
       arch: [x64]
-  icon: resources/icons/icon.png
+  # One PNG per icon-theme size, drawn by build/icons.mjs (hicolor has no 1024x1024).
+  icon: build/linux/icons
   category: AudioVideo
   # Also the icon's name in the system theme, which the autostart entry refers to.
   executableName: omnicam
