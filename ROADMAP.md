@@ -92,8 +92,9 @@ fix in the UI, Secure Boot included. The phone's microphone needs no driver ther
 to PipeWire while it runs. Packages are an AppImage (updates itself), an rpm and a deb, built and attached to each
 release by CI. The tray falls back to a minimised window where GNOME has no tray.
 
-Tested end to end on Fedora 44 (GNOME, Wayland) with TODO-RESULTS-APPS. What remains is the matrix nobody has
-run yet: Ubuntu and Debian, KDE, X11, and more consumer apps (Zoom, Discord, Flatpak'd apps). Reports welcome,
+Tested end to end on Fedora 44 (GNOME, Wayland), with Chromium (Chrome's engine) and ffmpeg reading the camera.
+What remains is the matrix nobody has run yet: Ubuntu and Debian, KDE, X11, and more consumer apps (Firefox, OBS,
+Zoom, Discord, Flatpak'd apps). Reports welcome,
 *hardware*. A sandboxed Flatpak of OmniCam itself is not possible: it has to set up a kernel module.
 
 ### 4 · Windows 11 Media Foundation backend — M to L, *C++*

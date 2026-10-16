@@ -3,7 +3,7 @@
 ## Unreleased
 
 OmniCam now runs on Linux too, with the same phone page, the same camera quality and a microphone that needs nothing
-installed.
+installed. On Windows nothing changes in how OmniCam works, apart from the fix below.
 
 ### New
 - **Linux (x64).** Download the **AppImage** for any distribution (it updates itself, like the Windows app), or
@@ -18,7 +18,8 @@ installed.
 - **Phone can't open the page?** On Linux, *Settings → Connection* has the firewall command for your port.
 
 ### Fixed
-- **The bug report button** now says which system you use instead of always "Windows".
+- **After a camera problem**, changing any setting tries the camera again; before, only changing the output
+  resolution (or restarting OmniCam) did.
 
 ## 2.0.0 — 2026-10-14
 

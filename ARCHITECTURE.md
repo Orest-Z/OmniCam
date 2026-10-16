@@ -312,8 +312,10 @@ Per 1080p frame in the native pipeline: I420→YUYV 0.65–0.77 ms (I420→I420 
   drives "convert nothing while nobody watches" and the phone's 5 fps idle mode, as on Windows.
 - **A minimised window is still "visible" on Wayland** (xdg-shell has no minimised state a client sees), so main
   runs the preview only while the window is shown and not minimised by its own account
-  (`ui-window.ts` `uiWindowShown`). Without that the preview never stopped and the phone never went idle:
-  47% → 13% of a core with a phone connected and nobody watching.
+  (`ui-window.ts`, `syncPreview`). Without that the preview never stopped and the phone never went idle:
+  47% → 13% of a core with a phone connected and nobody watching. Only a minimise OmniCam makes itself counts (its
+  close button without a tray, a `--hidden` start): one the desktop makes (Super+H, a dock click) reaches the app as
+  a mere blur, with page visibility and animation frames unchanged (checked on GNOME 50), so the preview runs on.
 
 ## Roadmap (not built yet)
 

@@ -204,7 +204,8 @@ and enrolls its key at the next boot the same way; `sudo update-secureboot-polic
 `pulseaudio-utils`, which the packages pull in).
 
 **Tray:** GNOME shows no tray icons without the AppIndicator extension, so OmniCam minimises instead of hiding when
-you close the window. For a tray icon on Fedora: `sudo dnf install gnome-shell-extension-appindicator`, sign out and
+you close the window. Use that close button rather than Super+H: GNOME doesn't tell apps they were minimised, so only
+OmniCam's own minimise lets the phone rest at 5 fps. For a tray icon on Fedora: `sudo dnf install gnome-shell-extension-appindicator`, sign out and
 in, and turn it on in *Extensions*. Ubuntu, KDE, Cinnamon and Xfce have a tray already.
 
 **Apps from Flathub** (Discord, Zoom…) only see cameras they have been allowed to: if one doesn't list OmniCam, run
