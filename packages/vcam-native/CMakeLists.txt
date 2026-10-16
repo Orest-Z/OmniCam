@@ -12,6 +12,8 @@ else()
   if(OMNICAM_BUILD_FILTER)
     message(FATAL_ERROR "OMNICAM_BUILD_FILTER: the DirectShow filter only builds on Windows")
   endif()
+  # Pipeline + camera backend without Node, for testing the device by hand (tools/vcam_selftest.cc).
+  option(OMNICAM_BUILD_SELFTEST "Build vcam_selftest (Linux only)" OFF)
 endif()
 
 set(SOFTCAM_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/softcam/src")
@@ -85,11 +87,15 @@ if(OMNICAM_BUILD_FILTER)
     strmiids ole32 oleaut32 uuid advapi32 user32 gdi32 winmm)
 endif()
 
-# --- N-API addon: omnicam_vcam.node ---------------------------------------------------------
-if(OMNICAM_BUILD_ADDON)
+# --- libyuv and the camera backend: shared by the addon and the self-test ------------------
+if(OMNICAM_BUILD_ADDON OR OMNICAM_BUILD_SELFTEST)
   set(LIBYUV_DISABLE_JPEG ON CACHE BOOL "" FORCE)
   set(UNIT_TEST OFF CACHE BOOL "" FORCE)
   add_subdirectory("${LIBYUV_DIR}" EXCLUDE_FROM_ALL)
+  if(NOT WIN32)
+    target_compile_options(yuv_common_objects PRIVATE -w)
+    find_package(Threads REQUIRED)
+  endif()
 
   # The camera backend is chosen at build time, one per OS (see src/backend/ivcam.h).
   if(WIN32)
@@ -99,7 +105,10 @@ if(OMNICAM_BUILD_ADDON)
   else()
     message(FATAL_ERROR "No virtual camera backend for ${CMAKE_SYSTEM_NAME}")
   endif()
+endif()
 
+# --- N-API addon: omnicam_vcam.node ---------------------------------------------------------
+if(OMNICAM_BUILD_ADDON)
   add_library(omnicam_vcam SHARED
     src/addon.cc
     src/pipeline.cc
@@ -119,7 +128,6 @@ if(OMNICAM_BUILD_ADDON)
     target_compile_options(omnicam_vcam PRIVATE /EHsc /W4)
     target_link_libraries(omnicam_vcam PRIVATE ${CMAKE_JS_LIB} softcam_core yuv advapi32)
   else()
-    target_compile_options(yuv_common_objects PRIVATE -w)
     # Headers we don't own are SYSTEM so -Wall -Wextra only looks at our code.
     target_include_directories(omnicam_vcam SYSTEM PRIVATE
       ${CMAKE_JS_INC}
@@ -128,7 +136,15 @@ if(OMNICAM_BUILD_ADDON)
       "${LIBYUV_DIR}/include")
     target_compile_definitions(omnicam_vcam PRIVATE NAPI_VERSION=8 NAPI_CPP_EXCEPTIONS NODE_ADDON_API_DISABLE_DEPRECATED)
     target_compile_options(omnicam_vcam PRIVATE -Wall -Wextra)
-    find_package(Threads REQUIRED)
     target_link_libraries(omnicam_vcam PRIVATE ${CMAKE_JS_LIB} yuv Threads::Threads)
   endif()
+endif()
+
+# --- vcam_selftest: pushes a test pattern into the camera device ---------------------------
+if(OMNICAM_BUILD_SELFTEST)
+  add_executable(vcam_selftest tools/vcam_selftest.cc src/pipeline.cc ${OMNICAM_BACKEND})
+  target_include_directories(vcam_selftest PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+  target_include_directories(vcam_selftest SYSTEM PRIVATE "${LIBYUV_DIR}/include")
+  target_compile_options(vcam_selftest PRIVATE -Wall -Wextra)
+  target_link_libraries(vcam_selftest PRIVATE yuv Threads::Threads)
 endif()

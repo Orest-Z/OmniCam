@@ -13,6 +13,7 @@ packages/vcam-native/build/
 *.user
 *.tsbuildinfo
 packages/vcam-native/build-x86/
+packages/vcam-native/build-selftest/
 apps/desktop/release/
 
 # Locally installed agent skills (npx skills add)
