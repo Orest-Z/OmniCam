@@ -8,6 +8,10 @@ const SPEAKERS = out('Speakers (Realtek(R) Audio)');
 const CABLE = out('CABLE Input (VB-Audio Virtual Cable)');
 const CABLE_A = out('CABLE-A Input (VB-Audio Cable A)');
 const VAC = out('Line 1 (Virtual Audio Cable)');
+// What Chromium lists on Linux (Fedora 44, PipeWire): descriptions as labels, a bare "Default" entry.
+const FEED = out('OmniCam Feed');
+const LINUX_SPEAKERS = out('Tiger Lake-LP Smart Sound Technology Audio Controller Speaker');
+const LINUX_DEFAULT = out('Default', 'default');
 
 describe('loopbackOutputs', () => {
   test('finds VB-CABLE, its variants and Virtual Audio Cable', () => {
@@ -20,6 +24,22 @@ describe('loopbackOutputs', () => {
     const def = out('Default - CABLE Input (VB-Audio Virtual Cable)', 'default');
     const comms = out('Communications - CABLE Input (VB-Audio Virtual Cable)', 'communications');
     assert.deepEqual(loopbackOutputs([SPEAKERS, capture, def, comms]), []);
+  });
+});
+
+describe('loopbackOutputs on Linux', () => {
+  test("OmniCam's own feed, never the speakers or the default entry", () => {
+    assert.deepEqual(loopbackOutputs([LINUX_DEFAULT, LINUX_SPEAKERS, FEED]), [FEED]);
+  });
+
+  test('only the exact name: a capture side or a look-alike is not the feed', () => {
+    const mic = { kind: 'audioinput', deviceId: 'm', label: 'OmniCam Microphone' };
+    assert.deepEqual(loopbackOutputs([mic, out('Monitor of OmniCam Feed'), out('OmniCam Feed 2')]), []);
+  });
+
+  test('picked like any loopback', () => {
+    assert.equal(pickSink([LINUX_DEFAULT, LINUX_SPEAKERS, FEED], ''), FEED);
+    assert.equal(pickSink([LINUX_DEFAULT, LINUX_SPEAKERS], ''), null);
   });
 });
 
@@ -54,6 +74,10 @@ describe('micNameFor', () => {
   test('VB-CABLE pairs Input with Output', () => {
     assert.equal(micNameFor(CABLE.label), 'CABLE Output (VB-Audio Virtual Cable)');
     assert.equal(micNameFor(CABLE_A.label), 'CABLE-A Output (VB-Audio Cable A)');
+  });
+
+  test("OmniCam's feed comes out of OmniCam Microphone", () => {
+    assert.equal(micNameFor(FEED.label), 'OmniCam Microphone');
   });
 
   test('Virtual Audio Cable uses one name for both sides', () => {
