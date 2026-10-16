@@ -92,12 +92,19 @@ export function linuxVirtualMic(distro: Distro): VirtualMic {
       set({ status: 'error', reason: `The sound server did not accept OmniCam's microphone: ${e.stderr || e.message}` });
       return;
     }
-    for (const args of LEVEL_ARGS) await pactl(args).catch((err: PactlError) => console.warn(`virtual mic: ${args[0]} failed`, err.stderr || err.message));
+    await setLevels();
     console.log(`virtual mic: ${SINK_NAME} and ${SOURCE_NAME} ready (modules ${modules.join(', ')})`);
     await delay(SETTLE_MS);
+    // WirePlumber restores saved volumes on its own schedule, sometimes after the first setLevels (seen
+    // with the source: 50% from an earlier run came back). Once more after it has had its turn.
+    await setLevels();
     await restoreDefaults(before);
     watch();
     await check();
+  }
+
+  async function setLevels(): Promise<void> {
+    for (const args of LEVEL_ARGS) await pactl(args).catch((err: PactlError) => console.warn(`virtual mic: ${args[0]} failed`, err.stderr || err.message));
   }
 
   /** If the new devices just became the defaults, the user didn't choose that: put the old ones back. */
