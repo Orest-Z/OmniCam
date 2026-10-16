@@ -8,6 +8,9 @@ let win: BrowserWindow | null = null;
 let quitting = false;
 let trayAvailable = true;
 const restarts: number[] = [];
+/** Minimised as far as OmniCam knows (see onShownChange). */
+let minimized = false;
+const shownListeners = new Set<() => void>();
 
 // Must match --bg / --text-2 in renderer/styles.css, for each theme.
 export const THEME = {
@@ -46,6 +49,24 @@ export function setTrayAvailable(available: boolean): void {
 
 export function uiWindow(): BrowserWindow | null {
   return win;
+}
+
+/**
+ * The window is on screen: open, not hidden in the tray, not minimised. The page's own visibility can't
+ * say so on Wayland, where a minimised window stays 'visible' to it (xdg-shell has no minimised state a
+ * client can see), so the preview would never stop and the phone never drop to idle.
+ */
+export function uiWindowShown(): boolean {
+  return Boolean(win && win.isVisible() && !minimized);
+}
+
+/** Called whenever uiWindowShown() may have changed. */
+export function onShownChange(listener: () => void): void {
+  shownListeners.add(listener);
+}
+
+function shownChanged(): void {
+  for (const l of shownListeners) l();
 }
 
 export function iconPath(name: string): string {
@@ -149,6 +170,20 @@ export function createOrShowUiWindow(opts: { minimized?: boolean } = {}): Browse
   win.on('resize', saveBounds);
   win.on('move', saveBounds);
 
+  win.on('minimize', () => {
+    minimized = true;
+    shownChanged();
+  });
+  // Wayland may not report a restore from the dock, but the window always gets focus then.
+  const back = () => {
+    minimized = false;
+    shownChanged();
+  };
+  win.on('restore', back);
+  win.on('focus', back);
+  win.on('show', back);
+  win.on('hide', shownChanged);
+
   win.on('close', (e) => {
     // Closing the window must not kill the camera: hide to tray instead.
     if (quitting) return;
@@ -163,6 +198,8 @@ export function createOrShowUiWindow(opts: { minimized?: boolean } = {}): Browse
   });
   win.on('closed', () => {
     win = null;
+    minimized = false;
+    shownChanged();
   });
 
   if (!app.isPackaged && process.env.ELECTRON_RENDERER_URL) {
