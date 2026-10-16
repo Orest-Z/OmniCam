@@ -93,7 +93,9 @@ bool Pipeline::start(int width, int height, int fps, const std::string& nativeDi
     if (!device_->start(width, height, fps, error)) return false;
 
     width_ = width; height_ = height; fps_ = fps;
-    out_.assign((size_t)width * height * 3, 0);
+    format_ = device_->preferredFormat();
+    out_.resize(frameBytes());
+    fillBlack(out_);
     haveOut_ = false;
     {
         std::lock_guard<std::mutex> lock(mtx_);
@@ -181,8 +183,36 @@ bool Pipeline::takePreview(std::vector<uint8_t>& rgba, int& width, int& height) 
     return true;
 }
 
-// out_ (BGR24 at output size) -> ARGB -> scaled -> RGBA (what ImageData wants).
-void Pipeline::makePreview(const std::vector<uint8_t>& bgr) {
+size_t Pipeline::frameBytes() const {
+    const size_t pixels = (size_t)width_ * height_;
+    switch (format_) {
+    case OutputFormat::BGR24: return pixels * 3;
+    case OutputFormat::I420:  return pixels + (size_t)(width_ / 2) * (height_ / 2) * 2;
+    case OutputFormat::YUYV:  return pixels * 2;
+    }
+    return pixels * 3;
+}
+
+void Pipeline::fillBlack(std::vector<uint8_t>& frame) const {
+    switch (format_) {
+    case OutputFormat::BGR24:
+        std::fill(frame.begin(), frame.end(), uint8_t{0});
+        break;
+    case OutputFormat::I420:
+        fillI420Black(bufOf(frame, width_, height_));
+        break;
+    case OutputFormat::YUYV:
+        for (size_t i = 0; i + 1 < frame.size(); i += 2) {
+            frame[i] = 16;       // Y
+            frame[i + 1] = 128;  // U or V
+        }
+        break;
+    }
+}
+
+// Output frame (any format, output size) -> ARGB -> scaled -> RGBA (what ImageData wants). YUV output
+// is shown with BT.601 limited range, the way V4L2 consumers read it.
+void Pipeline::makePreview(const std::vector<uint8_t>& frame) {
     int maxW;
     {
         std::lock_guard<std::mutex> lock(mtx_);
@@ -197,8 +227,25 @@ void Pipeline::makePreview(const std::vector<uint8_t>& bgr) {
     const int ph = std::max(2, evenDown((int)(height_ * scale + 0.5)));
     argb_.resize((size_t)width_ * height_ * 4);
     argbScaled_.resize((size_t)pw * ph * 4);
-    // libyuv "RGB24" == B,G,R memory (our out_), "ARGB" == B,G,R,A memory.
-    if (libyuv::RGB24ToARGB(bgr.data(), width_ * 3, argb_.data(), width_ * 4, width_, height_) != 0) return;
+    // libyuv "RGB24" == B,G,R memory (BGR24 out_), "ARGB" == B,G,R,A memory.
+    const uint8_t* f = frame.data();
+    int rc = -1;
+    switch (format_) {
+    case OutputFormat::BGR24:
+        rc = libyuv::RGB24ToARGB(f, width_ * 3, argb_.data(), width_ * 4, width_, height_);
+        break;
+    case OutputFormat::I420: {
+        const int cw = width_ / 2;
+        const uint8_t* u = f + (size_t)width_ * height_;
+        const uint8_t* v = u + (size_t)cw * (height_ / 2);
+        rc = libyuv::I420ToARGB(f, width_, u, cw, v, cw, argb_.data(), width_ * 4, width_, height_);
+        break;
+    }
+    case OutputFormat::YUYV:
+        rc = libyuv::YUY2ToARGB(f, width_ * 2, argb_.data(), width_ * 4, width_, height_);
+        break;
+    }
+    if (rc != 0) return;
     if (libyuv::ARGBScale(argb_.data(), width_ * 4, width_, height_, argbScaled_.data(), pw * 4, pw, ph, libyuv::kFilterBilinear) != 0) return;
     std::lock_guard<std::mutex> lock(mtx_);
     preview_.resize((size_t)pw * ph * 4);
@@ -222,14 +269,14 @@ PipelineStats Pipeline::stats() {
 
 // --- conversion --------------------------------------------------------------------------------
 
-bool Pipeline::convert(const RawFrame& raw, const Transform& t, std::vector<uint8_t>& outBgr) {
+bool Pipeline::convert(const RawFrame& raw, const Transform& t, std::vector<uint8_t>& out) {
     const FrameInfo& in = raw.info;
     const uint8_t* data = raw.data.data();
     const size_t size = raw.data.size();
     if (in.width <= 0 || in.height <= 0) return false;
     const int ch = (in.height + 1) / 2;
     const auto* yuv = constantsFor(in);
-    outBgr.resize((size_t)width_ * height_ * 3);
+    out.resize(frameBytes());
 
     // Note: libyuv's NV12->RGB24 row functions have no SIMD implementation under MSVC x64 (10 ms per
     // 1080p frame, measured); NV12->I420 + I420->RGB24 do (about 1.5 ms). So NV12 takes the I420 route.
@@ -299,9 +346,10 @@ bool Pipeline::convert(const RawFrame& raw, const Transform& t, std::vector<uint
     //   fit : scale to fit, letterbox/pillarbox with black bars (never crops)
     //   fill: scale to cover, crop the overflow symmetrically (webcam-like; a portrait phone
     //         becomes a normal landscape picture instead of a narrow pillar)
+    // For I420 output the scaled canvas is the output frame itself.
     I420View canvas = cur;
     if (cur.w != width_ || cur.h != height_) {
-        I420Buf fit = bufOf(fit_, width_, height_);
+        I420Buf fit = bufOf(format_ == OutputFormat::I420 ? out : fit_, width_, height_);
         I420View src = cur;
         int dw, dh;
         if (t.fill) {
@@ -334,9 +382,27 @@ bool Pipeline::convert(const RawFrame& raw, const Transform& t, std::vector<uint
         canvas = fit;
     }
 
-    // libyuv "RGB24" is B,G,R in memory — exactly what DirectShow RGB24 wants, top-down.
-    return libyuv::I420ToRGB24Matrix(canvas.y, canvas.sy, canvas.u, canvas.su, canvas.v, canvas.sv,
-                                     outBgr.data(), width_ * 3, yuv, width_, height_) == 0;
+    // The canvas is I420 in the source's colours. YUV output passes those samples through: no RGB
+    // round trip, and no matrix or range conversion either. V4L2 consumers read YUV as BT.601
+    // limited range, so a BT.709 or full-range source shows slightly shifted colours there; RGB
+    // sources (the placeholder) and BGR24 output are exact.
+    switch (format_) {
+    case OutputFormat::BGR24:
+        // libyuv "RGB24" is B,G,R in memory — exactly what DirectShow RGB24 wants, top-down.
+        return libyuv::I420ToRGB24Matrix(canvas.y, canvas.sy, canvas.u, canvas.su, canvas.v, canvas.sv,
+                                         out.data(), width_ * 3, yuv, width_, height_) == 0;
+    case OutputFormat::I420: {
+        if (canvas.y == out.data()) return true; // scaled straight into the output
+        I420Buf o = bufOf(out, width_, height_);
+        return libyuv::I420Copy(canvas.y, canvas.sy, canvas.u, canvas.su, canvas.v, canvas.sv,
+                                o.y, o.sy, o.u, o.su, o.v, o.sv, width_, height_) == 0;
+    }
+    case OutputFormat::YUYV:
+        // libyuv "YUY2" is Y0,U,Y1,V in memory == V4L2_PIX_FMT_YUYV.
+        return libyuv::I420ToYUY2(canvas.y, canvas.sy, canvas.u, canvas.su, canvas.v, canvas.sv,
+                                  out.data(), width_ * 2, width_, height_) == 0;
+    }
+    return false;
 }
 
 // --- worker ------------------------------------------------------------------------------------
@@ -423,7 +489,7 @@ void Pipeline::workerLoop() {
             const uint8_t* frame = nullptr;
             if (showPlaceholder || !haveOut_) frame = placeholderSet_ ? placeholder_.data() : nullptr;
             if (!frame) {
-                if (!haveOut_) std::fill(out_.begin(), out_.end(), uint8_t{0});
+                if (!haveOut_) fillBlack(out_);
                 frame = out_.data();
             }
             if (!haveNew && consumers_ > 0) repeated_++;
