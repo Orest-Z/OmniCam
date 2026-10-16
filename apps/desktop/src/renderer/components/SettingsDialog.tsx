@@ -13,6 +13,8 @@ interface Props {
   vcamError: string | null;
   update: UpdateState;
   version: string;
+  platform: NodeJS.Platform;
+  trayAvailable: boolean;
   onSettings: (patch: Partial<AppSettings>) => void;
   onOpenUpdate: () => void;
   onOpenMicGuide: () => void;
@@ -45,7 +47,7 @@ const SECTIONS: { id: SectionId; label: string; icon: LucideIcon }[] = [
  * Settings as five sections in a sidebar. Each opens with a status line, and a section that needs
  * attention carries a dot. Long explanations sit in ⓘ tooltips.
  */
-export function SettingsDialog({ settings, pairing, vcam, vcamError, update, version, onSettings, onOpenUpdate, onOpenMicGuide, onOpenWhatsNew, onClose }: Props) {
+export function SettingsDialog({ settings, pairing, vcam, vcamError, update, version, platform, trayAvailable, onSettings, onOpenUpdate, onOpenMicGuide, onOpenWhatsNew, onClose }: Props) {
   const fallback = portFallback(pairing);
   const loopbacks = useLoopbacks();
   const sink = loopbacks && pickSink(loopbacks.outputs, settings.micOutput);
@@ -64,7 +66,7 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, update, ver
     camera: <CameraPane settings={settings} vcam={vcam} vcamError={vcamError} onSettings={onSettings} />,
     mic: <MicPane settings={settings} loopbacks={loopbacks} sink={sink} onSettings={onSettings} onOpenMicGuide={onOpenMicGuide} />,
     connection: <ConnectionPane settings={settings} pairing={pairing} onSettings={onSettings} />,
-    app: <AppPane settings={settings} onSettings={onSettings} />,
+    app: <AppPane settings={settings} platform={platform} trayAvailable={trayAvailable} onSettings={onSettings} />,
     about: <AboutPane settings={settings} update={update} version={version} onSettings={onSettings} onOpenUpdate={onOpenUpdate} onOpenWhatsNew={onOpenWhatsNew} />,
   }[section];
 
@@ -278,11 +280,11 @@ function ConnectionPane({ settings, pairing, onSettings }: Pick<Props, 'settings
   );
 }
 
-function AppPane({ settings, onSettings }: Pick<Props, 'settings' | 'onSettings'>) {
+function AppPane({ settings, platform, trayAvailable, onSettings }: Pick<Props, 'settings' | 'platform' | 'trayAvailable' | 'onSettings'>) {
   return (
     <>
       <h3>App</h3>
-      <Field title="Appearance" sub="System follows Windows.">
+      <Field title="Appearance" sub={platform === 'win32' ? 'System follows Windows.' : 'System follows your desktop.'}>
         <Segmented
           value={settings.theme}
           options={[
@@ -293,9 +295,16 @@ function AppPane({ settings, onSettings }: Pick<Props, 'settings' | 'onSettings'
           onChange={(v) => onSettings({ theme: v })}
         />
       </Field>
-      <Field title="Keep running in the tray" sub="Closing the window keeps the camera available.">
-        <Switch on={settings.closeToTray} onChange={(v) => onSettings({ closeToTray: v })} />
-      </Field>
+      {trayAvailable ? (
+        <Field title="Keep running in the tray" sub="Closing the window keeps the camera available.">
+          <Switch on={settings.closeToTray} onChange={(v) => onSettings({ closeToTray: v })} />
+        </Field>
+      ) : (
+        // No tray to hide in (stock GNOME): the window minimises instead. Off is the way to quit.
+        <Field title="Keep running when the window closes" sub="No tray here, so the window minimises." info="GNOME needs the AppIndicator extension for a tray icon.">
+          <Switch on={settings.closeToTray} onChange={(v) => onSettings({ closeToTray: v })} />
+        </Field>
+      )}
       <Field title="Start OmniCam when I sign in">
         <Switch on={settings.launchAtLogin} onChange={(v) => onSettings({ launchAtLogin: v })} />
       </Field>

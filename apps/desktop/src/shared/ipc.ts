@@ -132,8 +132,9 @@ export interface AppSettings {
   notesSeen: string;
   /** Stream numbers over the preview: always, or only while hovered. */
   streamDetails: 'always' | 'hover';
-  /** Desktop app colours; 'system' follows the Windows light/dark setting. */
+  /** Desktop app colours; 'system' follows the OS light/dark setting. */
   theme: 'dark' | 'light' | 'system';
+  /** Closing the window keeps OmniCam running: hidden in the tray, or minimised where there is none. */
   closeToTray: boolean;
   launchAtLogin: boolean;
   /**
@@ -242,6 +243,8 @@ export interface AppState {
   update: UpdateState;
   version: string;
   platform: NodeJS.Platform;
+  /** A tray icon is shown. False on desktops without a tray host (stock GNOME): closing minimises. */
+  trayAvailable: boolean;
 }
 
 export type StatePatch = Partial<AppState>;

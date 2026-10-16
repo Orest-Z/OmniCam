@@ -1,7 +1,8 @@
 {
   "parts": {
     "desktop-ui":     { "label": "Desktop UI",     "description": "React renderer: pairing, live view, settings", "paths": ["apps/desktop/src/renderer"], "uses": ["desktop-shared", "protocol"] },
-    "main":           { "label": "Main process",   "description": "Electron main: server, sessions, tray, updater", "paths": ["apps/desktop/src/main"], "uses": ["desktop-shared", "protocol"] },
+    "main":           { "label": "Main process",   "description": "Electron main: server, sessions, tray, updater", "paths": ["apps/desktop/src/main"], "uses": ["platform", "desktop-shared", "protocol"] },
+    "platform":       { "label": "Platform",       "description": "Per-OS services for main: autostart, tray support, camera setup, virtual microphone", "paths": ["apps/desktop/src/platform"], "uses": ["desktop-shared"] },
     "engine":         { "label": "Engine",         "description": "WebRTC receive and virtual camera output", "paths": ["apps/desktop/src/engine"], "uses": ["desktop-shared", "protocol"] },
     "preload":        { "label": "Preload",        "description": "Bridge exposing IPC to the renderer", "paths": ["apps/desktop/src/preload"], "uses": ["desktop-shared", "protocol"] },
     "phone":          { "label": "Phone app",      "description": "Browser page that streams the phone camera", "paths": ["apps/phone/src"], "uses": ["protocol"] },

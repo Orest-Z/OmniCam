@@ -6,6 +6,7 @@ import { settings } from './settings';
 
 let win: BrowserWindow | null = null;
 let quitting = false;
+let trayAvailable = true;
 const restarts: number[] = [];
 
 // Must match --bg / --text-2 in renderer/styles.css, for each theme.
@@ -38,6 +39,11 @@ export function markQuitting(): void {
   quitting = true;
 }
 
+/** Without a tray, closing the window minimises it instead of hiding it where nobody could find it. */
+export function setTrayAvailable(available: boolean): void {
+  trayAvailable = available;
+}
+
 export function uiWindow(): BrowserWindow | null {
   return win;
 }
@@ -57,7 +63,8 @@ function restoredBounds() {
   return visible ? b : { width: b.width, height: b.height };
 }
 
-export function createOrShowUiWindow(): BrowserWindow {
+/** `minimized`: a --hidden start on a desktop without a tray. */
+export function createOrShowUiWindow(opts: { minimized?: boolean } = {}): BrowserWindow {
   if (win) {
     if (win.isMinimized()) win.restore();
     win.show();
@@ -75,7 +82,8 @@ export function createOrShowUiWindow(): BrowserWindow {
     title: 'OmniCam',
     backgroundColor: themeColors().bg,
     autoHideMenuBar: true,
-    icon: iconPath('icon.ico'),
+    // Windows: multi-size .ico. Linux takes a png (a desktop entry's icon wins where there is one).
+    icon: iconPath(process.platform === 'win32' ? 'icon.ico' : 'icon.png'),
     // Native caption buttons drawn over our own header (see renderer .titlebar).
     titleBarStyle: 'hidden',
     titleBarOverlay: { color: themeColors().bg, symbolColor: themeColors().symbol, height: THEME.titlebarHeight },
@@ -87,7 +95,19 @@ export function createOrShowUiWindow(): BrowserWindow {
     },
   });
 
-  win.once('ready-to-show', () => win?.show());
+  win.once('ready-to-show', () => {
+    if (opts.minimized) {
+      win?.showInactive();
+      // Wayland drops a minimise sent before the compositor has mapped the window, and nothing says
+      // when it has (GNOME: 100–300 ms). Ask again until it takes, for at most 2 s.
+      const minimize = (tries: number) => {
+        if (!win || win.isMinimized() || tries === 0) return;
+        win.minimize();
+        setTimeout(() => minimize(tries - 1), 100);
+      };
+      minimize(20);
+    } else win?.show();
+  });
   // Renderer warnings/errors go to the log file; in dev everything does.
   win.webContents.on('console-message', (e) => {
     if (!app.isPackaged || e.level === 'warning' || e.level === 'error') console.log(`[ui:${e.level}]`, e.message);
@@ -134,7 +154,8 @@ export function createOrShowUiWindow(): BrowserWindow {
     if (quitting) return;
     if (settings.get().closeToTray) {
       e.preventDefault();
-      win?.hide();
+      if (trayAvailable) win?.hide();
+      else win?.minimize();
     } else {
       // The hidden engine window keeps 'window-all-closed' from ever firing, so quit explicitly.
       app.quit();

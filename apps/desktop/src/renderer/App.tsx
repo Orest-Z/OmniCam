@@ -25,7 +25,8 @@ const SPONSORS_URL = 'https://github.com/sponsors/Orest-Z';
  * A new GitHub issue with a short form already filled in: which OmniCam and which phone (never an
  * address or a name), and where the log is.
  */
-function bugReportUrl(version: string, phone?: string): string {
+function bugReportUrl(version: string, platform: NodeJS.Platform, phone?: string): string {
+  const os = platform === 'win32' ? 'Windows' : platform === 'linux' ? 'Linux' : platform;
   const body = [
     '**What happened?**',
     '',
@@ -34,7 +35,7 @@ function bugReportUrl(version: string, phone?: string): string {
     '',
     '',
     '---',
-    `OmniCam ${version} · Windows${phone ? ` · phone: ${phone}` : ''}`,
+    `OmniCam ${version} · ${os}${phone ? ` · phone: ${phone}` : ''}`,
     'The log helps a lot: Settings → About → Open log folder, then attach omnicam.log here.',
   ].join('\n');
   return `https://github.com/Orest-Z/OmniCam/issues/new?body=${encodeURIComponent(body)}`;
@@ -113,7 +114,7 @@ export function App() {
   const { pairing, settings, stats, vcam, vcamError } = state;
   const showLive = stats.state !== 'idle';
   const badge = updateBadge(state.update);
-  // What is on screen now ('system' resolves through Windows); the toggle picks the other one.
+  // What is on screen now ('system' resolves through the OS); the toggle picks the other one.
   const dark = settings.theme === 'system' ? matchMedia('(prefers-color-scheme: dark)').matches : settings.theme === 'dark';
 
   return (
@@ -139,7 +140,7 @@ export function App() {
             {badge}
           </button>
         )}
-        <IconButton title="Report a bug on GitHub" onClick={() => void window.omnicam.openExternal(bugReportUrl(state.version, stats.device?.platform))}>
+        <IconButton title="Report a bug on GitHub" onClick={() => void window.omnicam.openExternal(bugReportUrl(state.version, state.platform, stats.device?.platform))}>
           <Bug />
         </IconButton>
         <IconButton title="Sponsor OmniCam on GitHub" className="heart" onClick={() => void window.omnicam.openExternal(SPONSORS_URL)}>
@@ -177,6 +178,8 @@ export function App() {
           vcamError={vcamError}
           update={state.update}
           version={state.version}
+          platform={state.platform}
+          trayAvailable={state.trayAvailable}
           onSettings={(p) => void setSettings(p)}
           onOpenUpdate={() => {
             setSettingsOpen(false);

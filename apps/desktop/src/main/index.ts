@@ -28,9 +28,10 @@ import { phoneServer } from './server';
 import { session } from './session';
 import { settings } from './settings';
 import { createTray, updateTray } from './tray';
-import { applyTheme, createOrShowUiWindow, markQuitting, uiWindow } from './ui-window';
+import { applyTheme, createOrShowUiWindow, markQuitting, setTrayAvailable, uiWindow } from './ui-window';
 import { checkForUpdates, downloadUpdate, initUpdater, installUpdate, updateState } from './updater';
 import { outputFpsFor } from '../shared/stream-format';
+import { platform } from '../platform';
 
 // --- Chromium switches: must be set before 'ready' -------------------------------------------
 // The engine's ICE host candidate must be a real LAN IP, not an mDNS name: phones on networks
@@ -64,6 +65,8 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 let vcamError: string | null = null;
+// Until the check answers; Windows answers at once.
+let trayAvailable = true;
 
 async function fullState(): Promise<AppState> {
   return {
@@ -75,6 +78,7 @@ async function fullState(): Promise<AppState> {
     update: updateState(),
     version: app.getVersion(),
     platform: process.platform,
+    trayAvailable,
   };
 }
 
@@ -97,7 +101,7 @@ async function changeSettings(patch: Partial<AppSettings>): Promise<AppSettings>
   engine.applySettings(next);
   if (next.theme !== prev.theme) applyTheme(next.theme);
   if (next.launchAtLogin !== prev.launchAtLogin) {
-    app.setLoginItemSettings({ openAtLogin: next.launchAtLogin, args: ['--hidden'] });
+    platform.setLaunchAtLogin(next.launchAtLogin);
   }
   broadcast({ settings: next });
   return next;
@@ -120,8 +124,8 @@ function wireIpc(): void {
   ipcMain.handle(UI_SET_PREVIEW, (_e, enabled: boolean) => engine.setPreview(enabled));
 
   ipcMain.handle(UI_OPEN_EXTERNAL, (_e, url: string) => {
-    // Web pages, plus Windows' Sound settings for the microphone guide; nothing else the OS could launch.
-    if (/^https?:\/\//.test(url) || url === 'ms-settings:sound') return shell.openExternal(url);
+    // Web pages, plus the OS's sound settings for the microphone guide; nothing else the OS could launch.
+    if (/^https?:\/\//.test(url) || (platform.soundSettingsUrl !== null && url === platform.soundSettingsUrl)) return shell.openExternal(url);
   });
 
   ipcMain.handle(UI_OPEN_LOGS, () => shell.openPath(logDir()));
@@ -160,8 +164,17 @@ async function main(): Promise<void> {
   applyTheme(settings.get().theme);
   wireIpc();
   engine.create();
-  createTray();
+  platform.syncLaunchAtLogin(settings.get().launchAtLogin);
+  const trayCheck = platform.hasTray().then((has) => {
+    trayAvailable = has;
+    setTrayAvailable(has);
+    if (has) createTray();
+    broadcast({ trayAvailable: has });
+    return has;
+  });
   if (!process.argv.includes('--hidden')) createOrShowUiWindow();
+  // With no tray to come back from, a hidden start would leave OmniCam out of reach: start minimised.
+  else if (!(await trayCheck)) createOrShowUiWindow({ minimized: true });
   if (!app.isPackaged) {
     setTimeout(() => console.log(`[pids] main=${process.pid} engine=${engine.osPid()} ui=${uiWindow()?.webContents.getOSProcessId()}`), 4000);
   }
@@ -213,7 +226,7 @@ async function main(): Promise<void> {
     engine.shutdown();
     void phoneServer.stop();
   });
-  // Keep running in the tray when the UI window is closed.
+  // Keep running in the tray (or minimised) when the UI window is closed.
   app.on('window-all-closed', () => {
     /* intentionally empty */
   });
