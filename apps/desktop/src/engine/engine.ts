@@ -41,6 +41,8 @@ const PREVIEW_MAX_WIDTH = 640;
 const CONSUMER_POLL_MS = 250; // how fast we notice an app opening/closing the camera
 const IDLE_AFTER_MS = 5000; // no consumer + no preview for this long -> ask the phone to relax
 const STALL_AFTER_MS = 2000;
+// Linux: the device keeps its size while an app reads it. Try a new size again this often until it lets go.
+const BUSY_RETRY_MS = 3000;
 // Dev diagnostics, passed by main as ?dbg= : OMNICAM_DEBUG=timing | nocopy | nopreview
 const DEBUG = new Set((new URLSearchParams(location.search).get('dbg') ?? '').split(',').filter(Boolean));
 if (DEBUG.size) console.warn('engine debug switches:', [...DEBUG].join(','));
@@ -52,6 +54,8 @@ let sessionId = '';
 let engineSettings: EngineSettings | null = null;
 let vcam: VcamAddon | null = null;
 let vcamStarted = false;
+let busyRetry: ReturnType<typeof setTimeout> | undefined;
+let lastStartError = '';
 let pumpAbort: AbortController | null = null;
 let previewEnabled = false;
 let lastFrameAt = 0;
@@ -122,18 +126,27 @@ function applySettings(next: EngineSettings) {
   // A camera that failed to start gets another try with any settings: after the Linux setup, or once the
   // app that held the device has closed.
   if (formatChanged || !vcamStarted) {
+    clearTimeout(busyRetry);
     try {
       if (vcamStarted) vcam.stop();
       vcam.start({ width: next.outputWidth, height: next.outputHeight, fps: next.outputFps, nativeDir: next.nativeDir });
       vcamStarted = true;
+      lastStartError = '';
       setPlaceholderFrame();
       if (stats.state !== 'connected') vcam.showPlaceholder();
       ipcRenderer.send(ENGINE_VCAM_ERROR, null);
     } catch (err) {
       vcamStarted = false;
       const message = `virtual camera failed to start: ${(err as Error).message}`;
-      ipcRenderer.send(ENGINE_VCAM_ERROR, message);
-      warn(message);
+      // Retries repeat the same failure: log it once.
+      if (message !== lastStartError) {
+        lastStartError = message;
+        ipcRenderer.send(ENGINE_VCAM_ERROR, message);
+        warn(message);
+      }
+      if (process.platform === 'linux' && (err as Error).message.startsWith('busy:')) {
+        busyRetry = setTimeout(() => engineSettings && applySettings(engineSettings), BUSY_RETRY_MS);
+      }
     }
   }
   if (vcamStarted) {
