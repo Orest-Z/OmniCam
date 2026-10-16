@@ -6,7 +6,8 @@ import { format } from 'node:util';
 
 /**
  * Plain-text log file next to the settings, so a user can send it with a bug report:
- *   %APPDATA%\OmniCam\logs\omnicam.log   (previous run kept as omnicam.1.log at rotation)
+ *   %APPDATA%\OmniCam\logs\omnicam.log    Windows   (previous run kept as omnicam.1.log at rotation)
+ *   ~/.config/OmniCam/logs/omnicam.log     Linux     ($XDG_CONFIG_HOME when set)
  *
  * Everything that goes through console.* in the main process lands here (the engine's logs are
  * relayed to main over IPC, so they do too). Nothing is uploaded anywhere.
