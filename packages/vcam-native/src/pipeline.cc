@@ -8,6 +8,10 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <timeapi.h>
+#elif defined(__linux__)
+#include <pthread.h>
+#include <sys/resource.h>
+#include <unistd.h>
 #endif
 
 namespace omnicam {
@@ -414,6 +418,11 @@ void Pipeline::workerLoop() {
     timeBeginPeriod(1);
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
     SetThreadDescription(GetCurrentThread(), L"omnicam-vcam");
+#elif defined(__linux__)
+    pthread_setname_np(pthread_self(), "omnicam-vcam");
+    // Slightly above normal so frame delivery does not hitch behind renderer work. Raising priority
+    // needs CAP_SYS_NICE or an RLIMIT_NICE allowance; without them this fails and nothing changes.
+    (void)setpriority(PRIO_PROCESS, (id_t)gettid(), -4);
 #endif
     const auto period = std::chrono::duration_cast<clock::duration>(std::chrono::duration<double>(1.0 / fps_));
     RawFrame local;
