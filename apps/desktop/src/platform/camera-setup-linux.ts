@@ -1,11 +1,9 @@
 import { app } from 'electron';
 import { execFile } from 'node:child_process';
-import { randomBytes } from 'node:crypto';
-import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { existsSync, lstatSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import type { CameraSetupResult } from '../shared/ipc';
-import { setupResult } from './setup-result';
+import { onlyRootCanChange, setupResult } from './setup-result';
 
 /** Long enough for someone to type a password; the script itself takes seconds. */
 const SETUP_TIMEOUT_MS = 5 * 60 * 1000;
@@ -17,33 +15,48 @@ function scriptPath(): string {
     : join(app.getAppPath(), 'build', 'linux', 'omnicam-camera-setup.sh');
 }
 
+/** The script and its folder belong to root and nobody else may change them (an rpm or deb install). */
+function installedByRoot(script: string): boolean {
+  try {
+    const file = lstatSync(script);
+    const dir = lstatSync(dirname(script));
+    return file.isFile() && dir.isDirectory() && onlyRootCanChange(file) && onlyRootCanChange(dir);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * pkexec's arguments. Root must run exactly the script OmniCam ships, so it never runs a file the user
+ * could change between OmniCam writing it and bash reading it: an rpm or deb's script is root's own and
+ * runs in place; otherwise (an AppImage, whose FUSE mount root can't read, or a dev build) the text
+ * itself is the argument to `bash -c`.
+ */
+function pkexecArgs(script: string): string[] {
+  if (app.isPackaged && !process.env.APPIMAGE && installedByRoot(script)) return ['/bin/bash', script, 'install'];
+  return ['/bin/bash', '-c', readFileSync(script, 'utf8'), 'omnicam-camera-setup', 'install'];
+}
+
 /**
  * The one-time camera setup: makes v4l2loopback load at boot with OmniCam's device and loads it now.
- * Root only here, through polkit's password prompt, never at launch. The script runs from a private
- * copy: root can't read files inside an AppImage's FUSE mount.
+ * Root only here, through polkit's password prompt, never at launch.
  */
 export function setupCameraLinux(): Promise<CameraSetupResult> {
-  const source = scriptPath();
-  if (!existsSync(source)) {
-    console.warn(`camera setup: ${source} is missing`);
+  const script = scriptPath();
+  if (!existsSync(script)) {
+    console.warn(`camera setup: ${script} is missing`);
     return Promise.resolve({ status: 'failed', message: 'This build of OmniCam has no camera setup script.' });
   }
-  const copy = join(process.env.XDG_RUNTIME_DIR || tmpdir(), `omnicam-camera-setup-${randomBytes(6).toString('hex')}.sh`);
+  let args: string[];
   try {
-    // Created 0700 in one step ('wx' also refuses a file or link someone placed there first).
-    writeFileSync(copy, readFileSync(source), { mode: 0o700, flag: 'wx' });
+    args = pkexecArgs(script);
   } catch (err) {
-    console.warn('camera setup: copy failed', err);
-    return Promise.resolve({ status: 'failed', message: 'OmniCam could not prepare the camera setup.' });
+    console.warn('camera setup: cannot read the script', err);
+    return Promise.resolve({ status: 'failed', message: 'OmniCam could not read its camera setup.' });
   }
   return new Promise((resolve) => {
-    console.log('camera setup: asking for permission');
-    execFile('pkexec', ['/bin/bash', copy, 'install'], { timeout: SETUP_TIMEOUT_MS }, (err, _stdout, stderr) => {
-      try {
-        unlinkSync(copy);
-      } catch {
-        /* already gone */
-      }
+    console.log(`camera setup: asking for permission (${args[1] === '-c' ? 'script text' : args[1]})`);
+    execFile('pkexec', args, { timeout: SETUP_TIMEOUT_MS }, (err, _stdout, stderr) => {
       const code = err ? (typeof err.code === 'number' ? err.code : null) : 0;
       const result =
         err && (err as NodeJS.ErrnoException).code === 'ENOENT'

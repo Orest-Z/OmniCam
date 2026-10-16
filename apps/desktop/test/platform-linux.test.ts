@@ -2,7 +2,7 @@ import { strict as assert } from 'node:assert';
 import { describe, test } from 'node:test';
 import { distroFrom, pactlInstallCommand } from '../src/platform/os-release.ts';
 import { isRelevantEvent, LEVEL_ARGS, ownModules, parseDefaults, replacementSink, SINK_ARGS, SOURCE_ARGS } from '../src/platform/pactl.ts';
-import { setupResult } from '../src/platform/setup-result.ts';
+import { onlyRootCanChange, setupResult } from '../src/platform/setup-result.ts';
 
 describe('ownModules', () => {
   // `pactl list short modules` on Fedora 44 (pipewire-pulse), with OmniCam's pair and someone else's.
@@ -136,5 +136,19 @@ describe('levels', () => {
     ]);
     assert.ok(SINK_ARGS.at(-1)!.includes('priority.session=0'));
     assert.ok(SOURCE_ARGS.at(-1)!.includes('priority.session=0'));
+  });
+});
+
+describe('onlyRootCanChange', () => {
+  test("an rpm or deb's script and folder", () => {
+    assert.equal(onlyRootCanChange({ uid: 0, mode: 0o100644 }), true);
+    assert.equal(onlyRootCanChange({ uid: 0, mode: 0o40755 }), true);
+  });
+
+  test('anything the user or a group could change', () => {
+    assert.equal(onlyRootCanChange({ uid: 1000, mode: 0o100644 }), false);
+    assert.equal(onlyRootCanChange({ uid: 0, mode: 0o100664 }), false);
+    assert.equal(onlyRootCanChange({ uid: 0, mode: 0o100646 }), false);
+    assert.equal(onlyRootCanChange({ uid: 0, mode: 0o41777 }), false);
   });
 });

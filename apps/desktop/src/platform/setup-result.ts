@@ -18,3 +18,8 @@ export function setupResult(exitCode: number | null, stderr: string): CameraSetu
     .pop();
   return { status: 'failed', ...(exitCode !== null && { exitCode }), ...(message && { message }) };
 }
+
+/** Owned by root, and no group or other write bit: nobody but root can change it. */
+export function onlyRootCanChange(stat: { uid: number; mode: number }): boolean {
+  return stat.uid === 0 && (stat.mode & 0o022) === 0;
+}
