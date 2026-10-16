@@ -28,7 +28,7 @@ public:
         (void)fps;
         camera_ = softcam::sender::CreateCamera(width, height, 0.0f);
         if (!camera_) {
-            error = "could not create the virtual camera (is another OmniCam instance running?)";
+            error = "busy: could not create the virtual camera (is another OmniCam instance running?)";
             return false;
         }
         return true;
@@ -41,8 +41,8 @@ public:
         }
     }
 
-    void sendFrame(const uint8_t* bgr24) override {
-        if (camera_) softcam::sender::SendFrame(camera_, bgr24);
+    void sendFrame(const uint8_t* frame) override {
+        if (camera_) softcam::sender::SendFrame(camera_, frame);
     }
 
     int consumers() override {
@@ -53,7 +53,7 @@ public:
         HKEY key = nullptr;
         LONG rc = RegOpenKeyExW(HKEY_CLASSES_ROOT, kFilterClsidKey, 0, KEY_READ | KEY_WOW64_64KEY, &key);
         if (rc != ERROR_SUCCESS) {
-            reason = "OmniCam camera driver is not registered (run the installer, or regsvr32 omnicam_vcam.dll)";
+            reason = "not-registered: OmniCam camera driver is not registered (run the installer, or regsvr32 omnicam_vcam.dll)";
             return false;
         }
         RegCloseKey(key);
