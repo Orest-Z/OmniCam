@@ -18,6 +18,11 @@ permissions:
 jobs:
   windows:
     runs-on: windows-latest
+    # Read by linux-release, which attaches the Linux packages to the release this job publishes.
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      release: ${{ steps.version.outputs.release }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -241,6 +246,13 @@ jobs:
             ''
             'Setup, usage and troubleshooting: README.txt below, or the project README.'
             ''
+            "**Linux** (x64): **OmniCam-$version.AppImage** runs on any distribution (``chmod +x`` it, then run it;"
+            "it updates itself like the Windows app), or install **OmniCam-$version.rpm** (Fedora:"
+            "``sudo dnf install ./OmniCam-$version.rpm``) or **OmniCam-$version.deb** (Debian, Ubuntu:"
+            "``sudo apt install ./OmniCam-$version.deb``) and get new versions here. The camera needs the"
+            'v4l2loopback kernel module; OmniCam sets it up with one click once it is installed. See'
+            '[Linux in the README](https://github.com/Orest-Z/OmniCam#install-linux).'
+            ''
             '**Verify the download** (optional):'
             ''
             "- SHA-256 of ``$($installer.Name)``: ``$sha256``"
@@ -272,3 +284,85 @@ jobs:
             apps/desktop/release/*.blockmap
             apps/desktop/release/latest.yml
             apps/desktop/resources/docs/README.txt
+
+  # AppImage, rpm and deb. Runs next to the windows job on every push and pull request; a release is
+  # attached by linux-release below, once the windows job has published it.
+  linux:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Version
+        id: version
+        run: echo "version=$(node -p "require('./apps/desktop/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      # Runs as root through pkexec and the package scriptlets: keep it clean.
+      - name: Shellcheck
+        run: shellcheck apps/desktop/build/linux/omnicam-camera-setup.sh
+
+      # N-API addon with the v4l2loopback backend. CMake and GCC are preinstalled on ubuntu-latest.
+      - name: Native build
+        run: npm run native:build
+
+      # electron-builder's bundled fpm builds the rpm with rpmbuild.
+      - name: Packaging tools
+        run: sudo apt-get update && sudo apt-get install -y rpm
+
+      - name: Packages
+        run: npm run dist:linux
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: OmniCam-Linux-${{ steps.version.outputs.version }}
+          path: |
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/*.rpm
+            apps/desktop/release/*.deb
+            apps/desktop/release/latest-linux.yml
+          if-no-files-found: error
+
+  # Adds the Linux packages to the release the windows job just published; its notes stay as they
+  # are. latest-linux.yml next to the AppImage is what the AppImage's updater reads.
+  linux-release:
+    needs: [windows, linux]
+    if: needs.windows.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: OmniCam-Linux-${{ needs.linux.outputs.version }}
+          path: linux
+
+      # gh attestation verify OmniCam-<version>.AppImage --repo Orest-Z/OmniCam (likewise .rpm, .deb)
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            linux/*.AppImage
+            linux/*.rpm
+            linux/*.deb
+
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload '${{ needs.windows.outputs.tag }}' --repo '${{ github.repository }}' --clobber \
+            linux/*.AppImage linux/*.rpm linux/*.deb linux/latest-linux.yml
