@@ -11,6 +11,8 @@
  */
 const LOOPBACK_OUTPUT = /\bcable(-[a-d])? input\b|\(virtual audio cable\)|^OmniCam Feed$/i;
 const OMNICAM_FEED = /^OmniCam Feed$/i;
+/** What apps call OmniCam's own microphone on Linux. */
+export const OMNICAM_MIC = 'OmniCam Microphone';
 
 /** The fields of a MediaDeviceInfo this needs, so it runs without a browser. */
 export interface AudioDevice {
@@ -43,6 +45,6 @@ export function pickSink<T extends AudioDevice>(devices: T[], preferred: string)
 
 /** The microphone to pick in Discord, Zoom or Teams: VB-CABLE's "CABLE Input" comes out of "CABLE Output". */
 export function micNameFor(outputLabel: string): string {
-  if (OMNICAM_FEED.test(outputLabel)) return 'OmniCam Microphone';
+  if (OMNICAM_FEED.test(outputLabel)) return OMNICAM_MIC;
   return outputLabel.replace(/\bInput\b/, 'Output');
 }

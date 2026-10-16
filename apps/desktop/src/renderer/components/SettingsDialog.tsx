@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { AlertTriangle, AppWindow, CheckCircle2, ChevronRight, Info, Mic, Video, Wifi, type LucideIcon } from 'lucide-react';
 import type { AppSettings, Distro, PairingInfo, UpdateState, VirtualCamStats, VirtualMicState } from '../../shared/ipc';
-import { micNameFor, pickSink } from '../../shared/audio-sink';
+import { micNameFor, OMNICAM_MIC, pickSink } from '../../shared/audio-sink';
 import { firewallSteps } from '../../shared/firewall';
 import { useLoopbacks } from '../useLoopbacks';
 import { CameraHelp } from './CameraHelp';
@@ -261,7 +261,7 @@ function LinuxMicPane({ virtualMic, onOpenMicGuide }: Pick<Props, 'onOpenMicGuid
     <>
       <h3>Microphone</h3>
       {virtualMic.status === 'starting' ? (
-        <Status>Adding OmniCam Microphone…</Status>
+        <Status>Adding {OMNICAM_MIC}…</Status>
       ) : virtualMic.status !== 'ready' ? (
         <div className="notice bad">
           <AlertTriangle />
@@ -279,7 +279,7 @@ function LinuxMicPane({ virtualMic, onOpenMicGuide }: Pick<Props, 'onOpenMicGuid
           </span>
         </div>
       ) : (
-        <Status ok>Ready · apps pick "OmniCam Microphone"</Status>
+        <Status ok>Ready · apps pick "{OMNICAM_MIC}"</Status>
       )}
       <Field title="Camera, microphone or both" sub="Switch on the phone, or with the buttons in the window.">
         <button className="btn" onClick={onOpenMicGuide}>

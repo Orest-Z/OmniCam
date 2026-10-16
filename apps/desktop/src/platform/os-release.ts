@@ -18,11 +18,3 @@ export function distroFrom(osRelease: string): Distro {
   }
   return 'other';
 }
-
-/** The command that installs pactl, which the virtual microphone needs. */
-export function pactlInstallCommand(distro: Distro): string {
-  if (distro === 'fedora') return 'sudo dnf install pulseaudio-utils';
-  if (distro === 'debian') return 'sudo apt install pulseaudio-utils';
-  if (distro === 'arch') return 'sudo pacman -S libpulse';
-  return '';
-}

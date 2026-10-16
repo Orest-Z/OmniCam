@@ -31,7 +31,7 @@ import { phoneServer } from './server';
 import { session } from './session';
 import { settings } from './settings';
 import { createTray, updateTray } from './tray';
-import { applyTheme, createOrShowUiWindow, markQuitting, onShownChange, setTrayAvailable, uiWindow, uiWindowShown } from './ui-window';
+import { applyTheme, createOrShowUiWindow, markQuitting, resendPreview, setPreviewWanted, setTrayAvailable, trayAvailable, uiWindow } from './ui-window';
 import { checkForUpdates, downloadUpdate, initUpdater, installUpdate, updateState } from './updater';
 import { outputFpsFor } from '../shared/stream-format';
 import { platform } from '../platform';
@@ -68,17 +68,6 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 let vcamError: string | null = null;
-/** The live view shows the preview and its page is visible; it only runs while the window is shown too. */
-let previewWanted = false;
-let previewOn = false;
-function syncPreview(): void {
-  const on = previewWanted && uiWindowShown();
-  if (on === previewOn) return;
-  previewOn = on;
-  engine.setPreview(on);
-}
-// Until the check answers; Windows answers at once.
-let trayAvailable = true;
 
 async function fullState(): Promise<AppState> {
   return {
@@ -90,7 +79,7 @@ async function fullState(): Promise<AppState> {
     update: updateState(),
     version: app.getVersion(),
     platform: process.platform,
-    trayAvailable,
+    trayAvailable: trayAvailable(),
     distro: platform.distro,
     virtualMic: platform.virtualMic?.state() ?? null,
   };
@@ -135,11 +124,7 @@ function wireIpc(): void {
     broadcast({ pairing: await session.pairingInfo() });
   });
 
-  ipcMain.handle(UI_SET_PREVIEW, (_e, enabled: boolean) => {
-    previewWanted = enabled;
-    syncPreview();
-  });
-  onShownChange(syncPreview);
+  ipcMain.handle(UI_SET_PREVIEW, (_e, enabled: boolean) => setPreviewWanted(enabled));
 
   ipcMain.handle(UI_OPEN_EXTERNAL, (_e, url: string) => {
     // Web pages, plus the OS's sound settings for the microphone guide; nothing else the OS could launch.
@@ -183,9 +168,7 @@ function wireIpc(): void {
   });
   engine.on('restarted', () => {
     broadcast({ stats: engine.stats, vcam: engine.vcam });
-    // A reloaded engine starts with the preview off.
-    previewOn = false;
-    syncPreview();
+    resendPreview();
   });
 }
 
@@ -201,7 +184,6 @@ async function main(): Promise<void> {
   platform.virtualMic?.start((virtualMic) => broadcast({ virtualMic }));
   platform.syncLaunchAtLogin(settings.get().launchAtLogin);
   const trayCheck = platform.hasTray().then((has) => {
-    trayAvailable = has;
     setTrayAvailable(has);
     if (has) createTray();
     broadcast({ trayAvailable: has });

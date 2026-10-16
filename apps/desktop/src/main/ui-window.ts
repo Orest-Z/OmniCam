@@ -1,16 +1,19 @@
 import { app, BrowserWindow, nativeTheme, screen, shell } from 'electron';
 import type { AppSettings } from '../shared/ipc';
 import { join } from 'node:path';
-import { restartBudget } from './engine-bridge';
+import { engine, restartBudget } from './engine-bridge';
 import { settings } from './settings';
 
 let win: BrowserWindow | null = null;
 let quitting = false;
-let trayAvailable = true;
+// Until the check answers; Windows answers at once.
+let withTray = true;
 const restarts: number[] = [];
-/** Minimised as far as OmniCam knows (see onShownChange). */
+/** Minimised as far as OmniCam knows (see syncPreview). */
 let minimized = false;
-const shownListeners = new Set<() => void>();
+/** The live view shows the preview and its page is visible. */
+let previewWanted = false;
+let previewOn = false;
 
 // Must match --bg / --text-2 in renderer/styles.css, for each theme.
 export const THEME = {
@@ -44,29 +47,39 @@ export function markQuitting(): void {
 
 /** Without a tray, closing the window minimises it instead of hiding it where nobody could find it. */
 export function setTrayAvailable(available: boolean): void {
-  trayAvailable = available;
+  withTray = available;
+}
+
+export function trayAvailable(): boolean {
+  return withTray;
 }
 
 export function uiWindow(): BrowserWindow | null {
   return win;
 }
 
+/** What the UI asks for: Preview.tsx while the live view is up and its page visible. */
+export function setPreviewWanted(wanted: boolean): void {
+  previewWanted = wanted;
+  syncPreview();
+}
+
+/** A reloaded engine starts with the preview off: tell it again. */
+export function resendPreview(): void {
+  previewOn = false;
+  syncPreview();
+}
+
 /**
- * The window is on screen: open, not hidden in the tray, not minimised. The page's own visibility can't
- * say so on Wayland, where a minimised window stays 'visible' to it (xdg-shell has no minimised state a
- * client can see), so the preview would never stop and the phone never drop to idle.
+ * The preview runs only while the window is on screen: open, not hidden in the tray, not minimised. The
+ * page's own visibility can't tell on Wayland, where a minimised window stays 'visible' to it (xdg-shell
+ * has no minimised state a client can see), so the preview would never stop and the phone never go idle.
  */
-export function uiWindowShown(): boolean {
-  return Boolean(win && win.isVisible() && !minimized);
-}
-
-/** Called whenever uiWindowShown() may have changed. */
-export function onShownChange(listener: () => void): void {
-  shownListeners.add(listener);
-}
-
-function shownChanged(): void {
-  for (const l of shownListeners) l();
+function syncPreview(): void {
+  const on = previewWanted && Boolean(win && win.isVisible() && !minimized);
+  if (on === previewOn) return;
+  previewOn = on;
+  engine.setPreview(on);
 }
 
 export function iconPath(name: string): string {
@@ -172,24 +185,24 @@ export function createOrShowUiWindow(opts: { minimized?: boolean } = {}): Browse
 
   win.on('minimize', () => {
     minimized = true;
-    shownChanged();
+    syncPreview();
   });
   // Wayland may not report a restore from the dock, but the window always gets focus then.
   const back = () => {
     minimized = false;
-    shownChanged();
+    syncPreview();
   };
   win.on('restore', back);
   win.on('focus', back);
   win.on('show', back);
-  win.on('hide', shownChanged);
+  win.on('hide', syncPreview);
 
   win.on('close', (e) => {
     // Closing the window must not kill the camera: hide to tray instead.
     if (quitting) return;
     if (settings.get().closeToTray) {
       e.preventDefault();
-      if (trayAvailable) win?.hide();
+      if (withTray) win?.hide();
       else win?.minimize();
     } else {
       // The hidden engine window keeps 'window-all-closed' from ever firing, so quit explicitly.
@@ -199,7 +212,7 @@ export function createOrShowUiWindow(opts: { minimized?: boolean } = {}): Browse
   win.on('closed', () => {
     win = null;
     minimized = false;
-    shownChanged();
+    syncPreview();
   });
 
   if (!app.isPackaged && process.env.ELECTRON_RENDERER_URL) {

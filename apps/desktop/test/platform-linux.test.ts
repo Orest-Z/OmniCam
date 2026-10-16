@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert';
 import { describe, test } from 'node:test';
-import { distroFrom, pactlInstallCommand } from '../src/platform/os-release.ts';
-import { isRelevantEvent, LEVEL_ARGS, ownModules, parseDefaults, replacementSink, SINK_ARGS, SOURCE_ARGS } from '../src/platform/pactl.ts';
+import { distroFrom } from '../src/platform/os-release.ts';
+import { isRelevantEvent, LEVEL_ARGS, ownModules, pactlInstallCommand, parseDefaults, replacementSink, SINK_ARGS, SOURCE_ARGS } from '../src/platform/pactl.ts';
 import { onlyRootCanChange, setupResult } from '../src/platform/setup-result.ts';
 
 describe('ownModules', () => {

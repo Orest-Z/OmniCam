@@ -1,8 +1,7 @@
 import { execFile, execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import type { Distro, VirtualMicState } from '../shared/ipc';
-import { pactlInstallCommand } from './os-release';
-import { isRelevantEvent, LEVEL_ARGS, ownModules, parseDefaults, replacementSink, SINK_ARGS, SINK_NAME, SOURCE_ARGS, SOURCE_NAME } from './pactl';
+import { isRelevantEvent, LEVEL_ARGS, ownModules, pactlInstallCommand, parseDefaults, replacementSink, SINK_ARGS, SINK_NAME, SOURCE_ARGS, SOURCE_NAME } from './pactl';
 import type { VirtualMic } from './types';
 
 // English output whatever the desktop's language: parseDefaults reads pactl info's labels.

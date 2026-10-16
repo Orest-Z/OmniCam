@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { AppWindow, ArrowUpRight, AudioLines, Cable, Check, ChevronDown, Mic, Smartphone, Video } from 'lucide-react';
 import type { DesktopToPhone } from '@omnicam/protocol';
 import type { AppSettings, StreamStats, VirtualMicState } from '../../shared/ipc';
-import { micNameFor, pickSink } from '../../shared/audio-sink';
+import { micNameFor, OMNICAM_MIC, pickSink } from '../../shared/audio-sink';
 import { useLoopbacks } from '../useLoopbacks';
 import { SPEAKING_LEVEL } from './LiveView';
 import { Command, Dialog } from './ui';
@@ -19,8 +19,6 @@ const VB_CABLE_URL = 'https://vb-audio.com/Cable/';
 const SOUND_SETTINGS = 'ms-settings:sound';
 /** What apps call the cable's microphone side until a cable is found. */
 const VB_CABLE_MIC = 'CABLE Output (VB-Audio Virtual Cable)';
-/** The microphone OmniCam adds on Linux (platform/pactl.ts names it). */
-const OMNICAM_MIC = 'OmniCam Microphone';
 
 /** Installing VB-CABLE, one screen at a time. The screenshots circle what to click. */
 const INSTALL: { tab: string; text: string; shot?: string; alt?: string }[] = [

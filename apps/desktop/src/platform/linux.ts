@@ -60,10 +60,12 @@ function removeAutostart(): void {
 }
 
 /** Linux desktops: XDG autostart, a tray only where a StatusNotifier host runs. */
+// Writes the entry only when its text differs, so at startup it also follows an AppImage that moved.
+const launchAtLogin = (on: boolean) => (on ? writeAutostart() : removeAutostart());
+
 export const linux: Platform = {
-  setLaunchAtLogin: (on) => (on ? writeAutostart() : removeAutostart()),
-  // Rewrites the entry only when its text differs, e.g. an AppImage that now lives elsewhere.
-  syncLaunchAtLogin: (on) => (on ? writeAutostart() : removeAutostart()),
+  setLaunchAtLogin: launchAtLogin,
+  syncLaunchAtLogin: launchAtLogin,
   hasTray: () =>
     new Promise((resolve) => {
       // Electron's tray is a StatusNotifierItem; with no watcher on the session bus nobody shows it.

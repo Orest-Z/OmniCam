@@ -6,6 +6,8 @@
  * monitor ("OmniCam Microphone") is what apps record from. Both live only while OmniCam runs.
  */
 
+import type { Distro } from '../shared/ipc';
+
 export const SINK_NAME = 'omnicam_feed';
 export const SOURCE_NAME = 'omnicam_mic';
 
@@ -80,4 +82,12 @@ export function parseDefaults(info: string): { sink: string; source: string } {
  */
 export function isRelevantEvent(line: string): boolean {
   return /^Event '(change)' on server\b/.test(line) || /^Event 'remove' on (sink|source|module) #/.test(line);
+}
+
+/** The command that installs pactl, which the virtual microphone needs. */
+export function pactlInstallCommand(distro: Distro): string {
+  if (distro === 'fedora') return 'sudo dnf install pulseaudio-utils';
+  if (distro === 'debian') return 'sudo apt install pulseaudio-utils';
+  if (distro === 'arch') return 'sudo pacman -S libpulse';
+  return '';
 }
