@@ -289,6 +289,9 @@ jobs:
   # attached by linux-release below, once the windows job has published it.
   linux:
     runs-on: ubuntu-latest
+    # Builds only, also for pull requests: read access is all it needs.
+    permissions:
+      contents: read
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
@@ -345,6 +348,10 @@ jobs:
     needs: [windows, linux]
     if: needs.windows.outputs.release == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/download-artifact@v8
         with:
@@ -363,6 +370,7 @@ jobs:
       - name: Attach to the release
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.windows.outputs.tag }}
         run: |
-          gh release upload '${{ needs.windows.outputs.tag }}' --repo '${{ github.repository }}' --clobber \
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber \
             linux/*.AppImage linux/*.rpm linux/*.deb linux/latest-linux.yml
