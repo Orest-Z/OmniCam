@@ -1,6 +1,6 @@
 {
   "name": "omnicam",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "description": "Use your phone's camera as a virtual webcam â€” no app install on the phone.",
   "workspaces": [

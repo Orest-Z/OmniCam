@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.1.0 — 2026-10-16
 
 OmniCam now runs on Linux too, with the same phone page, the same camera quality and a microphone that needs nothing
 installed. On Windows nothing changes in how OmniCam works, apart from the fix below.
