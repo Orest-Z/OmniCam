@@ -110,7 +110,7 @@ function applySettings(next: EngineSettings) {
     const loaded = loadVcam(next.addonPath);
     vcam = loaded.addon;
     if (!vcam) {
-      ipcRenderer.send(ENGINE_VCAM_ERROR, loaded.reason ?? 'native addon missing');
+      ipcRenderer.send(ENGINE_VCAM_ERROR, loaded.reason ?? 'no-addon: native addon missing');
       warn(loaded.reason);
     }
   }
@@ -119,7 +119,9 @@ function applySettings(next: EngineSettings) {
   const formatChanged =
     !prev || prev.outputWidth !== next.outputWidth || prev.outputHeight !== next.outputHeight || prev.outputFps !== next.outputFps;
 
-  if (formatChanged) {
+  // A camera that failed to start gets another try with any settings: after the Linux setup, or once the
+  // app that held the device has closed.
+  if (formatChanged || !vcamStarted) {
     try {
       if (vcamStarted) vcam.stop();
       vcam.start({ width: next.outputWidth, height: next.outputHeight, fps: next.outputFps, nativeDir: next.nativeDir });
