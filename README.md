@@ -479,7 +479,7 @@ signed and by whom.
 
 OmniCam is a hobby project. If it saves you buying a webcam, you can [sponsor its development](https://github.com/sponsors/Orest-Z). Thanks to everyone who does:
 
-<!-- sponsors --><!-- sponsors -->
+<!-- sponsors -->No sponsors yet. [Be the first](https://github.com/sponsors/Orest-Z)!<!-- sponsors -->
 
 ## License
 
