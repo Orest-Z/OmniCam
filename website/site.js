@@ -1,5 +1,5 @@
-// Points the download buttons at the newest installer for the visitor's system (the AppImage on Linux, the Windows
-// installer otherwise), shows its version, size and SHA-256, and fills the numbers strip (downloads, stars, forks,
+// Points each download button at its file in the newest release, with the version and sizes, marks the visitor's
+// own system, shows the SHA-256 of that system's main download, and fills the numbers strip (downloads, stars, forks,
 // releases) from GitHub's API, so they are always current. Without JavaScript, or if the API is unreachable, the
 // buttons still open the latest release and the strip stays hidden.
 const api = (path) =>
@@ -9,6 +9,9 @@ const windowsInstaller = (a) => /^OmniCam-Setup-.+\.exe$/.test(a.name);
 const linuxPackage = (a) => /^OmniCam-.+\.(AppImage|rpm|deb)$/.test(a.name);
 const installer = (a) => windowsInstaller(a) || linuxPackage(a);
 const onLinux = /Linux/.test(navigator.userAgent) && !/Android/.test(navigator.userAgent);
+// Mark the visitor's own system among the download cards.
+const mine = onLinux ? 'linux' : /Windows/.test(navigator.userAgent) ? 'windows' : null;
+if (mine) for (const el of document.querySelectorAll(`[data-os="${mine}"]`)) el.classList.add('mine');
 const count = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
 
 (async () => {
@@ -28,33 +31,24 @@ const count = new Intl.NumberFormat('en', { notation: 'compact', maximumFraction
     document.getElementById('stats').hidden = false;
 
     const release = published[0];
-    const exe = release.assets.find(windowsInstaller);
-    const appImage = release.assets.find((a) => /\.AppImage$/.test(a.name));
-    // A Linux visitor gets the AppImage, once a release has one; everyone else the Windows installer.
-    const linux = onLinux && Boolean(appImage);
-    const asset = linux ? appImage : exe;
-    if (!asset) return;
-
     const version = release.tag_name.replace(/^v/, '');
-    const mb = (asset.size / 1024 / 1024).toFixed(0);
-    for (const a of document.querySelectorAll('[data-download]')) {
-      a.href = asset.browser_download_url;
-      a.querySelector('span').textContent = linux ? `Download OmniCam ${version} for Linux` : `Download OmniCam ${version}`;
-    }
-    for (const p of document.querySelectorAll('[data-download-meta]')) {
-      p.textContent = linux ? `Linux x64 · AppImage · ${mb} MB · MIT license` : `Windows 10 / 11 · 64-bit · ${mb} MB · MIT license`;
-    }
-    // The other system's download, under each button.
-    if (linux && exe) {
-      for (const p of document.querySelectorAll('[data-other-os]')) {
-        const win = Object.assign(document.createElement('a'), { href: exe.browser_download_url, textContent: 'Windows installer' });
-        const pkgs = Object.assign(document.createElement('a'), { href: '#linux', textContent: 'rpm and deb' });
-        p.replaceChildren(pkgs, ' · ', win);
+    for (const p of document.querySelectorAll('[data-download-meta]')) p.textContent = `Version ${version} · free · MIT license`;
+
+    const files = { exe: /\.exe$/, AppImage: /\.AppImage$/, rpm: /\.rpm$/, deb: /\.deb$/ };
+    const assets = {};
+    for (const [kind, file] of Object.entries(files)) {
+      const asset = (assets[kind] = release.assets.find((a) => installer(a) && file.test(a.name)));
+      if (!asset) continue;
+      for (const a of document.querySelectorAll(`[data-asset="${kind}"]`)) {
+        a.href = asset.browser_download_url;
+        const size = a.querySelector('[data-size]');
+        if (size) size.textContent = ` · ${(asset.size / 1024 / 1024).toFixed(0)} MB`;
       }
     }
+    const asset = onLinux ? assets.AppImage : assets.exe;
 
     // GitHub computes this digest itself when the file is uploaded.
-    if (asset.digest?.startsWith('sha256:')) {
+    if (asset?.digest?.startsWith('sha256:')) {
       const el = document.getElementById('checksum');
       el.textContent = `SHA-256 of ${asset.name}: ${asset.digest.slice(7)}`;
       el.hidden = false;
