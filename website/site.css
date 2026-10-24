@@ -151,8 +151,39 @@ h1 span, h2 span {
 .bento .card h3 { margin-top: 28px; }
 .dim { color: var(--text-3); font: 500 13px var(--mono); }
 .meta { color: var(--text-3); font: 13px var(--mono); margin: 16px 0 0; }
-.meta.other { margin-top: 6px; }
-.meta.other a { color: var(--text-2); }
+.meta + .cta { margin-top: 20px; }
+
+/* Downloads: one card per system, each file its own labelled button. site.js marks the visitor's system. */
+.get { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; width: 100%; max-width: 780px; text-align: left; }
+@media (min-width: 700px) { .get { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.os {
+  display: flex; flex-direction: column; gap: 10px; padding: 20px;
+  border: 1px solid var(--border-strong); border-radius: var(--r-lg); background: rgba(20, 19, 23, 0.72);
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+.os.mine { border-color: rgba(138, 92, 243, 0.6); box-shadow: 0 0 0 1px rgba(138, 92, 243, 0.25), 0 24px 60px -28px var(--glow); }
+.os-head { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+.os-head .ico {
+  width: 44px; height: 44px; padding: 10px; border-radius: 12px;
+  color: var(--accent-soft); background: var(--accent-tint); border: 1px solid rgba(138, 92, 243, 0.22);
+}
+.os-head h3 { margin: 0; font-size: 19px; }
+.os-head p { margin: 0; color: var(--text-3); font-size: 13px; }
+.yours {
+  display: none; margin-left: auto; padding: 2px 9px; border-radius: 999px; white-space: nowrap;
+  background: var(--accent-tint); border: 1px solid rgba(138, 92, 243, 0.4); color: var(--accent-soft); font: 500 11px/1.6 var(--mono);
+}
+.mine .yours { display: inline-block; }
+.btn.dl { width: 100%; height: auto; min-height: 58px; padding: 9px 18px; border-radius: var(--r-md); }
+.dl > span { display: flex; flex-direction: column; line-height: 1.3; }
+.dl b { font-weight: 600; }
+.dl small { font: 500 12px var(--mono); opacity: 0.78; }
+.pkgs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.pkgs .dl { min-height: 52px; padding: 8px 14px; }
+[data-size] { white-space: nowrap; }
+.os-hint { margin: 2px 0 0; color: var(--text-2); font-size: 14px; }
+.os-note { margin: auto 0 0; padding-top: 4px; color: var(--text-3); font-size: 13px; }
+.closer .get { margin-top: 0; }
 .card code { overflow-wrap: anywhere; }
 #linux > .sub:last-child { margin: 20px 0 0; font-size: 15px; }
 
