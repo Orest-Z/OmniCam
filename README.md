@@ -318,7 +318,7 @@ Five sections in a sidebar. Each starts with how things stand, and a dot marks t
 **App**
 - **Appearance** — Dark (default), Light or System. The sun/moon button next to Settings switches it in one click.
 - **Keep running in the tray** — closing the window keeps the camera available. Off: closing the window quits OmniCam.
-- **Start with Windows.**
+- **Start OmniCam when I sign in.**
 
 **About**
 - **Updates** — OmniCam also checks quietly when it starts and once a day, unless you turn off
@@ -345,7 +345,7 @@ Five sections in a sidebar. Each starts with how things stand, and a dot marks t
   network, or start a hotspot on the phone and connect the PC to it.
 - If Windows asked about the firewall when OmniCam first started, allow it for private networks. The installer adds a
   rule for you; re-run it if in doubt.
-- Several network interfaces (VPN, virtual adapters)? Pick the Wi-Fi one under **Settings → Network interface** so the
+- Several network interfaces (VPN, virtual adapters)? Pick the Wi-Fi one under **Settings → Connection → Network** so the
   QR code uses the right address.
 - On Linux, a firewall may block the port: *Settings → Connection → Phone can't open the page?* shows the command.
 </details>
@@ -377,7 +377,7 @@ bars. Holding the phone in landscape avoids both.
 <details>
 <summary><strong>Something else — where are the logs?</strong></summary>
 
-Settings → **Open log folder** (`%APPDATA%\OmniCam\logs\omnicam.log`; on Linux `~/.config/OmniCam/logs/omnicam.log`). It records connections, the camera device
+Settings → About → **Open log folder** (`%APPDATA%\OmniCam\logs\omnicam.log`; on Linux `~/.config/OmniCam/logs/omnicam.log`). It records connections, the camera device
 state and any crashes, and nothing is ever uploaded. Attach it when you
 [open an issue](https://github.com/Orest-Z/OmniCam/issues).
 </details>

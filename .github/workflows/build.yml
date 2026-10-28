@@ -241,7 +241,7 @@ jobs:
             "**New install:** download **OmniCam-Setup-$version.exe** below and run it."
             $smartScreen
             ''
-            '**Already running OmniCam?** *Settings -> Check for updates* installs this version for you;'
+            '**Already running OmniCam?** *Settings -> About -> Check now* installs this version for you;'
             'the installer below does the same thing by hand.'
             ''
             'Setup, usage and troubleshooting: README.txt below, or the project README.'
