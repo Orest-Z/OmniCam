@@ -12,6 +12,7 @@ export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
     build: {
+      license: { fileName: 'licenses.md' },
       rollupOptions: { input: resolve(__dirname, 'src/main/index.ts') },
     },
   },
@@ -28,6 +29,7 @@ export default defineConfig({
     define: { __RELEASE_NOTES__: JSON.stringify(releaseNotes) },
     build: {
       minify: 'esbuild',
+      license: { fileName: 'licenses.md' },
       rollupOptions: {
         // Two renderer entry points: the visible UI and the hidden media engine.
         input: {
