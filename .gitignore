@@ -19,3 +19,7 @@ apps/desktop/release/
 .agents/
 .claude/
 skills-lock.json
+
+# Private project documentation: never committed or pushed
+/Documentation.pdf
+/Documentation.html
