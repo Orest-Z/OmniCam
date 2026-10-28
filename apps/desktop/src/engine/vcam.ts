@@ -55,8 +55,6 @@ declare global {
   }
 }
 
-export class VcamUnavailable extends Error {}
-
 /** Loads the addon from an absolute path. Returns null (with reason) when it is not built/present. */
 export function loadVcam(addonPath: string): { addon: VcamAddon | null; reason?: string } {
   try {

@@ -16,6 +16,11 @@ extraResources:
     to: icons
   - from: resources/docs
     to: docs
+  # Licences of the JavaScript libraries bundled into out/, written by Vite at build time.
+  - from: out/main/licenses.md
+    to: docs/third-party-licenses.md
+  - from: out/renderer/licenses.md
+    to: docs/third-party-licenses-ui.md
 asar: true
 win:
   target:
@@ -74,7 +79,6 @@ deb:
   recommends:
     - v4l2loopback-dkms
     - pulseaudio-utils
-electronVersion: 44.5.0
 # GitHub Releases feed for the in-app updater: makes electron-builder write latest.yml (CI attaches it
 # to the release) and resources/app-update.yml (tells the installed app where to look). The dist
 # script passes --publish never; CI uploads the files itself.

@@ -31,3 +31,7 @@ Geist    — Copyright (c) Vercel, SIL Open Font License 1.1
            https://vercel.com/font
 Electron — Copyright (c) Electron contributors / GitHub Inc., MIT License
 Lucide   — Copyright (c) Lucide Contributors, ISC License
+
+The JavaScript libraries built into the app (React, electron-updater, qrcode, selfsigned
+and the libraries they use) are listed with their full licences in
+third-party-licenses.md and third-party-licenses-ui.md, next to this file.

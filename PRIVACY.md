@@ -9,7 +9,7 @@ server. Nothing about you, your phone or your video is sent to the developer.
 |---|---|---|---|
 | The phone page and pairing | Your phone → your PC, on your local network (HTTPS, port 28441 by default) | While you pair | It *is* the app |
 | Video, microphone sound and controls | Your phone ↔ your PC, peer-to-peer on your local network (WebRTC, encrypted) | While streaming; the microphone only when you turn it on | It *is* the app |
-| Update check | Your PC → GitHub (`github.com`, the project's Releases) | At launch and once a day | **Yes**: Settings → *Check for updates automatically* |
+| Update check | Your PC → GitHub (`github.com`, the project's Releases) | At launch and once a day | **Yes**: Settings → About → *Check for updates automatically* |
 | Update download | Your PC → GitHub | Only after you click *Update* | Don't click it |
 
 - Video and sound never leave your network: there are no STUN, TURN or relay servers, and WebRTC only uses

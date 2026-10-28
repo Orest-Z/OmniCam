@@ -3,7 +3,12 @@
 Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by
 [SignPath Foundation](https://signpath.org/).
 
-## What is signed
+**Not active yet.** No OmniCam release is code-signed so far. CI has the signing
+steps, switched off until SignPath Foundation accepts the project, so Windows reports every file as unsigned
+and SmartScreen asks you to confirm before the installer runs. This page is the policy that applies once
+signing is switched on.
+
+## What will be signed
 
 Only files built by this repository's CI ([`.github/workflows/build.yml`](.github/workflows/build.yml)) on
 GitHub-hosted runners, from the commit the release is tagged at:
@@ -48,12 +53,17 @@ Shown on the installer's first page, and undone by the uninstaller:
 
 ## Verifying a download
 
-Right-click the installer → **Properties** → **Digital Signatures**: the signer is *SignPath Foundation*.
-Or in PowerShell:
+Until releases are signed, the installer has no **Digital Signatures** tab. Every release's notes list instead
+the installer's SHA-256 and a signed build provenance attestation, which shows it was built by this repository's
+GitHub Actions from the tagged commit:
 
 ```powershell
-Get-AuthenticodeSignature .\OmniCam-Setup-1.2.0.exe | Format-List Status, SignerCertificate
+Get-FileHash .\OmniCam-Setup-<version>.exe
+gh attestation verify OmniCam-Setup-<version>.exe --repo Orest-Z/OmniCam
 ```
+
+Once signing is on: right-click the installer → **Properties** → **Digital Signatures**, and the signer is
+*SignPath Foundation*. Or `Get-AuthenticodeSignature .\OmniCam-Setup-<version>.exe`.
 
 Reporting a problem with a signed file, or a file that claims to be signed by this project and was not
 built here: follow [SECURITY.md](SECURITY.md).

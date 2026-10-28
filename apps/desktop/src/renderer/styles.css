@@ -31,7 +31,7 @@
   color-scheme: dark; /* native scrollbars and dropdown menus follow the theme */
 }
 
-/* Light theme (Settings > Appearance; Electron's themeSource drives prefers-color-scheme). Same
+/* Light theme (Settings > App > Appearance; Electron's themeSource drives prefers-color-scheme). Same
    violet brand on lavender-white surfaces; purple text is darker so it reads on light tints.
    Keep --bg / --text-2 in sync with THEME.light in main/ui-window.ts (caption buttons). */
 @media (prefers-color-scheme: light) {

@@ -11,7 +11,7 @@ yet are all welcome.
 - the phone model and browser (for example iPhone 14, Safari, or Pixel 7, Chrome)
 - the app you are using the camera in (Discord, Zoom, OBS…)
 - what you did, what you expected and what happened instead
-- the log file: Settings → **Open log folder** → `omnicam.log`
+- the log file: Settings → About → **Open log folder** → `omnicam.log`
 
 Found a security problem? Please don't open an issue; follow [SECURITY.md](SECURITY.md) instead.
 
