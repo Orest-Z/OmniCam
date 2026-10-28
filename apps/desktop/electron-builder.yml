@@ -74,7 +74,6 @@ deb:
   recommends:
     - v4l2loopback-dkms
     - pulseaudio-utils
-electronVersion: 44.5.0
 # GitHub Releases feed for the in-app updater: makes electron-builder write latest.yml (CI attaches it
 # to the release) and resources/app-update.yml (tells the installed app where to look). The dist
 # script passes --publish never; CI uploads the files itself.
