@@ -72,6 +72,7 @@ export function toEngineSettings(s: AppSettings): EngineSettings {
     mirror: s.mirror,
     rotation: s.rotation,
     scaleMode: s.scaleMode,
+    picture: s.picture,
     holdLastFrame: s.holdLastFrame,
     micOutput: s.micOutput,
     ...nativePaths(),

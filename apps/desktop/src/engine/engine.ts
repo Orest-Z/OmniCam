@@ -15,6 +15,7 @@ import {
   ENGINE_STATS,
   ENGINE_VCAM_ERROR,
   ENGINE_VCAM_STATS,
+  NEUTRAL_PICTURE,
   type ConnectionState,
   type EngineAnswer,
   type EngineOffer,
@@ -68,9 +69,18 @@ let loggedFormat = false;
 let copyMs = 0;
 let copyN = 0;
 if (DEBUG.has('timing')) {
+  // The native counters are totals since start: report each interval on its own, so a change shows.
+  let lastUs = 0;
+  let lastN = 0;
   setInterval(() => {
     const v = vcamStats() as VirtualCamStats & { convertUs?: number; convertN?: number };
-    log(`state=${stats.state} fps=${stats.fps} kbps=${stats.bitrateKbps} idle=${phoneIdle} consumers=${consumersActive} preview=${previewEnabled} | timing: copyTo avg ${(copyN ? copyMs / copyN : 0).toFixed(2)} ms over ${copyN} frames; native convert avg ${((v.convertUs ?? 0) / Math.max(1, v.convertN ?? 0) / 1000).toFixed(2)} ms`);
+    if ((v.convertN ?? 0) < lastN) lastUs = lastN = 0; // the camera restarted: its counters did too
+    const us = (v.convertUs ?? 0) - lastUs;
+    const n = (v.convertN ?? 0) - lastN;
+    lastUs = v.convertUs ?? 0;
+    lastN = v.convertN ?? 0;
+    const p = engineSettings?.picture;
+    log(`state=${stats.state} fps=${stats.fps} kbps=${stats.bitrateKbps} idle=${phoneIdle} consumers=${consumersActive} preview=${previewEnabled} | timing: copyTo avg ${(copyN ? copyMs / copyN : 0).toFixed(2)} ms over ${copyN} frames; native convert avg ${(us / Math.max(1, n) / 1000).toFixed(2)} ms over ${n} | picture ${p ? `${p.brightness},${p.contrast},${p.saturation},${p.warmth}` : '-'}`);
     copyMs = 0;
     copyN = 0;
   }, 5000);
@@ -151,7 +161,7 @@ function applySettings(next: EngineSettings) {
   }
   if (vcamStarted) {
     vcam.setHoldLastFrame(next.holdLastFrame);
-    vcam.setTransform({ mirror: next.mirror, rotation: next.rotation, fill: next.scaleMode === 'fill' });
+    vcam.setTransform({ mirror: next.mirror, rotation: next.rotation, fill: next.scaleMode === 'fill', ...NEUTRAL_PICTURE, ...next.picture });
     vcam.setPreview(previewEnabled, PREVIEW_MAX_WIDTH, PREVIEW_INTERVAL_MS);
   }
   ipcRenderer.send(ENGINE_VCAM_STATS, vcamStats());
@@ -397,12 +407,14 @@ function onPhoneMessage(msg: PhoneToDesktop) {
   switch (msg.type) {
     case 'hello':
       stats.device = msg.device;
+      log('phone cameras:', JSON.stringify(msg.cameras.map((c) => c.label || c.deviceId)));
       break;
     case 'trackInfo':
       stats.trackInfo = msg.info;
       break;
     case 'capabilities':
       stats.caps = msg.caps;
+      log(`camera "${stats.trackInfo?.label ?? '?'}" zoom:`, msg.caps.zoom ? JSON.stringify(msg.caps.zoom) : 'not adjustable');
       break;
     case 'sources': {
       const cameraWasOn = cameraOn();

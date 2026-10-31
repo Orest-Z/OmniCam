@@ -17,6 +17,7 @@ import {
   UI_UPDATE_DOWNLOAD,
   UI_UPDATE_INSTALL,
   UI_VCAM_ERROR,
+  UI_PHONE_ERROR,
   type AppSettings,
   type AppState,
   type CameraSetupResult,
@@ -34,6 +35,7 @@ import { createTray, updateTray } from './tray';
 import { applyTheme, createOrShowUiWindow, markQuitting, resendPreview, setPreviewWanted, setTrayAvailable, trayAvailable, uiWindow } from './ui-window';
 import { checkForUpdates, downloadUpdate, initUpdater, installUpdate, updateState } from './updater';
 import { outputFpsFor } from '../shared/stream-format';
+import { phoneErrorText } from '../shared/phone-error';
 import { platform } from '../platform';
 
 // --- Chromium switches: must be set before 'ready' -------------------------------------------
@@ -153,7 +155,10 @@ function wireIpc(): void {
   engine.on('vcam', (v) => broadcast({ vcam: v }));
   engine.on('preview', (frame: PreviewFrame) => uiWindow()?.webContents.send(UI_PREVIEW_FRAME, frame));
   engine.on('phone', (msg: PhoneToDesktop) => {
-    if (msg.type === 'error') console.warn('[phone]', msg.message);
+    if (msg.type === 'error') {
+      console.warn('[phone]', msg.message);
+      uiWindow()?.webContents.send(UI_PHONE_ERROR, phoneErrorText(msg, engine.stats.device?.platform));
+    }
     // Apps get exactly the virtual camera's rate, so it follows the rate the phone's camera really
     // runs at, whichever side changed the resolution: 720p60 reaches Zoom at 60, and a phone that
     // only managed 30 doesn't get its frames doubled. Only on a change: it restarts the device.

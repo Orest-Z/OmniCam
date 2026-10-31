@@ -352,6 +352,7 @@ bool Pipeline::convert(const RawFrame& raw, const Transform& t, std::vector<uint
     //         becomes a normal landscape picture instead of a narrow pillar)
     // For I420 output the scaled canvas is the output frame itself.
     I420View canvas = cur;
+    int ix = 0, iy = 0, iw = width_, ih = height_; // where the picture sits on the canvas (not the bars)
     if (cur.w != width_ || cur.h != height_) {
         I420Buf fit = bufOf(format_ == OutputFormat::I420 ? out : fit_, width_, height_);
         I420View src = cur;
@@ -375,6 +376,7 @@ bool Pipeline::convert(const RawFrame& raw, const Transform& t, std::vector<uint
         const int x0 = evenDown((width_ - dw) / 2);
         const int y0 = evenDown((height_ - dh) / 2);
         if (dw != width_ || dh != height_) fillI420Black(fit);
+        ix = x0, iy = y0, iw = dw, ih = dh;
         uint8_t* dy = fit.y + (size_t)y0 * fit.sy + x0;
         uint8_t* du = fit.u + (size_t)(y0 / 2) * fit.su + x0 / 2;
         uint8_t* dv = fit.v + (size_t)(y0 / 2) * fit.sv + x0 / 2;
@@ -384,6 +386,27 @@ bool Pipeline::convert(const RawFrame& raw, const Transform& t, std::vector<uint
                               dy, fit.sy, du, fit.su, dv, fit.sv, dw, dh, filter) != 0)
             return false;
         canvas = fit;
+    }
+
+    // Picture adjustments, on the picture only: black bars stay black.
+    const Adjust& adj = t.adjust;
+    if (adj.touchesLuma() || adj.touchesChroma()) {
+        const AdjustCoef k(adj);
+        const auto at = reinterpret_cast<uintptr_t>(canvas.y);
+        if (at >= reinterpret_cast<uintptr_t>(data) && at < reinterpret_cast<uintptr_t>(data + size)) {
+            // Still the phone's frame (same size, nothing rotated): never write it, a held frame is converted
+            // again and would be adjusted twice. Adjust it into our own buffer instead, in the same pass.
+            I420Buf dst = bufOf(format_ == OutputFormat::I420 ? out : fit_, width_, height_);
+            adjustPlanes(k, adj, canvas.y, canvas.sy, canvas.u, canvas.su, canvas.v, canvas.sv, width_, height_,
+                         dst.y, dst.sy, dst.u, dst.su, dst.v, dst.sv);
+            canvas = dst;
+        } else {
+            // Our own scratch buffer (or the output itself): adjust in place.
+            const size_t cx = ix / 2, cy = iy / 2;
+            adjustPlanes(k, adj, const_cast<uint8_t*>(canvas.y) + (size_t)iy * canvas.sy + ix, canvas.sy,
+                         const_cast<uint8_t*>(canvas.u) + cy * canvas.su + cx, canvas.su,
+                         const_cast<uint8_t*>(canvas.v) + cy * canvas.sv + cx, canvas.sv, iw, ih);
+        }
     }
 
     // The canvas is I420 in the source's colours. YUV output passes those samples through: no RGB

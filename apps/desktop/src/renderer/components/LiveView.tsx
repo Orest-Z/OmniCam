@@ -1,9 +1,11 @@
-import { Flashlight, FlipHorizontal2, Mic, MicOff, QrCode, RotateCw, Unplug, Video, VideoOff } from 'lucide-react';
-import type { DesktopToPhone } from '@omnicam/protocol';
+import { useState } from 'react';
+import { Flashlight, FlipHorizontal2, Mic, MicOff, QrCode, RotateCw, SlidersHorizontal, Unplug, Video, VideoOff } from 'lucide-react';
+import { zoomSteps, type DesktopToPhone } from '@omnicam/protocol';
 import type { AppSettings, StreamStats, VirtualCamStats, VirtualMicState } from '../../shared/ipc';
 import { micNameFor, pickSink } from '../../shared/audio-sink';
-import { activePreset } from '../../shared/stream-format';
+import { activePreset, isUpscaled, sizeLabel } from '../../shared/stream-format';
 import { useLoopbacks } from '../useLoopbacks';
+import { PicturePanel, pictureChanged } from './PicturePanel';
 import { Preview } from './Preview';
 import { IconButton, Segmented } from './ui';
 
@@ -17,6 +19,7 @@ interface Props {
   onControl: (msg: DesktopToPhone) => void;
   onShowQr: () => void;
   onOpenMicGuide: () => void;
+  onOpenSettings: () => void;
 }
 
 /**
@@ -25,10 +28,14 @@ interface Props {
  */
 export const SPEAKING_LEVEL = 0.02;
 
-export function LiveView({ stats, vcam, settings, virtualMic, onSettings, onControl, onShowQr, onOpenMicGuide }: Props) {
+export function LiveView({ stats, vcam, settings, virtualMic, onSettings, onControl, onShowQr, onOpenMicGuide, onOpenSettings }: Props) {
   const live = stats.state === 'connected' || stats.state === 'stalled';
   const facing = stats.trackInfo?.facing ?? 'user';
   const preset = activePreset(stats.trackInfo);
+  const zoom = stats.caps?.zoom;
+  const zooms = zoomSteps(zoom);
+  // Lights the button the phone is at; a level between buttons lights none.
+  const zoomAt = zooms.find((z) => Math.abs(z - (zoom?.current ?? 1)) < 0.05) ?? -1;
   const phone = stats.device?.platform ?? 'Phone';
   const camera = stats.sources?.camera !== false;
   const mic = stats.sources?.mic === true;
@@ -37,6 +44,10 @@ export function LiveView({ stats, vcam, settings, virtualMic, onSettings, onCont
   const sink = loopbacks && pickSink(loopbacks.outputs, settings.micOutput);
   // The phone's sound has nowhere to go: say so where the microphone is switched on.
   const noCable = mic && loopbacks !== null && !sink;
+  const [pictureOpen, setPictureOpen] = useState(false);
+  // What apps get, which is set in Settings and not by the phone's buttons: say so where both are seen.
+  const output = vcam.running ? `${sizeLabel(vcam.width, vcam.height)} ${vcam.fps} fps` : '';
+  const upscaled = vcam.running && isUpscaled(stats.trackInfo, vcam);
 
   return (
     <div className="live">
@@ -67,6 +78,9 @@ export function LiveView({ stats, vcam, settings, virtualMic, onSettings, onCont
               )
             )}
           </div>
+        )}
+        {camera && pictureOpen && (
+          <PicturePanel picture={settings.picture} onChange={(picture) => onSettings({ picture })} onClose={() => setPictureOpen(false)} />
         )}
       </div>
 
@@ -120,6 +134,14 @@ export function LiveView({ stats, vcam, settings, virtualMic, onSettings, onCont
                 ]}
                 onChange={(p) => onControl({ type: 'setResolution', preset: p })}
               />
+              {zooms.length > 1 && (
+                <Segmented
+                  value={zoomAt}
+                  disabled={!live}
+                  options={zooms.map((z) => ({ value: z, label: `${+z.toFixed(1)}×`, title: z < 1 ? 'Ultra-wide' : `Zoom ${+z.toFixed(1)}×` }))}
+                  onChange={(level) => onControl({ type: 'setZoom', level })}
+                />
+              )}
               {stats.caps?.torch && (
                 <IconButton
                   title="Torch"
@@ -145,6 +167,13 @@ export function LiveView({ stats, vcam, settings, virtualMic, onSettings, onCont
               >
                 <RotateCw />
               </IconButton>
+              <IconButton
+                title={pictureChanged(settings.picture) ? 'Picture (adjusted)' : 'Picture: brightness, contrast, colour'}
+                on={pictureOpen || pictureChanged(settings.picture)}
+                onClick={() => setPictureOpen(!pictureOpen)}
+              >
+                <SlidersHorizontal />
+              </IconButton>
               <Segmented
                 value={settings.scaleMode}
                 options={[
@@ -161,10 +190,20 @@ export function LiveView({ stats, vcam, settings, virtualMic, onSettings, onCont
 
         {camera && (
           <>
-            <span className={'inuse' + (vcam.consumers > 0 ? ' on' : '')} title="Apps currently reading the OmniCam camera">
+            <span className={'inuse' + (vcam.consumers > 0 ? ' on' : '')} title="Apps currently reading the OmniCam camera, and what they get (Settings → Output resolution)">
               <i />
               {vcam.consumers > 0 ? `In use by ${vcam.consumers} app${vcam.consumers > 1 ? 's' : ''}` : 'No app is using the camera yet'}
+              {output && <span className="muted"> · apps get {output}</span>}
             </span>
+            {upscaled && (
+              <button
+                className="upscaled"
+                title={`The phone sends ${sizeLabel(stats.trackInfo!.width, stats.trackInfo!.height)}, apps get ${sizeLabel(vcam.width, vcam.height)}: the picture is scaled up, which costs CPU and adds no detail. Lower the output in Settings, or film at a higher resolution on the phone.`}
+                onClick={onOpenSettings}
+              >
+                Scaled up
+              </button>
+            )}
 
             <span className="divider" />
           </>

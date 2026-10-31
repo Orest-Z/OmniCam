@@ -11,10 +11,10 @@ let nextId = 1;
 export function useToasts(ttlMs = 3500) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const push = useCallback(
-    (text: string, kind: Toast['kind'] = '') => {
+    (text: string, kind: Toast['kind'] = '', ms = ttlMs) => {
       const id = nextId++;
       setToasts((t) => [...t, { id, text, kind }]);
-      setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), ttlMs);
+      setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), ms);
     },
     [ttlMs],
   );

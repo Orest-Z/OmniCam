@@ -8,6 +8,7 @@ import {
   UI_GET_STATE,
   UI_OPEN_EXTERNAL,
   UI_OPEN_LOGS,
+  UI_PHONE_ERROR,
   UI_PREVIEW_FRAME,
   UI_ROTATE_TOKEN,
   UI_SET_PREVIEW,
@@ -45,6 +46,7 @@ const api: UiApi = {
   retryCamera: () => ipcRenderer.invoke(UI_CAMERA_RETRY),
   onState: (cb) => subscribe<StatePatch>(UI_STATE, cb),
   onPreviewFrame: (cb) => subscribe<PreviewFrame>(UI_PREVIEW_FRAME, cb),
+  onPhoneError: (cb) => subscribe<string>(UI_PHONE_ERROR, cb),
 };
 
 contextBridge.exposeInMainWorld('omnicam', api);

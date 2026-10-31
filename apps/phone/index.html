@@ -82,6 +82,7 @@
           </button>
         </div>
         <div class="bottom">
+          <div id="zoom" class="zoom" role="group" aria-label="Zoom" hidden></div>
           <div class="selects">
             <!-- Switches what the phone sends at any time, without reconnecting. -->
             <select id="mode-live" class="select" title="What this phone sends">
@@ -96,7 +97,7 @@
               <option value="4k">4K</option>
             </select>
           </div>
-          <p id="hint" class="hint">Keep this page open. Locking the phone pauses the camera and microphone.</p>
+          <p id="hint" class="hint" aria-live="polite">Keep this page open. Locking the phone pauses the camera and microphone.</p>
         </div>
       </div>
       <!-- Front "torch": the screen itself lights the face. Tap to turn off. -->

@@ -325,6 +325,13 @@ jobs:
       - name: Native build
         run: npm run native:build
 
+      # Picture adjustments: the SIMD loop and the plain one both match the reference over every slider position.
+      - name: Native self-check
+        working-directory: packages/vcam-native
+        run: |
+          g++ -O2 -std=c++17 -Wall -Wextra -Werror -Isrc tools/adjust_check.cc -o "$RUNNER_TEMP/adjust_check" && "$RUNNER_TEMP/adjust_check"
+          g++ -O2 -std=c++17 -Wall -Wextra -Werror -DOMNICAM_ADJUST_SCALAR -Isrc tools/adjust_check.cc -o "$RUNNER_TEMP/adjust_scalar" && "$RUNNER_TEMP/adjust_scalar"
+
       # electron-builder's bundled fpm builds the rpm with rpmbuild.
       - name: Packaging tools
         run: sudo apt-get update && sudo apt-get install -y rpm

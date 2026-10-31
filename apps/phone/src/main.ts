@@ -4,6 +4,7 @@ import {
   type DesktopToPhone,
   type MediaSources,
   type PhoneToDesktop,
+  zoomSteps,
 } from '@omnicam/protocol';
 import { CameraController } from './camera';
 import { MIC_CONSTRAINTS, MicController } from './mic';
@@ -29,6 +30,7 @@ const els = {
   flip: $<HTMLButtonElement>('flip'),
   stop: $<HTMLButtonElement>('stop'),
   torch: $<HTMLButtonElement>('torch'),
+  zoom: $<HTMLDivElement>('zoom'),
   screenlight: $<HTMLDivElement>('screenlight'),
   res: $<HTMLSelectElement>('res'),
   mode: $<HTMLSelectElement>('mode'),
@@ -99,6 +101,7 @@ function refreshTrackInfo() {
   els.torch.hidden = !hasLight();
   send({ type: 'trackInfo', info });
   showTorch(torchOn);
+  showZoom();
 }
 
 /**
@@ -117,7 +120,31 @@ function showTorch(on: boolean) {
   torchOn = on;
   els.torch.classList.toggle('on', on);
   els.screenlight.hidden = !(on && screenLight());
-  send({ type: 'capabilities', caps: { ...camera.capabilities(), torch: hasLight(), torchOn: on } });
+  sendCaps();
+}
+
+const sendCaps = () => send({ type: 'capabilities', caps: { ...camera.capabilities(), torch: hasLight(), torchOn } });
+
+/** Zoom buttons for the open camera, with the current level lit; the desktop gets the same state. */
+function showZoom() {
+  const z = camera.capabilities().zoom;
+  const steps = zoomSteps(z);
+  els.zoom.hidden = !sources.camera || steps.length < 2;
+  els.zoom.replaceChildren(
+    ...steps.map((level) => {
+      const b = document.createElement('button');
+      b.textContent = `${+level.toFixed(1)}×`;
+      b.classList.toggle('on', Math.abs(level - (z?.current ?? 1)) < 0.05);
+      b.addEventListener('click', () => void zoomTo(level));
+      return b;
+    }),
+  );
+}
+
+async function zoomTo(level: number) {
+  await camera.setZoom(level);
+  showZoom();
+  sendCaps();
 }
 
 /**
@@ -127,6 +154,7 @@ function showTorch(on: boolean) {
 function showSources() {
   els.flip.hidden = els.res.hidden = !sources.camera;
   els.torch.hidden = !sources.camera || !hasLight();
+  showZoom();
   els.miconly.hidden = sources.camera;
   if (!sources.camera) els.trackinfo.textContent = '';
   els.modeLive.value = els.mode.value = modeOf(sources);
@@ -172,7 +200,17 @@ async function setSource(kind: keyof MediaSources, on: boolean): Promise<boolean
     }
   } catch (err) {
     // Usually a permission the phone never granted (the session started without this source).
-    send({ type: 'error', message: `could not turn the ${kind === 'mic' ? 'microphone' : 'camera'} on (${(err as Error).name})` });
+    // The desktop says so too (its button may have asked), and this page says it here.
+    const reason = (err as Error).name;
+    const what = kind === 'mic' ? 'microphone' : 'camera';
+    send({ type: 'error', message: `could not turn the ${what} on (${reason})`, source: kind, reason });
+    showHint(
+      reason === 'NotAllowedError'
+        ? `Couldn't turn on the ${what}. Allow it for this page in the browser's site settings, then reload this page.`
+        : reason === 'NotReadableError' || reason === 'AbortError'
+          ? `Couldn't turn on the ${what}: another app is using it. Close that app, then try again.`
+          : `Couldn't turn on the ${what} (${reason}). Try again.`,
+    );
     return false;
   }
   sources[kind] = on;
@@ -181,6 +219,17 @@ async function setSource(kind: keyof MediaSources, on: boolean): Promise<boolean
 }
 
 const HINT = els.hint.textContent ?? '';
+let hintTimer: ReturnType<typeof setTimeout> | undefined;
+
+function showHint(text: string) {
+  els.hint.textContent = text;
+  els.hint.classList.add('warn');
+  clearTimeout(hintTimer);
+  hintTimer = setTimeout(() => {
+    els.hint.textContent = HINT;
+    els.hint.classList.remove('warn');
+  }, 10000);
+}
 
 /**
  * The phone's own picker, during a session. What the mode needs goes on before what it doesn't goes off,
@@ -189,12 +238,9 @@ const HINT = els.hint.textContent ?? '';
 async function setMode(mode: Mode) {
   const wantMic = mode !== 'camera';
   const wantCamera = mode !== 'mic';
-  const missing =
-    (wantMic && !(await setSource('mic', true)) && 'microphone') || (wantCamera && !(await setSource('camera', true)) && 'camera');
-  if (missing) {
-    els.hint.textContent = `Couldn't turn on the ${missing}. Allow it for this page in the browser's site settings, then try again.`;
-    setTimeout(() => (els.hint.textContent = HINT), 6000);
-  } else {
+  // A source that can't be turned on explains itself (setSource shows the hint).
+  const missing = (wantMic && !(await setSource('mic', true))) || (wantCamera && !(await setSource('camera', true)));
+  if (!missing) {
     if (!wantMic) await setSource('mic', false);
     if (!wantCamera) await setSource('camera', false);
   }
@@ -234,6 +280,9 @@ async function handleControl(msg: DesktopToPhone) {
     }
     case 'setTorch':
       if (sources.camera) await setLight(msg.on);
+      break;
+    case 'setZoom':
+      if (sources.camera) await zoomTo(msg.level);
       break;
     case 'setMirror':
       // Mirroring is applied on the desktop side; nothing to do on the phone.

@@ -158,6 +158,14 @@ export class CameraController {
     return true;
   }
 
+  /** On an iPhone's back camera, iOS picks the lens for the level (0.5 is the ultra-wide). */
+  async setZoom(level: number): Promise<void> {
+    const z = this.capabilities().zoom;
+    if (!z) return;
+    const zoom = Math.min(z.max, Math.max(z.min, level));
+    await this.track!.applyConstraints({ advanced: [{ zoom } as MediaTrackConstraintSet] }).catch(() => {});
+  }
+
   /** Recover after iOS/Android killed the track while the page was hidden. */
   async recoverIfEnded(): Promise<MediaStreamTrack | null> {
     if (this.track && this.track.readyState === 'live') return null;
@@ -166,11 +174,13 @@ export class CameraController {
 
   capabilities(): PhoneCapabilities {
     const track = this.track;
-    const caps = (track?.getCapabilities?.() ?? {}) as MediaTrackCapabilities & { torch?: boolean; zoom?: unknown };
+    const caps = (track?.getCapabilities?.() ?? {}) as MediaTrackCapabilities & { torch?: boolean; zoom?: MediaSettingsRange };
     const facingModes = (caps.facingMode ?? []) as Facing[];
+    const z = caps.zoom;
+    const current = (track?.getSettings() as MediaTrackSettings & { zoom?: number } | undefined)?.zoom;
     return {
       torch: Boolean(caps.torch),
-      zoom: caps.zoom !== undefined,
+      zoom: z?.max ? { min: z.min ?? 1, max: z.max, step: z.step ?? 0.1, current: current ?? 1 } : undefined,
       facingModes: facingModes.length ? facingModes : ['user', 'environment'],
     };
   }

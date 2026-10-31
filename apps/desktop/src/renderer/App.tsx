@@ -62,6 +62,9 @@ export function App() {
   const prevCheckedAt = useRef<number | null | undefined>(undefined);
   const prevPortFallback = useRef<string | null>(null);
 
+  // The phone couldn't do what a button here asked: say why and what to do, long enough to read.
+  useEffect(() => window.omnicam.onPhoneError((text) => push(text, 'bad', 10000)), [push]);
+
   // Toasts on meaningful transitions only.
   useEffect(() => {
     const s = state?.stats.state;
@@ -165,6 +168,7 @@ export function App() {
             onControl={(m) => void control(m)}
             onShowQr={() => setQrOpen(true)}
             onOpenMicGuide={() => setMicGuideOpen(true)}
+            onOpenSettings={() => setSettingsOpen(true)}
           />
         ) : (
           <PairView pairing={pairing} vcam={vcam} vcamError={vcamError} platform={state.platform} distro={state.distro} onOpenSettings={() => setSettingsOpen(true)} />
@@ -183,7 +187,9 @@ export function App() {
           distro={state.distro}
           trayAvailable={state.trayAvailable}
           virtualMic={state.virtualMic}
+          stats={stats}
           onSettings={(p) => void setSettings(p)}
+          onControl={(m) => void control(m)}
           onOpenUpdate={() => {
             setSettingsOpen(false);
             setUpdateOpen(true);
