@@ -11,7 +11,7 @@ export const VCAM_ERROR_CODES = ['not-registered', 'busy', 'no-module', 'not-loa
 export type VcamErrorCode = (typeof VCAM_ERROR_CODES)[number];
 
 /** Problems the camera setup itself reports (its exit codes), beside the addon's codes. */
-type SetupProblem = 'secure-boot' | 'config-conflict' | 'setup-failed';
+type SetupProblem = 'secure-boot' | 'config-conflict' | 'setup-failed' | 'enroll-key' | 'kernel-update' | 'driver-failed';
 
 export interface VcamError {
   /** Null for a reason without a known code (an engine crash, a pipeline check): shown as it is. */
@@ -23,10 +23,17 @@ export interface VcamError {
 export interface VcamHelp {
   title: string;
   line: string;
-  /** Terminal commands, in order; each gets a copy button. */
+  /** What happens, in order: before OmniCam installs something, and for the restart after it. */
+  steps?: string[];
+  /** Terminal commands, in order; each gets a copy button. With `action: 'driver'`, the do-it-yourself way. */
   commands: string[];
-  /** OmniCam can do it itself: the "Set up camera" button (one password prompt). */
-  action?: 'setup';
+  /** Secure Boot's one-time password, shown large. */
+  password?: string;
+  /**
+   * OmniCam can do it itself, behind one password prompt: "Set up camera" ('setup'), or "Install
+   * camera driver" ('driver', Fedora and Debian/Ubuntu), which installs v4l2loopback and then sets up.
+   */
+  action?: 'setup' | 'driver';
 }
 
 // The engine puts this before the addon's reason when start() throws.
@@ -41,7 +48,8 @@ export function parseVcamError(message: string): VcamError {
 
 /**
  * The setup script's exit code (build/linux/omnicam-camera-setup.sh: 10 no module, 13 busy, 14 Secure
- * Boot, 15 another v4l2loopback config) as the problem to explain; null when there is nothing to say.
+ * Boot, 15 another v4l2loopback config, 16 Secure Boot key queued, 17 update the kernel first, 18 the
+ * driver install failed) as the problem to explain; null when there is nothing to say.
  */
 export function setupProblem(result: CameraSetupResult): VcamErrorCode | SetupProblem | null {
   if (result.status !== 'failed') return null;
@@ -54,6 +62,12 @@ export function setupProblem(result: CameraSetupResult): VcamErrorCode | SetupPr
       return 'secure-boot';
     case 15:
       return 'config-conflict';
+    case 16:
+      return 'enroll-key';
+    case 17:
+      return 'kernel-update';
+    case 18:
+      return 'driver-failed';
     default:
       return 'setup-failed';
   }
@@ -68,6 +82,31 @@ function installModule(distro: Distro): string[] {
   }
   if (distro === 'debian') return ['sudo apt install v4l2loopback-dkms'];
   if (distro === 'arch') return ['sudo pacman -S v4l2loopback-dkms linux-headers'];
+  return [];
+}
+
+/** What "Install camera driver" does, told before the click; null where OmniCam can't install it. */
+function driverSteps(distro: Distro): string[] | null {
+  const end = [
+    'Sets up the OmniCam camera, so it is there after every restart too.',
+    'If Secure Boot is on, gives you a one-time password to approve the driver at the next restart.',
+  ];
+  if (distro === 'fedora') {
+    return [
+      "Turns on RPM Fusion free, the community repository for open-source software Fedora doesn't ship itself (skipped if it is on already). Your system updates then include its packages.",
+      'Installs akmod-v4l2loopback from it and builds the driver for your kernel. This takes a few minutes.',
+      ...end,
+    ];
+  }
+  if (distro === 'debian') {
+    return ["Installs v4l2loopback-dkms and your kernel's headers from your distribution, and builds the driver. This takes a few minutes.", ...end];
+  }
+  return null;
+}
+
+function updateKernel(distro: Distro): string[] {
+  if (distro === 'fedora') return ['sudo dnf upgrade --refresh', 'systemctl reboot'];
+  if (distro === 'debian') return ['sudo apt update && sudo apt full-upgrade', 'systemctl reboot'];
   return [];
 }
 
@@ -95,6 +134,16 @@ export function describe(problem: VcamErrorCode | SetupProblem | null, platform:
       };
     case 'no-module': {
       const commands = installModule(distro);
+      const steps = driverSteps(distro);
+      if (steps) {
+        return {
+          title: 'Install the camera driver',
+          line: "OmniCam's camera needs v4l2loopback, a small open-source kernel driver that adds a camera other apps can pick. OmniCam can install it for you, after one password prompt. It:",
+          steps,
+          commands,
+          action: 'driver',
+        };
+      }
       return {
         title: 'Install the camera driver',
         line:
@@ -149,6 +198,33 @@ export function describe(problem: VcamErrorCode | SetupProblem | null, platform:
         line: `${detail ? `${detail} ` : ''}Remove or rename that file, then click Set up camera again.`,
         commands: [],
         action: 'setup',
+      };
+    case 'enroll-key':
+      return {
+        title: 'Restart to approve the driver',
+        line: "The driver is installed, but Secure Boot only loads drivers it trusts. OmniCam has asked it to trust this one; you confirm that once, while the computer restarts. You'll need this password then:",
+        password: detail,
+        steps: [
+          'Write the password down, or take a photo of it with your phone.',
+          'Restart the computer. A blue screen, Perform MOK management, waits 10 seconds: press a key.',
+          'Choose Enroll MOK, then Continue, then Yes. Type the password (nothing shows as you type), then choose Reboot.',
+          "OmniCam's camera works from then on.",
+        ],
+        commands: [],
+      };
+    case 'kernel-update':
+      return {
+        title: 'Update and restart first',
+        line: 'Installing the driver would also bring in a newer kernel, which is only safe as part of a full update. Update your system, restart, then click Install camera driver again.',
+        commands: updateKernel(distro),
+        action: 'driver',
+      };
+    case 'driver-failed':
+      return {
+        title: "The driver didn't install",
+        line: `${detail ? `${detail} ` : ''}Try again, or install it yourself in a terminal.`,
+        commands: installModule(distro),
+        action: driverSteps(distro) ? 'driver' : 'setup',
       };
     case 'setup-failed':
       return { title: "Camera setup didn't finish", line: detail || 'The log folder (Settings → About) has details.', commands: [], action: 'setup' };

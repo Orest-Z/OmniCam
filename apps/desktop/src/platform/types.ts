@@ -25,8 +25,11 @@ export interface Platform {
   distro: Distro;
   /** A microphone OmniCam creates itself, or null where the user installs one (Windows: VB-CABLE). */
   virtualMic: VirtualMic | null;
-  /** The one-time camera setup OmniCam can run itself (Linux: v4l2loopback), or null (Windows: the installer). */
-  setupCamera: (() => Promise<CameraSetupResult>) | null;
+  /**
+   * The one-time camera setup OmniCam can run itself (Linux: v4l2loopback), or null (Windows: the
+   * installer). `driver`: install the driver package first.
+   */
+  setupCamera: ((driver: boolean) => Promise<CameraSetupResult>) | null;
   /** Whether in-app updates can replace this install: not in dev, not an rpm/deb (their updates come from Releases). */
   updates(): 'supported' | 'dev' | 'package';
 }
