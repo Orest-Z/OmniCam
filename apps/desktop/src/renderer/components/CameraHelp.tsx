@@ -41,7 +41,8 @@ export function CameraHelp({ vcamError, platform, distro }: Props) {
   };
 
   return (
-    <div className="notice bad camhelp" role="alert">
+    // The Secure Boot password is the last step, not an error: the calmer colour.
+    <div className={`notice ${help.password ? 'warn' : 'bad'} camhelp`} role="alert">
       <AlertTriangle />
       <div>
         <b>{help.title}</b>

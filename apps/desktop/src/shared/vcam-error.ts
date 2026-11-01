@@ -206,7 +206,7 @@ export function describe(problem: VcamErrorCode | SetupProblem | null, platform:
         password: detail,
         steps: [
           'Write the password down, or take a photo of it with your phone.',
-          'Restart the computer. A blue screen, Perform MOK management, waits 10 seconds: press a key.',
+          'Save your work, then restart the computer. A blue screen, Perform MOK management, waits 10 seconds: press a key.',
           'Choose Enroll MOK, then Continue, then Yes. Type the password (nothing shows as you type), then choose Reboot.',
           "OmniCam's camera works from then on.",
         ],
