@@ -139,9 +139,9 @@ function wireIpc(): void {
   ipcMain.handle(UI_UPDATE_DOWNLOAD, () => downloadUpdate());
   ipcMain.handle(UI_UPDATE_INSTALL, () => installUpdate());
 
-  ipcMain.handle(UI_CAMERA_SETUP, async (): Promise<CameraSetupResult> => {
+  ipcMain.handle(UI_CAMERA_SETUP, async (_e, driver: unknown): Promise<CameraSetupResult> => {
     if (!platform.setupCamera) return { status: 'failed', message: 'Nothing to set up on this system.' };
-    const result = await platform.setupCamera();
+    const result = await platform.setupCamera(driver === true);
     // The device exists now: start the camera without restarting OmniCam.
     if (result.status === 'ok') engine.applySettings(settings.get());
     return result;

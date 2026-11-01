@@ -322,8 +322,11 @@ export interface UiApi {
   downloadUpdate(): Promise<void>;
   /** Quits, runs the downloaded installer and starts the new version. */
   installUpdate(): Promise<void>;
-  /** Linux: sets up the camera device once (a password prompt), then starts the camera. */
-  setupCamera(): Promise<CameraSetupResult>;
+  /**
+   * Linux: sets up the camera device once (a password prompt), then starts the camera. `driver`:
+   * installs the v4l2loopback driver from the distribution's packages first.
+   */
+  setupCamera(driver?: boolean): Promise<CameraSetupResult>;
   /** Tries to start the camera again, e.g. after closing the app that held it. */
   retryCamera(): Promise<void>;
   onState(cb: (patch: StatePatch) => void): () => void;

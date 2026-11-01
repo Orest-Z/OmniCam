@@ -42,7 +42,7 @@ const api: UiApi = {
   checkForUpdates: () => ipcRenderer.invoke(UI_UPDATE_CHECK),
   downloadUpdate: () => ipcRenderer.invoke(UI_UPDATE_DOWNLOAD),
   installUpdate: () => ipcRenderer.invoke(UI_UPDATE_INSTALL),
-  setupCamera: () => ipcRenderer.invoke(UI_CAMERA_SETUP),
+  setupCamera: (driver?: boolean) => ipcRenderer.invoke(UI_CAMERA_SETUP, driver === true),
   retryCamera: () => ipcRenderer.invoke(UI_CAMERA_RETRY),
   onState: (cb) => subscribe<StatePatch>(UI_STATE, cb),
   onPreviewFrame: (cb) => subscribe<PreviewFrame>(UI_PREVIEW_FRAME, cb),

@@ -433,6 +433,11 @@ svg { display: block; }
 .camhelp p { margin: 0; }
 .camhelp .cmd { align-self: stretch; margin: 2px 0; }
 .camhelp .btn { margin-top: 6px; }
+.camhelp ul, .camhelp ol { margin: 2px 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
+.camhelp details { align-self: stretch; }
+.camhelp summary, .camhelp .muted { color: var(--text-2); }
+.camhelp summary { cursor: pointer; }
+.camhelp .mokpass { font: 600 22px/1.2 var(--mono); letter-spacing: 0.12em; color: var(--text); user-select: all; }
 
 /* --- toasts ------------------------------------------------------------ */
 .toasts { position: fixed; right: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 60; }

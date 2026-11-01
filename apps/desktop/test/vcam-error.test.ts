@@ -40,6 +40,9 @@ group('setupProblem', () => {
     assert.equal(setupProblem({ status: 'failed', exitCode: 13 }), 'busy');
     assert.equal(setupProblem({ status: 'failed', exitCode: 14 }), 'secure-boot');
     assert.equal(setupProblem({ status: 'failed', exitCode: 15 }), 'config-conflict');
+    assert.equal(setupProblem({ status: 'failed', exitCode: 16 }), 'enroll-key');
+    assert.equal(setupProblem({ status: 'failed', exitCode: 17 }), 'kernel-update');
+    assert.equal(setupProblem({ status: 'failed', exitCode: 18 }), 'driver-failed');
     assert.equal(setupProblem({ status: 'failed' }), 'setup-failed');
   });
 
@@ -51,7 +54,7 @@ group('setupProblem', () => {
 
 group('describe', () => {
   test('every code on every distro has a title and a line', () => {
-    for (const code of [...VCAM_ERROR_CODES, 'secure-boot', 'config-conflict', 'setup-failed'] as const) {
+    for (const code of [...VCAM_ERROR_CODES, 'secure-boot', 'config-conflict', 'setup-failed', 'enroll-key', 'kernel-update', 'driver-failed'] as const) {
       for (const distro of DISTROS) {
         const help = describe(code, 'linux', distro, 'detail');
         assert.ok(help.title, `${code}/${distro} title`);
@@ -61,12 +64,20 @@ group('describe', () => {
     }
   });
 
-  test('no-module: the package for each distro, then Set up', () => {
+  test('no-module: the package for each distro; OmniCam installs it on Fedora and Debian, saying what it does', () => {
     const fedora = describe('no-module', 'linux', 'fedora');
     assert.deepEqual(fedora.commands.at(-1), 'sudo dnf install akmod-v4l2loopback');
     assert.match(fedora.commands[0], /rpmfusion-free-release/);
-    assert.equal(fedora.action, 'setup');
-    assert.deepEqual(describe('no-module', 'linux', 'debian').commands, ['sudo apt install v4l2loopback-dkms']);
+    assert.equal(fedora.action, 'driver');
+    assert.match(fedora.steps!.join(' '), /RPM Fusion free.*akmod-v4l2loopback.*Secure Boot/);
+    const debian = describe('no-module', 'linux', 'debian');
+    assert.deepEqual(debian.commands, ['sudo apt install v4l2loopback-dkms']);
+    assert.equal(debian.action, 'driver');
+    assert.doesNotMatch(debian.steps!.join(' '), /RPM Fusion/);
+    for (const distro of ['arch', 'other'] as const) {
+      assert.equal(describe('no-module', 'linux', distro).action, 'setup');
+      assert.equal(describe('no-module', 'linux', distro).steps, undefined);
+    }
     assert.deepEqual(describe('no-module', 'linux', 'arch').commands, ['sudo pacman -S v4l2loopback-dkms linux-headers']);
     assert.deepEqual(describe('no-module', 'linux', 'other').commands, []);
     assert.match(describe('no-module', 'linux', 'other').line, /package manager/);
@@ -91,6 +102,25 @@ group('describe', () => {
     assert.deepEqual(describe('secure-boot', 'linux', 'debian').commands, ['sudo update-secureboot-policy --enroll-key', 'systemctl reboot']);
     assert.equal(describe('secure-boot', 'linux', 'arch').commands.length, 2);
     assert.match(describe('secure-boot', 'linux', 'fedora').line, /Enroll MOK/);
+  });
+
+  test('a queued Secure Boot key: the password and the restart steps, no button', () => {
+    const help = describe('enroll-key', 'linux', 'fedora', '40213377');
+    assert.equal(help.password, '40213377');
+    assert.match(help.steps!.join(' '), /Enroll MOK/);
+    assert.equal(help.action, undefined);
+  });
+
+  test('kernel-update: update and restart, then install again', () => {
+    assert.deepEqual(describe('kernel-update', 'linux', 'fedora').commands, ['sudo dnf upgrade --refresh', 'systemctl reboot']);
+    assert.equal(describe('kernel-update', 'linux', 'debian').action, 'driver');
+  });
+
+  test('driver-failed: the reason, the manual commands, and the button again', () => {
+    const help = describe('driver-failed', 'linux', 'fedora', 'RPM Fusion could not be turned on.');
+    assert.match(help.line, /^RPM Fusion could not be turned on\. Try again/);
+    assert.match(help.commands[0], /rpmfusion-free-release/);
+    assert.equal(help.action, 'driver');
   });
 
   test('permission: the video group', () => {

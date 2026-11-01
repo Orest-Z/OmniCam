@@ -165,7 +165,17 @@ Tried it on one that says "not tested yet"? An issue saying it works (or doesn't
    The rpm and deb put OmniCam in your app list; their new versions come from the same Releases page
    (Settings → About links there).
 
-2. Install **v4l2loopback**, the kernel module that provides the camera device:
+2. Install **v4l2loopback**, the kernel module that provides the camera device. On **Fedora, Debian and Ubuntu**
+   OmniCam can do it: open it and click **Install camera driver** (one password prompt, a few minutes). Before you
+   click, it lists what it will do:
+
+   - Fedora: turns on [RPM Fusion](https://rpmfusion.org/) free (a community repository for open-source software
+     Fedora doesn't ship; your updates then include its packages), installs `akmod-v4l2loopback` and builds it.
+   - Debian, Ubuntu: installs `v4l2loopback-dkms` and your kernel's headers from your distribution, and builds it.
+   - Then it sets up the camera (step 3). If installing the driver would also pull in a new kernel, it stops and
+     asks you to update and restart first.
+
+   Or install it yourself:
 
    | Distribution | Command |
    |---|---|
@@ -185,8 +195,12 @@ Tried it on one that says "not tested yet"? An issue saying it works (or doesn't
 <details>
 <summary><strong>Secure Boot on?</strong> Enroll the module's signing key once — free, no BIOS change.</summary>
 
-With Secure Boot the kernel only loads modules signed with a key it trusts. OmniCam says so and shows these commands.
-On Fedora:
+With Secure Boot the kernel only loads modules signed with a key it trusts. When **Install camera driver** or **Set up
+camera** meets this, OmniCam queues the key itself and shows a one-time password (digits only): restart, then on
+the blue *MOK management* screen choose **Enroll MOK → Continue → Yes →** the password **→ Reboot**. The camera
+works from then on.
+
+To do it by hand instead, on Fedora:
 
 ```
 sudo kmodgenca -a

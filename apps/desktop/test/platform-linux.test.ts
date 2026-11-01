@@ -1,4 +1,5 @@
 import { strict as assert } from 'node:assert';
+import { execFileSync } from 'node:child_process';
 import { describe, test } from 'node:test';
 import { distroFrom } from '../src/platform/os-release.ts';
 import { isRelevantEvent, LEVEL_ARGS, ownModules, pactlInstallCommand, parseDefaults, replacementSink, SINK_ARGS, SOURCE_ARGS } from '../src/platform/pactl.ts';
@@ -150,5 +151,33 @@ describe('onlyRootCanChange', () => {
     assert.equal(onlyRootCanChange({ uid: 0, mode: 0o100664 }), false);
     assert.equal(onlyRootCanChange({ uid: 0, mode: 0o100646 }), false);
     assert.equal(onlyRootCanChange({ uid: 0, mode: 0o41777 }), false);
+  });
+});
+
+// The script runs only on Linux, through Linux's bash: the Linux CI job covers it.
+describe('the setup script\'s kernel guard', { skip: process.platform !== 'linux' }, () => {
+  // plans_kernel from the script itself, run on dry-run output.
+  const script = new URL('../build/linux/omnicam-camera-setup.sh', import.meta.url).pathname;
+  const plansKernel = (plan: string) => {
+    try {
+      execFileSync('bash', ['-c', `eval "$(sed -n '/^plans_kernel()/,/^}/p' "$0")"; plans_kernel "$1"`, script, plan]);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  test('dnf5: a new kernel-core in the plan stops it, kernel-devel alone does not', () => {
+    const devel = 'Installing:\n akmod-v4l2loopback x86_64 0:0.15.4-1.fc44 rpmfusion-free 50 KiB\nInstalling dependencies:\n kernel-devel        x86_64 0:7.2.10-200.fc44 updates 80 MiB\n kernel-devel-matched x86_64 0:7.2.10-200.fc44 updates 0 B\n';
+    assert.equal(plansKernel(devel), false);
+    assert.equal(plansKernel(`${devel} kernel-core          x86_64 0:7.3.1-200.fc44 updates 70 MiB\n`), true);
+    assert.equal(plansKernel(' kernel-modules-core x86_64 0:7.3.1-200.fc44 updates 40 MiB\n'), true);
+    assert.equal(plansKernel('   replacing kernel-devel-matched x86_64 0:7.2.10-200.fc44 updates 0 B\n'), false);
+  });
+
+  test('apt-get -s: a linux-image or linux-modules line stops it', () => {
+    assert.equal(plansKernel('Inst dkms (3.0.11-1ubuntu13 Ubuntu:24.04/noble)\nInst v4l2loopback-dkms (0.12.7-2ubuntu5 Ubuntu:24.04/noble)\n'), false);
+    assert.equal(plansKernel('Inst linux-image-6.8.0-51-generic (6.8.0-51.52 Ubuntu:24.04/noble-updates)\n'), true);
+    assert.equal(plansKernel('Inst linux-modules-6.8.0-51-generic (6.8.0-51.52 Ubuntu:24.04/noble-updates)\n'), true);
   });
 });
