@@ -154,7 +154,8 @@ describe('onlyRootCanChange', () => {
   });
 });
 
-describe('the setup script\'s kernel guard', () => {
+// The script runs only on Linux, through Linux's bash: the Linux CI job covers it.
+describe('the setup script\'s kernel guard', { skip: process.platform !== 'linux' }, () => {
   // plans_kernel from the script itself, run on dry-run output.
   const script = new URL('../build/linux/omnicam-camera-setup.sh', import.meta.url).pathname;
   const plansKernel = (plan: string) => {
