@@ -8,7 +8,8 @@ type PhoneError = Extract<PhoneToDesktop, { type: 'error' }>;
  */
 export function phoneErrorText(err: PhoneError, platform?: string): string {
   const phone = platform === 'iPhone' || platform === 'iPad' ? `The ${platform}` : platform === 'Android' ? 'The Android phone' : 'The phone';
-  if (!err.source) return `${phone} reported a problem: ${err.message}`;
+  // The phone's own text: cut, so a long one can't fill the window.
+  if (!err.source) return `${phone} reported a problem: ${String(err.message).slice(0, 200)}`;
   const what = err.source === 'mic' ? 'microphone' : 'camera';
   switch (err.reason) {
     case 'NotAllowedError':

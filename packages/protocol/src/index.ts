@@ -141,6 +141,7 @@ export interface ZoomRange {
  * (the ultra-wide lens, 0.5 on an iPhone), then 1×, 2× and 3×, as far as the camera reaches.
  */
 export function zoomSteps(z?: ZoomRange): number[] {
-  if (!z) return [];
+  // The range comes from the other side of the connection: anything but numbers means no buttons.
+  if (!z || !Number.isFinite(z.min) || !Number.isFinite(z.max)) return [];
   return [...(z.min < 1 ? [z.min] : []), 1, 2, 3].filter((s) => s >= z.min && s <= z.max);
 }

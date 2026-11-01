@@ -407,14 +407,15 @@ function onPhoneMessage(msg: PhoneToDesktop) {
   switch (msg.type) {
     case 'hello':
       stats.device = msg.device;
-      log('phone cameras:', JSON.stringify(msg.cameras.map((c) => c.label || c.deviceId)));
+      log('phone cameras:', JSON.stringify(msg.cameras));
       break;
     case 'trackInfo':
       stats.trackInfo = msg.info;
       break;
     case 'capabilities':
       stats.caps = msg.caps;
-      log(`camera "${stats.trackInfo?.label ?? '?'}" zoom:`, msg.caps.zoom ? JSON.stringify(msg.caps.zoom) : 'not adjustable');
+      // JSON: the label is the phone's text, and a newline in it would forge a log line.
+      log(`camera ${JSON.stringify(stats.trackInfo?.label ?? '?')} zoom:`, msg.caps.zoom ? JSON.stringify(msg.caps.zoom) : 'not adjustable');
       break;
     case 'sources': {
       const cameraWasOn = cameraOn();

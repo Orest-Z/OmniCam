@@ -13,7 +13,8 @@ export function useToasts(ttlMs = 3500) {
   const push = useCallback(
     (text: string, kind: Toast['kind'] = '', ms = ttlMs) => {
       const id = nextId++;
-      setToasts((t) => [...t, { id, text, kind }]);
+      // At most five on screen: a phone repeating an error can't stack them up the window.
+      setToasts((t) => [...t.slice(-4), { id, text, kind }]);
       setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), ms);
     },
     [ttlMs],

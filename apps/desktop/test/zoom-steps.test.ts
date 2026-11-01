@@ -10,4 +10,7 @@ test('zoom buttons follow what the camera can do', () => {
   assert.deepEqual(zoomSteps(range(1, 10)), [1, 2, 3]); // front camera: zoom in only
   assert.deepEqual(zoomSteps(range(1, 2.5)), [1, 2]);
   assert.deepEqual(zoomSteps(undefined), []);
+  // From the phone, unchecked: no buttons rather than a crash.
+  assert.deepEqual(zoomSteps({ min: '0.5', max: 10 } as never), []);
+  assert.deepEqual(zoomSteps(range(NaN, 10)), []);
 });
