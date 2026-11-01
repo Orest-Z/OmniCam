@@ -2,6 +2,7 @@
 
 #include <napi.h>
 
+#include <algorithm>
 #include <cstring>
 #include <memory>
 #include <string>
@@ -111,7 +112,7 @@ Napi::Value SetHoldLastFrame(const Napi::CallbackInfo& info) {
     return info.Env().Undefined();
 }
 
-// setTransform({ mirror, rotation })
+// setTransform({ mirror, rotation, fill, brightness, contrast, saturation, warmth })
 Napi::Value SetTransform(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
     if (info.Length() < 1 || !info[0].IsObject()) {
@@ -123,6 +124,11 @@ Napi::Value SetTransform(const Napi::CallbackInfo& info) {
     t.rotation = o.Has("rotation") ? o.Get("rotation").ToNumber().Int32Value() : 0;
     t.rotation = ((t.rotation % 360) + 360) % 360;
     t.fill = o.Has("fill") && o.Get("fill").ToBoolean().Value();
+    // Each -100..100; missing or out of range is clamped, so a bad value can't overflow the tables.
+    const auto level = [&](const char* key) {
+        return o.Has(key) ? std::clamp(o.Get(key).ToNumber().Int32Value(), -100, 100) : 0;
+    };
+    t.adjust = {level("brightness"), level("contrast"), level("saturation"), level("warmth")};
     if (t.rotation % 90 != 0) throw Napi::RangeError::New(env, "rotation must be a multiple of 90");
     pipeline().setTransform(t);
     return env.Undefined();

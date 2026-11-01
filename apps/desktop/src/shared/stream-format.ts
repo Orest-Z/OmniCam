@@ -20,3 +20,19 @@ export function activePreset(info: Pick<TrackInfo, 'width' | 'height' | 'frameRa
   // Same threshold as the output rate, so the button and what apps get never disagree.
   return outputFpsFor(info?.frameRate ?? 0) === 60 ? '720p60' : '720p';
 }
+
+/** "720p", "1080p" or "4K" for a frame, by its short side (so a phone held upright reads the same). */
+export function sizeLabel(width: number, height: number): string {
+  const short = Math.min(width, height);
+  return short >= 2160 ? '4K' : `${short}p`;
+}
+
+/**
+ * Apps get a bigger picture than the phone sends: scaled up, so more CPU and no more detail. Not when
+ * the phone runs at 60 fps: then 720p is all a phone browser films, and scaling it up is the deal.
+ */
+export function isUpscaled(phone: Pick<TrackInfo, 'width' | 'height' | 'frameRate'> | undefined, output: { width: number; height: number }): boolean {
+  const sent = Math.min(phone?.width ?? 0, phone?.height ?? 0);
+  if (!sent || outputFpsFor(phone?.frameRate ?? 0) === 60) return false;
+  return Math.min(output.width, output.height) > sent * 1.1;
+}

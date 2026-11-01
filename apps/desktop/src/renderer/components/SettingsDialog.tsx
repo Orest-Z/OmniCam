@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { AlertTriangle, AppWindow, CheckCircle2, ChevronRight, Info, Mic, Video, Wifi, type LucideIcon } from 'lucide-react';
-import type { AppSettings, Distro, PairingInfo, UpdateState, VirtualCamStats, VirtualMicState } from '../../shared/ipc';
+import type { DesktopToPhone } from '@omnicam/protocol';
+import type { AppSettings, Distro, PairingInfo, StreamStats, UpdateState, VirtualCamStats, VirtualMicState } from '../../shared/ipc';
 import { micNameFor, OMNICAM_MIC, pickSink } from '../../shared/audio-sink';
 import { firewallSteps } from '../../shared/firewall';
 import { useLoopbacks } from '../useLoopbacks';
@@ -20,7 +21,9 @@ interface Props {
   trayAvailable: boolean;
   /** Linux: OmniCam's own microphone; null on Windows (VB-CABLE). */
   virtualMic: VirtualMicState | null;
+  stats: StreamStats;
   onSettings: (patch: Partial<AppSettings>) => void;
+  onControl: (msg: DesktopToPhone) => void;
   onOpenUpdate: () => void;
   onOpenMicGuide: () => void;
   onOpenWhatsNew: () => void;
@@ -52,7 +55,7 @@ const SECTIONS: { id: SectionId; label: string; icon: LucideIcon }[] = [
  * Settings as five sections in a sidebar. Each opens with a status line, and a section that needs
  * attention carries a dot. Long explanations sit in ⓘ tooltips.
  */
-export function SettingsDialog({ settings, pairing, vcam, vcamError, update, version, platform, distro, trayAvailable, virtualMic, onSettings, onOpenUpdate, onOpenMicGuide, onOpenWhatsNew, onClose }: Props) {
+export function SettingsDialog({ settings, pairing, vcam, vcamError, update, version, platform, distro, trayAvailable, virtualMic, stats, onSettings, onControl, onOpenUpdate, onOpenMicGuide, onOpenWhatsNew, onClose }: Props) {
   const fallback = portFallback(pairing);
   const loopbacks = useLoopbacks();
   const sink = loopbacks && pickSink(loopbacks.outputs, settings.micOutput);
@@ -68,7 +71,7 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, update, ver
   const [picked, setSection] = useState<SectionId | null>(null);
   const section = picked ?? SECTIONS.find((s) => attention[s.id] === 'bad' || attention[s.id] === 'warn')?.id ?? 'camera';
   const pane = {
-    camera: <CameraPane settings={settings} vcam={vcam} vcamError={vcamError} platform={platform} distro={distro} onSettings={onSettings} />,
+    camera: <CameraPane settings={settings} vcam={vcam} vcamError={vcamError} platform={platform} distro={distro} stats={stats} onSettings={onSettings} onControl={onControl} />,
     mic: virtualMic ? (
       <LinuxMicPane virtualMic={virtualMic} onOpenMicGuide={onOpenMicGuide} />
     ) : (
@@ -99,7 +102,10 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, update, ver
   );
 }
 
-function CameraPane({ settings, vcam, vcamError, platform, distro, onSettings }: Pick<Props, 'settings' | 'vcam' | 'vcamError' | 'platform' | 'distro' | 'onSettings'>) {
+function CameraPane({ settings, vcam, vcamError, platform, distro, stats, onSettings, onControl }: Pick<Props, 'settings' | 'vcam' | 'vcamError' | 'platform' | 'distro' | 'stats' | 'onSettings' | 'onControl'>) {
+  const live = stats.state === 'connected' || stats.state === 'stalled';
+  const size = { '720p': '720p', '1080p': '1080p', '4k': '4K' }[settings.outputPreset];
+  const sixty = settings.outputFps === 60;
   return (
     <>
       <h3>Camera</h3>
@@ -124,8 +130,8 @@ function CameraPane({ settings, vcam, vcamError, platform, distro, onSettings }:
 
       <Field
         title="Output resolution"
-        sub="What Discord, Zoom and Teams receive."
-        info="Apps get exactly this frame rate, so it follows the phone's camera (60 for 720p60). Changing it restarts the camera. 4K is for OBS or recording: calls send at most 1080p, and 4K costs much more CPU."
+        sub={sixty && settings.outputPreset !== '720p' ? `Phones film 60 fps only at 720p; OmniCam scales it to ${size}.` : 'What Discord, Zoom and Teams receive.'}
+        info="The frame rate follows the phone: 60 switches the phone to 720p60, the only 60 fps mode phone browsers have, and 30 switches it back to 1080p. Changing the resolution restarts the camera, so apps that are using it may need reopening. 4K is for OBS or recording: calls send at most 1080p, and 4K costs much more CPU."
       >
         <Segmented
           value={settings.outputPreset}
@@ -136,15 +142,30 @@ function CameraPane({ settings, vcam, vcamError, platform, distro, onSettings }:
           ]}
           onChange={(v) => onSettings({ outputPreset: v })}
         />
+        {/* Apps get exactly the phone's rate (main follows it), so this switches the phone, not just a number. */}
         <Segmented
           value={settings.outputFps}
+          disabled={!live}
           options={[
-            { value: 30, label: '30' },
-            { value: 60, label: '60' },
+            { value: 30, label: '30', title: live ? 'The phone films at 1080p, 30 fps' : 'Follows the phone: connect it to switch' },
+            { value: 60, label: '60', title: live ? 'The phone films at 720p, 60 fps' : 'Follows the phone: connect it to switch' },
           ]}
-          onChange={(v) => onSettings({ outputFps: v })}
+          onChange={(fps) => {
+            if (fps === settings.outputFps) return; // already there: don't move a 4K phone back to 1080p
+            onSettings({ outputFps: fps });
+            onControl({ type: 'setResolution', preset: fps === 60 ? '720p60' : '1080p' });
+          }}
         />
       </Field>
+      {sixty && settings.outputPreset === '4k' && (
+        <div className="notice warn">
+          <AlertTriangle />
+          <span>
+            4K at 60 fps is the phone's 720p scaled up 9×, at about twice the CPU of 4K at 30. Only OBS and recordings use it: calls
+            send at most 1080p.
+          </span>
+        </div>
+      )}
       <Field title="When the phone pauses" sub="Locked screen, switched app, lost Wi-Fi.">
         <Segmented
           value={settings.holdLastFrame ? 'hold' : 'placeholder'}

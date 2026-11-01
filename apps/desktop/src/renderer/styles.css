@@ -205,7 +205,19 @@ svg { display: block; }
 
 /* --- live view --------------------------------------------------------- */
 .live { height: 100%; display: grid; grid-template-rows: 1fr auto; padding: 20px 24px 18px; gap: 14px; max-width: 1280px; margin: 0 auto; }
-.stage { min-height: 0; display: grid; place-items: center; }
+.stage { min-height: 0; display: grid; place-items: center; position: relative; }
+
+/* Picture adjustments: floats over the preview's corner so the picture stays in view while adjusting. */
+.picture { position: absolute; right: 12px; bottom: 12px; width: 260px; z-index: 5; display: flex; flex-direction: column; gap: 10px;
+  padding: 10px 14px 14px; border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--border-strong); box-shadow: var(--shadow); }
+.picture header { display: flex; align-items: center; gap: 8px; }
+.picture header b { flex: 1; font-size: 13px; font-weight: 600; }
+.picture header button.link { font: inherit; font-size: 12.5px; color: var(--accent-soft); background: none; border: 0; padding: 4px 6px; cursor: pointer; }
+.picture header button.link:disabled { color: var(--text-3); cursor: default; }
+.picture label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--text-2); }
+.picture label span { display: flex; justify-content: space-between; }
+.picture output { font-family: var(--mono); color: var(--text); }
+.picture input[type='range'] { width: 100%; accent-color: var(--accent); }
 /* Sized from the viewport only (never from the parent's height): a percentage max-height on an
    aspect-ratio box inside a min-height:0 grid made Chromium relayout every frame. */
 .preview {
@@ -250,6 +262,10 @@ svg { display: block; }
 .inuse i { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); }
 .inuse.on { color: var(--accent-soft); }
 .inuse.on i { background: var(--live); }
+.inuse .muted { color: var(--text-3); }
+.upscaled { font: inherit; font-size: 11.5px; font-weight: 500; padding: 3px 8px; border-radius: 999px; cursor: pointer;
+  color: var(--warn); background: rgba(233, 179, 90, 0.1); border: 1px solid rgba(233, 179, 90, 0.3); }
+.upscaled:hover { background: rgba(233, 179, 90, 0.18); }
 
 /* --- microphone guide -------------------------------------------------- */
 .dialog.guide .lead { margin: 0 0 16px; font-size: 13px; color: var(--text-2); line-height: 1.55; }
@@ -421,11 +437,11 @@ svg { display: block; }
 /* --- toasts ------------------------------------------------------------ */
 .toasts { position: fixed; right: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 60; }
 .toast {
-  display: flex; align-items: center; gap: 9px; padding: 10px 14px; border-radius: var(--r-md);
+  display: flex; align-items: flex-start; gap: 9px; padding: 10px 14px; border-radius: var(--r-md);
   background: var(--surface-2); border: 1px solid var(--border-strong); box-shadow: var(--shadow); font-size: 13px;
-  animation: rise 0.18s ease-out;
+  max-width: 420px; line-height: 1.45; animation: rise 0.18s ease-out;
 }
-.toast i { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); }
+.toast i { flex: none; margin-top: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); }
 .toast.ok i { background: var(--live); box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.2); }
 .toast.warn i { background: var(--warn); }
 .toast.bad i { background: var(--danger); }

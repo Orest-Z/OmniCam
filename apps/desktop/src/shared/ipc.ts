@@ -44,6 +44,8 @@ export const UI_DISCONNECT = 'ui:disconnect';
 export const UI_STATE = 'ui:state';
 export const UI_PREVIEW_FRAME = 'ui:preview-frame';
 export const UI_VCAM_ERROR = 'ui:vcam-error';
+/** A problem the phone reported, as a sentence for the window. */
+export const UI_PHONE_ERROR = 'ui:phone-error';
 export const UI_UPDATE_CHECK = 'ui:update-check';
 export const UI_UPDATE_DOWNLOAD = 'ui:update-download';
 export const UI_UPDATE_INSTALL = 'ui:update-install';
@@ -112,6 +114,16 @@ export interface NetworkAddress {
   wifi: boolean;
 }
 
+/** Picture adjustments made on this PC, after the phone: each -100..100, 0 leaves the picture as it is. */
+export interface Picture {
+  brightness: number;
+  contrast: number;
+  saturation: number;
+  warmth: number;
+}
+
+export const NEUTRAL_PICTURE: Picture = { brightness: 0, contrast: 0, saturation: 0, warmth: 0 };
+
 export interface AppSettings {
   port: number;
   /** Preferred LAN IP for the QR; empty = auto. */
@@ -123,6 +135,7 @@ export interface AppSettings {
   rotation: 0 | 90 | 180 | 270;
   /** fit = letterbox/pillarbox (never crops); fill = crop to fill the output like a webcam. */
   scaleMode: 'fit' | 'fill';
+  picture: Picture;
   /** When the phone stalls, hold the last frame instead of showing the placeholder. */
   holdLastFrame: boolean;
   /** Loopback output (its label) the phone's microphone is played into; empty = the first one found. */
@@ -162,6 +175,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   mirror: false,
   rotation: 0,
   scaleMode: 'fill',
+  picture: NEUTRAL_PICTURE,
   holdLastFrame: true,
   micOutput: '',
   notesSeen: '',
@@ -188,6 +202,7 @@ export interface EngineSettings {
   mirror: boolean;
   rotation: 0 | 90 | 180 | 270;
   scaleMode: 'fit' | 'fill';
+  picture: Picture;
   holdLastFrame: boolean;
   micOutput: string;
   /** Absolute path to the native addon (.node), or empty to run without a virtual camera. */
@@ -313,4 +328,5 @@ export interface UiApi {
   retryCamera(): Promise<void>;
   onState(cb: (patch: StatePatch) => void): () => void;
   onPreviewFrame(cb: (frame: PreviewFrame) => void): () => void;
+  onPhoneError(cb: (text: string) => void): () => void;
 }

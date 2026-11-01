@@ -76,6 +76,8 @@ export type DesktopToPhone =
   | { type: 'switchCamera'; facing?: Facing }
   | { type: 'setResolution'; preset: keyof typeof RESOLUTION_PRESETS }
   | { type: 'setTorch'; on: boolean }
+  /** Zoom level as the phone's camera app counts it: 1 is the main lens, 0.5 the ultra-wide where there is one. */
+  | { type: 'setZoom'; level: number }
   | { type: 'setMirror'; on: boolean }
   /** Turn the phone's microphone or camera on or off. The phone keeps at least one of them on. */
   | { type: 'setMic'; on: boolean }
@@ -93,7 +95,8 @@ export type PhoneToDesktop =
   | { type: 'capabilities'; caps: PhoneCapabilities }
   /** What the phone sends right now; on connect and after every change. */
   | { type: 'sources'; sources: MediaSources }
-  | { type: 'error'; message: string }
+  /** `source` and `reason` (the browser's error name) are set when switching a source on failed. */
+  | { type: 'error'; message: string; source?: keyof MediaSources; reason?: string }
   | { type: 'pong'; t: number };
 
 /** Camera and microphone are negotiated together and switched on and off without renegotiating. */
@@ -121,6 +124,24 @@ export interface PhoneCapabilities {
   torch: boolean;
   /** Torch is lit right now (the desktop button toggles from this). */
   torchOn?: boolean;
-  zoom: boolean;
+  /** The open camera's zoom range and level, when the browser lets a page change it. */
+  zoom?: ZoomRange;
   facingModes: Facing[];
+}
+
+export interface ZoomRange {
+  min: number;
+  max: number;
+  step: number;
+  current: number;
+}
+
+/**
+ * Zoom buttons, as in a phone's camera app: the widest the camera goes when that is below 1
+ * (the ultra-wide lens, 0.5 on an iPhone), then 1×, 2× and 3×, as far as the camera reaches.
+ */
+export function zoomSteps(z?: ZoomRange): number[] {
+  // The range comes from the other side of the connection: anything but numbers means no buttons.
+  if (!z || !Number.isFinite(z.min) || !Number.isFinite(z.max)) return [];
+  return [...(z.min < 1 ? [z.min] : []), 1, 2, 3].filter((s) => s >= z.min && s <= z.max);
 }

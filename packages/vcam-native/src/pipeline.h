@@ -10,6 +10,7 @@
 #include <thread>
 #include <vector>
 
+#include "adjust.h"
 #include "backend/ivcam.h"
 
 namespace omnicam {
@@ -36,6 +37,7 @@ struct Transform {
     bool mirror = false;
     int rotation = 0; // 0, 90, 180, 270 (clockwise)
     bool fill = false; // crop to fill the output (webcam-like) instead of letterboxing
+    Adjust adjust;     // brightness, contrast, saturation, warmth
 };
 
 struct PipelineStats {

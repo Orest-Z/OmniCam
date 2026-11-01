@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { describe, test } from 'node:test';
-import { activePreset, outputFpsFor } from '../src/shared/stream-format.ts';
+import { activePreset, isUpscaled, outputFpsFor, sizeLabel } from '../src/shared/stream-format.ts';
 
 describe('outputFpsFor', () => {
   test('a phone really running at 60 gets a 60 fps camera', () => {
@@ -47,5 +47,32 @@ describe('activePreset', () => {
 
   test('nothing known yet reads as 720p', () => {
     assert.equal(activePreset(undefined), '720p');
+  });
+});
+
+describe('sizeLabel', () => {
+  test('names a frame by its short side, upright or not', () => {
+    assert.equal(sizeLabel(1920, 1080), '1080p');
+    assert.equal(sizeLabel(1080, 1920), '1080p');
+    assert.equal(sizeLabel(1280, 720), '720p');
+    assert.equal(sizeLabel(3840, 2160), '4K');
+  });
+});
+
+describe('isUpscaled', () => {
+  const out4k = { width: 3840, height: 2160 };
+  test('a 1080p phone into a 4K camera is scaled up', () => {
+    assert.equal(isUpscaled({ width: 1920, height: 1080, frameRate: 30 }, out4k), true);
+    assert.equal(isUpscaled({ width: 1080, height: 1920, frameRate: 30 }, out4k), true);
+  });
+  test('the same size or smaller is not', () => {
+    assert.equal(isUpscaled({ width: 1920, height: 1080, frameRate: 30 }, { width: 1920, height: 1080 }), false);
+    assert.equal(isUpscaled({ width: 3840, height: 2160, frameRate: 30 }, { width: 1280, height: 720 }), false);
+  });
+  test('720p60 into 1080p is the 60 fps deal, not a mistake', () => {
+    assert.equal(isUpscaled({ width: 1280, height: 720, frameRate: 60 }, { width: 1920, height: 1080 }), false);
+  });
+  test('no phone picture yet: nothing to say', () => {
+    assert.equal(isUpscaled(undefined, out4k), false);
   });
 });

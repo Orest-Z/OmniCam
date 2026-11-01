@@ -1,4 +1,4 @@
-import type { VirtualCamStats } from '../shared/ipc';
+import type { Picture, VirtualCamStats } from '../shared/ipc';
 
 /** Pixel formats the addon accepts, mirroring WebCodecs `VideoPixelFormat` names. */
 export type FrameFormat = 'I420' | 'I420A' | 'NV12' | 'RGBA' | 'BGRA' | 'RGBX' | 'BGRX';
@@ -18,7 +18,8 @@ export interface PushFrameInfo {
   fullRange: boolean;
 }
 
-export interface Transform {
+/** Picture adjustments (brightness, contrast…) are applied by the addon, after rotation and scaling. */
+export interface Transform extends Picture {
   mirror: boolean;
   rotation: 0 | 90 | 180 | 270;
   /** Crop to fill the output instead of letterboxing. */
