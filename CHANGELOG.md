@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.2.0 — 2026-11-01
+
+Zoom and lens switching from the phone, picture adjustments on the PC, and clearer answers when
+something on the phone doesn't work.
+
+### New
+- **Zoom buttons** (0.5×, 1×, 2×, 3×), in the window and on the phone, as far as the phone's camera goes.
+  On an iPhone's back camera 0.5× switches to the ultra-wide lens.
+- **Picture:** brightness, contrast, saturation and warmth, adjusted on this PC, so they work the same
+  with every phone. Click the sliders button in the bar; they are saved with your settings.
+- **The bar shows what apps get** (for example 1080p 30 fps), and says *Scaled up* when apps get a bigger
+  picture than the phone sends.
+
+### Changed
+- **60 fps** in Settings now switches the phone to 720p at 60 fps, the only 60 fps mode phone browsers
+  have, and 30 switches it back to 1080p. Before, choosing 60 did nothing unless the phone already filmed at 60.
+
+### Fixed
+- **When the phone can't turn its camera or microphone on**, the window and the phone both say why (no
+  permission, or another app is using it) and what to do, instead of nothing happening.
+
 ## 2.1.0 — 2026-10-16
 
 OmniCam now runs on Linux too, with the same phone page, the same camera quality and a microphone that needs nothing
