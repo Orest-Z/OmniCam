@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.3.0 — 2026-11-01
+
+On Linux, OmniCam can now install its camera driver itself.
+
+### New
+- **Install camera driver** (Fedora, Debian, Ubuntu). When v4l2loopback is missing, OmniCam lists what it
+  will do, then does it after one password prompt: on Fedora it turns on RPM Fusion free and installs
+  akmod-v4l2loopback, on Debian and Ubuntu it installs v4l2loopback-dkms, and it sets up the camera. If the
+  install would also bring in a new kernel, it stops and asks you to update and restart first. On Arch and
+  other distributions OmniCam shows the commands, as before.
+- **Secure Boot, made simpler:** when Secure Boot blocks the driver, OmniCam asks it to trust the driver's
+  key and shows a one-time password with the steps for the next restart, instead of commands to type.
+
 ## 2.2.0 — 2026-11-01
 
 Zoom and lens switching from the phone, picture adjustments on the PC, and clearer answers when
