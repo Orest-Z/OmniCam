@@ -246,6 +246,7 @@ install_driver() {
     fi
     plan=$(dnf install --assumeno akmod-v4l2loopback 2>&1 || true)
     if plans_kernel "$plan"; then
+      echo "$plan" # for the log: which kernel it would have brought in
       fail 17 "$KERNEL_UPDATE"
     fi
     dnf install -y akmod-v4l2loopback ||
@@ -272,6 +273,7 @@ install_driver() {
       esac
     fi
     if plans_kernel "$plan"; then
+      echo "$plan" # for the log: which kernel it would have brought in
       fail 17 "$KERNEL_UPDATE"
     fi
     "${apt[@]}" install -y v4l2loopback-dkms "linux-headers-$kernel" ||
