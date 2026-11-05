@@ -67,8 +67,9 @@ vulnerabilities on their own, but reports that show a *practical* attack buildin
   same reason, in-app updates are checked against the sha512 published with the GitHub release, not
   against a code signature.
 
-Video travels phone → PC directly over WebRTC, which encrypts media (DTLS-SRTP). Nothing is sent
-to any server outside your network.
+Video travels phone → PC directly over WebRTC, which encrypts media (DTLS-SRTP). When WebRTC can't
+connect, it goes over a WebSocket on the same HTTPS port instead, encrypted by TLS with the same
+certificate, and needs the same token. Nothing is sent to any server outside your network.
 
 ## Third-party components
 

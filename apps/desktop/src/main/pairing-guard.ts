@@ -46,6 +46,17 @@ function isFile(path: string): boolean {
 }
 
 /**
+ * Whether WebRTC has a way to reach the phone: the address its request came from is one it offers (or it
+ * hides its addresses behind .local names, so there is no telling). An iPhone's own hotspot offers only the
+ * mobile data address, and the checks then fail after 15 s; the phone can skip that and use the media link.
+ */
+export function offerIncludesAddress(sdp: string, remoteAddress: string): boolean {
+  const ip = remoteAddress.replace(/^::ffff:/, '');
+  const offered = [...sdp.matchAll(/^a=candidate:\S+ \d+ \S+ \d+ (\S+) /gm)].map((m) => m[1]);
+  return offered.includes(ip) || offered.some((address) => address.endsWith('.local'));
+}
+
+/**
  * Sliding-window budget of `burst` attempts per `windowMs` per client. Clients whose attempts have all
  * aged out are dropped once more than `maxClients` are tracked, so the map cannot grow without bound;
  * evicting by age (not insertion order) means cycling through addresses cannot clear anyone else's budget.

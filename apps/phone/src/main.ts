@@ -8,6 +8,7 @@ import {
 } from '@omnicam/protocol';
 import { CameraController } from './camera';
 import { MIC_CONSTRAINTS, MicController } from './mic';
+import { PhoneLink } from './link';
 import { installFonts } from './fonts';
 
 installFonts();
@@ -69,6 +70,13 @@ let pc: RTCPeerConnection | null = null;
 let control: RTCDataChannel | null = null;
 let sender: RTCRtpSender | null = null;
 let micSender: RTCRtpSender | null = null;
+let link: PhoneLink | null = null;
+/** `link=1` always uses the media link, for testing it on an ordinary network. */
+const LINK_FORCED = new URLSearchParams(location.search).get('link') === '1';
+/** WebRTC can't reach the desktop from here, so this session goes over the media link. */
+let useLink = LINK_FORCED;
+/** Why, for the desktop's log. */
+let linkReason = 'forced with link=1';
 let wantConnected = false;
 let reconnectAttempt = 0;
 let reconnectTimer: number | undefined;
@@ -192,11 +200,13 @@ async function setSource(kind: keyof MediaSources, on: boolean): Promise<boolean
       camera.stopTracks();
       els.preview.srcObject = null;
       void sender?.replaceTrack(null);
+      link?.setVideo(false);
     } else if (on) {
       await mic.start();
     } else {
       mic.stop();
       void micSender?.replaceTrack(null);
+      link?.setAudio(null);
     }
   } catch (err) {
     // Usually a permission the phone never granted (the session started without this source).
@@ -260,7 +270,29 @@ function enqueue(task: () => Promise<unknown>) {
 // Control channel
 // ---------------------------------------------------------------------------
 function send(msg: PhoneToDesktop) {
-  if (control?.readyState === 'open') control.send(JSON.stringify(msg));
+  if (link) link.send(msg);
+  else if (control?.readyState === 'open') control.send(JSON.stringify(msg));
+}
+
+/** A control channel just opened, whichever kind. */
+async function greetDesktop() {
+  send({ type: 'hello', device, cameras: await camera.listCameras() });
+  showSources();
+  refreshTrackInfo();
+}
+
+// One command at a time, in order (see enqueue): "microphone on, then camera off" must not race the
+// microphone opening, or the phone refuses to turn off what looks like its last source. What only
+// measures or restarts the stream skips the queue.
+function onControlMessage(text: string) {
+  let msg: DesktopToPhone;
+  try {
+    msg = JSON.parse(text) as DesktopToPhone;
+  } catch {
+    return; // ignore malformed
+  }
+  if (msg.type === 'ping' || msg.type === 'frameAck' || msg.type === 'requestKeyFrame') void handleControl(msg);
+  else enqueue(() => handleControl(msg));
 }
 
 async function handleControl(msg: DesktopToPhone) {
@@ -296,6 +328,7 @@ async function handleControl(msg: DesktopToPhone) {
     case 'setIdle':
       idleMode = msg.idle;
       if (sender) void tuneSender(sender);
+      link?.setIdle(idleMode);
       break;
     case 'disconnect':
       stopSession(DISCONNECTED_MSG);
@@ -304,6 +337,12 @@ async function handleControl(msg: DesktopToPhone) {
       break;
     case 'ping':
       send({ type: 'pong', t: msg.t });
+      break;
+    case 'requestKeyFrame':
+      link?.requestKeyFrame();
+      break;
+    case 'frameAck':
+      link?.onFrameAck(msg.t);
       break;
   }
 }
@@ -371,6 +410,10 @@ async function tuneSender(s: RTCRtpSender) {
  * constraints they accepted, and a phone asked for 60 fps may still deliver 30.
  */
 async function showMeasuredRate() {
+  if (link?.isOpen && link.width && sources.camera) {
+    els.trackinfo.textContent = idleMode ? `${link.width}×${link.height} · standby` : `${link.width}×${link.height} · ${link.fps} fps`;
+    return;
+  }
   if (!sender || !wantConnected || !sources.camera) return;
   const stats = await sender.getStats().catch(() => null);
   stats?.forEach((r) => {
@@ -395,6 +438,10 @@ async function connect() {
   teardownPeer();
   if (!camera.track && !mic.track) throw new Error('nothing to send');
   setStatus(reconnectAttempt ? 'reconnecting' : 'connecting');
+  if (useLink) {
+    connectLink();
+    return;
+  }
 
   const peer = new RTCPeerConnection({ iceServers: [], bundlePolicy: 'max-bundle' });
   pc = peer;
@@ -409,28 +456,15 @@ async function connect() {
 
   const ch = peer.createDataChannel(CONTROL_CHANNEL_LABEL, { ordered: true });
   control = ch;
-  ch.onopen = async () => {
-    send({ type: 'hello', device, cameras: await camera.listCameras() });
-    showSources();
-    refreshTrackInfo();
-  };
-  // One command at a time, in order (see enqueue): "microphone on, then camera off" must not race the
-  // microphone opening, or the phone refuses to turn off what looks like its last source. Pings skip it.
-  ch.onmessage = (ev) => {
-    let msg: DesktopToPhone;
-    try {
-      msg = JSON.parse(ev.data) as DesktopToPhone;
-    } catch {
-      return; // ignore malformed
-    }
-    if (msg.type === 'ping') void handleControl(msg);
-    else enqueue(() => handleControl(msg));
-  };
+  ch.onopen = () => void greetDesktop();
+  ch.onmessage = (ev) => onControlMessage(ev.data as string);
 
+  let everConnected = false;
   peer.onconnectionstatechange = () => {
     if (pc !== peer) return;
     switch (peer.connectionState) {
       case 'connected':
+        everConnected = true;
         reconnectAttempt = 0;
         setStatus('live');
         void tuneSender(sender!);
@@ -441,6 +475,11 @@ async function connect() {
         break;
       case 'failed':
       case 'closed':
+        // It never connected: this network doesn't let WebRTC through, though it let this request through.
+        if (!everConnected && peer.connectionState === 'failed') {
+          linkReason = 'WebRTC could not connect';
+          useLink = true;
+        }
         scheduleReconnect();
         break;
     }
@@ -451,12 +490,59 @@ async function connect() {
   await waitForIceComplete(peer);
   if (pc !== peer) return; // superseded by a newer attempt
 
-  const answer = await exchangeSdp(token, peer.localDescription!.sdp, device);
+  let answer;
+  try {
+    answer = await exchangeSdp(token, peer.localDescription!.sdp, device);
+  } catch (err) {
+    if (!(err instanceof SignalingError) || err.code !== 'use-link') throw err;
+    linkReason = 'the offer has no address WebRTC could use';
+    useLink = true;
+    return connect();
+  }
   if (pc !== peer) return;
   await peer.setRemoteDescription({ type: 'answer', sdp: answer.sdp });
 }
 
+function connectLink() {
+  const current: PhoneLink = new PhoneLink({
+    token,
+    video: els.preview,
+    bitrateFor: (width, height) => bitrateFor(width, height, camera.trackInfo()?.frameRate ?? 30),
+    frameRate: () => Math.round(camera.trackInfo()?.frameRate || camera.wantedFrameRate),
+    onOpen() {
+      if (link !== current) return;
+      reconnectAttempt = 0;
+      setStatus('live');
+      current.send({ type: 'linkLog', message: `${linkReason}: ${device.userAgent}` });
+      current.setIdle(idleMode);
+      current.setVideo(sources.camera && Boolean(camera.track));
+      current.setAudio(sources.mic ? mic.track : null);
+      void greetDesktop();
+    },
+    onMessage: onControlMessage,
+    onClose(wasOpen) {
+      if (link !== current) return;
+      link = null;
+      // Never got through: go back through /api/session, which tells an expired QR code from a blocked socket.
+      if (!wasOpen && !LINK_FORCED) useLink = false;
+      setStatus('reconnecting', 'Connection lost…');
+      scheduleReconnect();
+    },
+    onProblem(kind) {
+      showHint(
+        kind === 'mic-needs-tap'
+          ? 'Tap the screen once to turn the microphone on.'
+          : 'This browser can\'t send video on this network. Update iOS, or put the phone and computer on another Wi-Fi.',
+      );
+      send({ type: 'error', message: `media link: ${kind}`, source: kind === 'mic-needs-tap' ? 'mic' : 'camera', reason: kind });
+    },
+  });
+  link = current;
+}
+
 function teardownPeer() {
+  link?.close();
+  link = null;
   control?.close();
   control = null;
   sender = null;
@@ -531,6 +617,7 @@ async function startSession() {
   }
   wantConnected = true;
   reconnectAttempt = 0;
+  useLink = LINK_FORCED;
   showHud();
   showSources();
   await requestWakeLock();
@@ -571,6 +658,7 @@ camera.onTrackChanged = (track) => {
   els.preview.srcObject = new MediaStream([track]);
   torchOn = false; // a reopened camera starts with the torch off
   if (sender && sender.track !== track) void sender.replaceTrack(track).then(() => sender && tuneSender(sender));
+  if (link?.isOpen) link.setVideo(true);
   refreshTrackInfo();
 };
 
@@ -581,6 +669,7 @@ mic.onTrackChanged = (track) => {
     return;
   }
   if (micSender && micSender.track !== track) void micSender.replaceTrack(track);
+  if (link?.isOpen) link.setAudio(track);
 };
 
 async function recover() {
@@ -588,7 +677,7 @@ async function recover() {
   // Only what is switched on: a camera that is off must stay off.
   if (sources.camera) await camera.recoverIfEnded().catch((err) => console.warn('camera recovery failed', err));
   if (sources.mic) await mic.start().catch((err) => console.warn('microphone recovery failed', err));
-  if (pc && pc.connectionState !== 'connected') scheduleReconnect();
+  if ((pc && pc.connectionState !== 'connected') || (useLink && !link)) scheduleReconnect();
 }
 
 document.addEventListener('visibilitychange', () => {

@@ -1,5 +1,11 @@
 import type { TrackInfo } from '@omnicam/protocol';
 
+export const WIFI_HELP = 'Connected the usual way (WebRTC), which is the most efficient.';
+export const HOTSPOT_HELP =
+  "On this network the phone can't send video the usual way (WebRTC), which usually means the phone is the hotspot. " +
+  "OmniCam sends it over the page's own connection instead. That uses more CPU on this computer and more battery on the " +
+  'phone, and can add a little delay. Connecting both to regular Wi-Fi avoids this.';
+
 /**
  * The virtual camera's output rate for what the phone's camera really runs at. Apps get exactly
  * the output rate, so 60 only when the phone does deliver it (a phone asked for 60 that manages 30

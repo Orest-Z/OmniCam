@@ -4,6 +4,7 @@ import type { DesktopToPhone } from '@omnicam/protocol';
 import type { AppSettings, Distro, PairingInfo, StreamStats, UpdateState, VirtualCamStats, VirtualMicState } from '../../shared/ipc';
 import { micNameFor, OMNICAM_MIC, pickSink } from '../../shared/audio-sink';
 import { firewallSteps } from '../../shared/firewall';
+import { HOTSPOT_HELP } from '../../shared/stream-format';
 import { useLoopbacks } from '../useLoopbacks';
 import { CameraHelp } from './CameraHelp';
 import { Command, Dialog, Segmented, Switch } from './ui';
@@ -126,6 +127,15 @@ function CameraPane({ settings, vcam, vcamError, platform, distro, stats, onSett
           {vcam.running ? `"OmniCam" camera active · ${vcam.width}×${vcam.height} · ${vcam.fps} fps` : '"OmniCam" camera starting…'}
           {vcam.consumers > 0 ? ` · in use by ${vcam.consumers} app${vcam.consumers > 1 ? 's' : ''}` : ''}
         </Status>
+      )}
+
+      {stats.transport === 'link' && (
+        <div className="notice warn">
+          <AlertTriangle />
+          <span>
+            <b>Hotspot mode.</b> {HOTSPOT_HELP}
+          </span>
+        </div>
       )}
 
       <Field

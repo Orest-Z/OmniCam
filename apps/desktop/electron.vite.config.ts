@@ -13,7 +13,11 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()],
     build: {
       license: { fileName: 'licenses.md' },
-      rollupOptions: { input: resolve(__dirname, 'src/main/index.ts') },
+      rollupOptions: {
+        input: resolve(__dirname, 'src/main/index.ts'),
+        // ws loads these optional native speed-ups in a try/catch; bundling them would make that a crash.
+        external: ['bufferutil', 'utf-8-validate'],
+      },
     },
   },
   preload: {
