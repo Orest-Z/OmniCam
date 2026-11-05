@@ -1,7 +1,7 @@
 {
   "name": "@omnicam/desktop",
   "productName": "OmniCam",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "private": true,
   "description": "OmniCam desktop — turns your phone into a virtual webcam",
   "main": "./out/main/index.js",
@@ -26,6 +26,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/ws": "^8.18.2",
     "@vitejs/plugin-react": "^5.2.0",
     "electron": "44.10.0",
     "electron-builder": "^26.18.0",
@@ -39,7 +40,8 @@
     "selfsigned": "^5.5.0",
     "sharp": "^0.35.5",
     "typescript": "^7.0.2",
-    "vite": "^7.3.7"
+    "vite": "^7.3.7",
+    "ws": "^8.22.1"
   },
   "homepage": "https://github.com/Orest-Z/OmniCam"
 }

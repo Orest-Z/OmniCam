@@ -13,6 +13,8 @@ import {
   ENGINE_APPLY_SETTINGS,
   ENGINE_CONTROL,
   ENGINE_DISCONNECT,
+  ENGINE_LINK,
+  ENGINE_LINK_SEND,
   ENGINE_LOG,
   ENGINE_OFFER,
   ENGINE_PHONE_MESSAGE,
@@ -66,8 +68,8 @@ export function nativePaths(): { addonPath: string; nativeDir: string } {
 export function toEngineSettings(s: AppSettings): EngineSettings {
   const preset = RESOLUTION_PRESETS[s.outputPreset] ?? RESOLUTION_PRESETS['720p'];
   return {
-    outputWidth: preset.width,
-    outputHeight: preset.height,
+    outputWidth: s.outputShape === 'portrait' ? preset.height : preset.width,
+    outputHeight: s.outputShape === 'portrait' ? preset.width : preset.height,
     outputFps: s.outputFps,
     mirror: s.mirror,
     rotation: s.rotation,
@@ -153,6 +155,10 @@ class EngineBridge extends EventEmitter {
       if (e.sender !== win.webContents) return;
       this.emit('vcam-error', message);
     });
+    ipcMain.on(ENGINE_LINK_SEND, (e, text: string | null) => {
+      if (e.sender !== win.webContents) return;
+      this.emit('link-send', text);
+    });
     ipcMain.on(ENGINE_LOG, (e, level: 'log' | 'warn' | 'error', ...args: unknown[]) => {
       if (e.sender !== win.webContents) return;
       console[level]('[engine]', ...args);
@@ -225,6 +231,11 @@ class EngineBridge extends EventEmitter {
 
   control(msg: DesktopToPhone): void {
     this.send(ENGINE_CONTROL, msg);
+  }
+
+  /** The media link's events for the engine: 'open', 'close', a binary message or a parsed text one. */
+  link(event: 'open' | 'close' | Uint8Array | object): void {
+    this.send(ENGINE_LINK, event);
   }
 
   setPreview(enabled: boolean): void {

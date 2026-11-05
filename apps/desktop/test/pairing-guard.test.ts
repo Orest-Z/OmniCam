@@ -3,7 +3,28 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, describe, test } from 'node:test';
-import { AttemptBudget, resolvePhoneFile, tokenMatches } from '../src/main/pairing-guard.ts';
+import { AttemptBudget, offerIncludesAddress, resolvePhoneFile, tokenMatches } from '../src/main/pairing-guard.ts';
+
+describe('offerIncludesAddress', () => {
+  const offer = (address: string) => `v=0\r\na=candidate:1965513828 1 udp 2113937151 ${address} 56650 typ host generation 0\r\n`;
+
+  test('an ordinary Wi-Fi phone offers the address it connects from', () => {
+    assert.equal(offerIncludesAddress(offer('192.168.1.9'), '192.168.1.9'), true);
+    assert.equal(offerIncludesAddress(offer('192.168.1.9'), '::ffff:192.168.1.9'), true);
+  });
+
+  test('an iPhone on its own hotspot offers only its mobile data address', () => {
+    assert.equal(offerIncludesAddress(offer('10.224.251.4'), '172.20.10.1'), false);
+  });
+
+  test('no candidates at all means no way in', () => {
+    assert.equal(offerIncludesAddress('v=0\r\n', '172.20.10.1'), false);
+  });
+
+  test('hidden addresses get the benefit of the doubt', () => {
+    assert.equal(offerIncludesAddress(offer('a1b2c3d4.local'), '192.168.1.9'), true);
+  });
+});
 
 describe('tokenMatches', () => {
   const token = 'q1W2e3R4t5Y6u7I8o9P0aA'; // same shape as the app's: 16 random bytes, base64url

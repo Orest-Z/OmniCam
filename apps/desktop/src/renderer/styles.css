@@ -224,6 +224,7 @@ svg { display: block; }
   position: relative; width: min(100%, calc((100vh - var(--titlebar) - 120px) * 16 / 9)); aspect-ratio: 16 / 9; border-radius: var(--r-lg);
   overflow: hidden; background: #000; border: 1px solid var(--border); box-shadow: 0 0 0 1px rgba(138, 92, 243, 0.1), 0 24px 60px rgba(0, 0, 0, 0.5);
 }
+.preview.portrait { width: min(100%, calc((100vh - var(--titlebar) - 120px) * 9 / 16)); aspect-ratio: 9 / 16; }
 .preview canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
 .preview .chip {
   position: absolute; top: 12px; left: 12px; display: inline-flex; align-items: center; gap: 7px;

@@ -21,6 +21,7 @@ export const ENGINE_CONTROL = 'engine:control';
 export const ENGINE_PREVIEW = 'engine:preview';
 export const ENGINE_SHUTDOWN = 'engine:shutdown';
 export const ENGINE_DISCONNECT = 'engine:disconnect';
+export const ENGINE_LINK = 'engine:link';
 
 // engine -> main
 export const ENGINE_READY = 'engine:ready';
@@ -31,6 +32,7 @@ export const ENGINE_PREVIEW_FRAME = 'engine:preview-frame';
 export const ENGINE_PHONE_MESSAGE = 'engine:phone-message';
 export const ENGINE_LOG = 'engine:log';
 export const ENGINE_VCAM_ERROR = 'engine:vcam-error';
+export const ENGINE_LINK_SEND = 'engine:link-send';
 
 // ui <-> main (through preload)
 export const UI_GET_STATE = 'ui:get-state';
@@ -71,6 +73,8 @@ export interface StreamStats {
   packetsLost: number;
   jitterMs: number;
   framesDecoded: number;
+  /** How the phone reaches this computer: WebRTC, or the media link when WebRTC can't get through. */
+  transport?: 'webrtc' | 'link';
   device?: DeviceInfo;
   trackInfo?: TrackInfo;
   caps?: PhoneCapabilities;
@@ -130,6 +134,8 @@ export interface AppSettings {
   preferredIp: string;
   /** Fixed output format of the virtual camera. */
   outputPreset: '720p' | '1080p' | '4k';
+  /** Portrait swaps the preset's sides: 1080p becomes 1080×1920, for a phone held upright. */
+  outputShape: 'landscape' | 'portrait';
   outputFps: 30 | 60;
   mirror: boolean;
   rotation: 0 | 90 | 180 | 270;
@@ -171,6 +177,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   port: DEFAULT_PORT,
   preferredIp: '',
   outputPreset: '720p',
+  outputShape: 'landscape',
   outputFps: 30,
   mirror: false,
   rotation: 0,

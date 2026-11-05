@@ -317,6 +317,7 @@ the camera, and it resumes when you come back (the last frame is held meanwhile,
 Five sections in a sidebar. Each starts with how things stand, and a dot marks the one that needs attention.
 
 **Camera**
+- **Output shape** — landscape, or portrait (9:16) for a phone held upright. Video call apps may crop a portrait picture or add bars.
 - **Output resolution** — what Discord, Zoom… receive: 720p, 1080p or 4K at 30 or 60 fps. The frame rate follows the phone (60 for 720p60). 4K is for OBS and recording; Discord, Zoom and Teams send at most 1080p. Consumer apps negotiate a format once, so this is fixed while they run; the phone picture is scaled into it.
 - **When the phone pauses** — hold the last frame or show a placeholder.
 - **Stream details** — the resolution, real fps and bitrate over the preview: always (default) or on hover. The preview itself is a reduced 10 fps snapshot; apps get the full stream.
@@ -421,6 +422,10 @@ PHONE (browser)                                DESKTOP
   per-launch random token; only one phone can be connected at a time.
 - Video is WebRTC, peer-to-peer on your LAN. The desktop's ICE candidate is a real LAN IP so it also works on Wi-Fi
   that blocks mDNS.
+- When WebRTC can't connect, the phone sends video and microphone over the page's own encrypted connection instead,
+  and the bar says **Hotspot mode**. An iPhone that is itself the hotspot always needs this, because Safari offers WebRTC
+  only its mobile data address. It costs more CPU and battery, so regular Wi-Fi is better when you have it. Video this
+  way needs iOS 16.4 or newer.
 - Frames never cross process boundaries as pixels: the native pipeline scales, rotates and converts them and hands
   them to OmniCam's own DirectShow virtual camera filter (built on [softcam](https://github.com/tshino/softcam)), or on
   Linux writes them to the v4l2loopback device in YUYV, straight from the phone's YUV with no RGB step.

@@ -4,6 +4,7 @@ import type { DesktopToPhone } from '@omnicam/protocol';
 import type { AppSettings, Distro, PairingInfo, StreamStats, UpdateState, VirtualCamStats, VirtualMicState } from '../../shared/ipc';
 import { micNameFor, OMNICAM_MIC, pickSink } from '../../shared/audio-sink';
 import { firewallSteps } from '../../shared/firewall';
+import { HOTSPOT_HELP } from '../../shared/stream-format';
 import { useLoopbacks } from '../useLoopbacks';
 import { CameraHelp } from './CameraHelp';
 import { Command, Dialog, Segmented, Switch } from './ui';
@@ -128,6 +129,15 @@ function CameraPane({ settings, vcam, vcamError, platform, distro, stats, onSett
         </Status>
       )}
 
+      {stats.transport === 'link' && (
+        <div className="notice warn">
+          <AlertTriangle />
+          <span>
+            <b>Hotspot mode.</b> {HOTSPOT_HELP}
+          </span>
+        </div>
+      )}
+
       <Field
         title="Output resolution"
         sub={sixty && settings.outputPreset !== '720p' ? `Phones film 60 fps only at 720p; OmniCam scales it to ${size}.` : 'What Discord, Zoom and Teams receive.'}
@@ -166,6 +176,16 @@ function CameraPane({ settings, vcam, vcamError, platform, distro, stats, onSett
           </span>
         </div>
       )}
+      <Field title="Output shape" sub="Portrait is 9:16, for a phone held upright. Video call apps may crop it or add bars.">
+        <Segmented
+          value={settings.outputShape}
+          options={[
+            { value: 'landscape', label: 'Landscape' },
+            { value: 'portrait', label: 'Portrait' },
+          ]}
+          onChange={(v) => onSettings({ outputShape: v })}
+        />
+      </Field>
       <Field title="When the phone pauses" sub="Locked screen, switched app, lost Wi-Fi.">
         <Segmented
           value={settings.holdLastFrame ? 'hold' : 'placeholder'}

@@ -1,6 +1,7 @@
 // A phone without a phone: opens the phone page in Chromium with its fake camera (a moving pattern)
 // and fake microphone (beeps), and starts streaming at once (&auto=1). Dev tool, never packaged.
 // Usage: npx electron apps/desktop/test/e2e/fake-phone.cjs '<phone URL from the dev log>' [camera|both|mic]
+// Add &link=1 to the URL to send over the media link instead of WebRTC.
 const { app, BrowserWindow } = require('electron');
 const { mkdtempSync } = require('node:fs');
 const { tmpdir } = require('node:os');

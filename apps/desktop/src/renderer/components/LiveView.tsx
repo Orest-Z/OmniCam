@@ -3,7 +3,7 @@ import { Flashlight, FlipHorizontal2, Mic, MicOff, QrCode, RotateCw, SlidersHori
 import { zoomSteps, type DesktopToPhone } from '@omnicam/protocol';
 import type { AppSettings, StreamStats, VirtualCamStats, VirtualMicState } from '../../shared/ipc';
 import { micNameFor, pickSink } from '../../shared/audio-sink';
-import { activePreset, isUpscaled, sizeLabel } from '../../shared/stream-format';
+import { activePreset, HOTSPOT_HELP, isUpscaled, sizeLabel, WIFI_HELP } from '../../shared/stream-format';
 import { useLoopbacks } from '../useLoopbacks';
 import { PicturePanel, pictureChanged } from './PicturePanel';
 import { Preview } from './Preview';
@@ -53,7 +53,7 @@ export function LiveView({ stats, vcam, settings, virtualMic, onSettings, onCont
     <div className="live">
       <div className="stage">
         {camera ? (
-          <Preview stats={stats} alwaysShowStats={settings.streamDetails === 'always'}>
+          <Preview stats={stats} alwaysShowStats={settings.streamDetails === 'always'} portrait={settings.outputShape === 'portrait'}>
             {noCable && (
               <button className="overhint" onClick={onOpenMicGuide}>
                 {virtualMic ? "OmniCam Microphone isn't ready: see why" : "The phone's microphone needs a virtual cable: set it up"}
@@ -209,7 +209,13 @@ export function LiveView({ stats, vcam, settings, virtualMic, onSettings, onCont
           </>
         )}
 
+        {stats.transport === 'link' && (
+          <button className="upscaled" title={`${HOTSPOT_HELP} Click for details.`} onClick={onOpenSettings}>
+            Hotspot mode
+          </button>
+        )}
         <span className="muted" style={{ fontSize: 12.5 }}>
+          {stats.transport === 'webrtc' && <span title={WIFI_HELP}>Wi-Fi · </span>}
           {phone}
           {!camera ? ' · microphone only' : stats.trackInfo?.label ? ` · ${facing === 'user' ? 'front' : 'back'} camera` : ''}
         </span>

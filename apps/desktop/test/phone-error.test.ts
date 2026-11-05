@@ -10,6 +10,11 @@ test('a denied permission says where to allow it', () => {
   assert.match(text, /site settings, then reload/);
 });
 
+test('the media link says what to do, not just an error code', () => {
+  assert.match(phoneErrorText(err('camera', 'no-encoder'), 'iPhone'), /regular Wi-Fi/);
+  assert.match(phoneErrorText(err('mic', 'mic-needs-tap'), 'iPhone'), /^The iPhone needs a tap/);
+});
+
 test('a busy camera says to close the other app', () => {
   assert.match(phoneErrorText(err('camera', 'NotReadableError'), 'Android'), /^The Android phone's camera is busy/);
 });

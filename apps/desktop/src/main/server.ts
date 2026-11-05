@@ -14,7 +14,8 @@ import {
 } from '@omnicam/protocol';
 import type { TlsMaterial } from './cert';
 import { session } from './session';
-import { AttemptBudget, resolvePhoneFile } from './pairing-guard';
+import { attachLink, closeLink } from './link';
+import { AttemptBudget, offerIncludesAddress, resolvePhoneFile } from './pairing-guard';
 import { engine } from './engine-bridge';
 
 const MIME: Record<string, string> = {
@@ -134,6 +135,11 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       res.setHeader('retry-after', String(SESSION_RETRY_AFTER_S));
       return json(res, 429, e);
     }
+    if (!offerIncludesAddress(body.sdp, ip)) {
+      console.log(`session: ${JSON.stringify(body.device.platform)} from ${ip} offers no address WebRTC could use, so it goes over the media link`);
+      const e: SessionError = { ok: false, error: 'use-link' };
+      return json(res, 409, e);
+    }
     negotiating = true;
     try {
       console.log(`session: ${body.device.platform} from ${req.socket.remoteAddress}`);
@@ -172,6 +178,7 @@ export class PhoneServer {
       });
     });
     server.keepAliveTimeout = 15_000;
+    attachLink(server);
     this.server = server;
 
     const listen = (port: number) =>
@@ -202,6 +209,7 @@ export class PhoneServer {
       const s = this.server;
       this.server = null;
       if (!s) return resolve();
+      closeLink();
       s.close(() => resolve());
       s.closeAllConnections?.();
     });

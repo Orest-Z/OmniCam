@@ -5,6 +5,8 @@ import {
   ENGINE_APPLY_SETTINGS,
   ENGINE_CONTROL,
   ENGINE_DISCONNECT,
+  ENGINE_LINK,
+  ENGINE_LINK_SEND,
   ENGINE_LOG,
   ENGINE_OFFER,
   ENGINE_PHONE_MESSAGE,
@@ -27,6 +29,7 @@ import { loadVcam, renderPlaceholder, type FrameFormat, type VcamAddon } from '.
 import { installFonts } from '../shared/fonts';
 import { tuneAnswerSdp } from './sdp';
 import { MicOutput } from './mic';
+import { LinkReceiver } from './link';
 
 installFonts();
 
@@ -202,6 +205,37 @@ function snapshotPreview() {
   ipcRenderer.send(ENGINE_PREVIEW_FRAME, { width: p.width, height: p.height, rgba: p.data });
 }
 
+let frameBuffer = new Uint8Array(0);
+
+/** Hands one frame to the virtual camera and the preview. Awaits one at a time: the buffer is shared. */
+async function deliverFrame(frame: VideoFrame) {
+  lastFrameAt = performance.now();
+  // Skip the GPU readback + conversion entirely while nothing needs frames.
+  if (vcam && vcamStarted && (consumersActive || previewEnabled) && frame.format && !DEBUG.has('nocopy')) {
+    const rect = frame.visibleRect ?? undefined;
+    const size = frame.allocationSize({ rect });
+    if (frameBuffer.byteLength < size) frameBuffer = new Uint8Array(size);
+    const t0 = performance.now();
+    const layout = await frame.copyTo(frameBuffer, { rect });
+    copyMs += performance.now() - t0;
+    copyN++;
+    if (!loggedFormat) {
+      loggedFormat = true;
+      log(`frame format ${frame.format} ${frame.codedWidth}x${frame.codedHeight} copyTo ${(performance.now() - t0).toFixed(1)} ms, planes ${layout.length}`);
+    }
+    const cs = frame.colorSpace;
+    vcam.pushFrame(frameBuffer.subarray(0, size), {
+      format: frame.format as FrameFormat,
+      width: rect?.width ?? frame.codedWidth,
+      height: rect?.height ?? frame.codedHeight,
+      layout: layout.map((l: PlaneLayout) => ({ offset: l.offset, stride: l.stride })),
+      matrix: cs?.matrix === 'bt709' ? 'bt709' : 'bt601',
+      fullRange: cs?.fullRange === true,
+    });
+    if (previewEnabled && !DEBUG.has('nopreview')) snapshotPreview();
+  }
+}
+
 async function runPump(t: MediaStreamTrack, abort: AbortSignal) {
   if (typeof MediaStreamTrackProcessor === 'undefined') {
     warn('MediaStreamTrackProcessor unavailable; virtual camera gets no frames');
@@ -210,7 +244,6 @@ async function runPump(t: MediaStreamTrack, abort: AbortSignal) {
   // maxBufferSize 1: if we ever fall behind, drop stale frames instead of queueing latency.
   const processor = new MediaStreamTrackProcessor({ track: t, maxBufferSize: 1 });
   const reader = processor.readable.getReader();
-  let buffer = new Uint8Array(0);
   abort.addEventListener('abort', () => void reader.cancel().catch(() => undefined));
 
   try {
@@ -218,31 +251,7 @@ async function runPump(t: MediaStreamTrack, abort: AbortSignal) {
       const { value: frame, done } = await reader.read();
       if (done || !frame) break;
       try {
-        lastFrameAt = performance.now();
-        // Skip the GPU readback + conversion entirely while nothing needs frames.
-        if (vcam && vcamStarted && (consumersActive || previewEnabled) && frame.format && !DEBUG.has('nocopy')) {
-          const rect = frame.visibleRect ?? undefined;
-          const size = frame.allocationSize({ rect });
-          if (buffer.byteLength < size) buffer = new Uint8Array(size);
-          const t0 = performance.now();
-          const layout = await frame.copyTo(buffer, { rect });
-          copyMs += performance.now() - t0;
-          copyN++;
-          if (!loggedFormat) {
-            loggedFormat = true;
-            log(`frame format ${frame.format} ${frame.codedWidth}x${frame.codedHeight} copyTo ${(performance.now() - t0).toFixed(1)} ms, planes ${layout.length}`);
-          }
-          const cs = frame.colorSpace;
-          vcam.pushFrame(buffer.subarray(0, size), {
-            format: frame.format as FrameFormat,
-            width: rect?.width ?? frame.codedWidth,
-            height: rect?.height ?? frame.codedHeight,
-            layout: layout.map((l: PlaneLayout) => ({ offset: l.offset, stride: l.stride })),
-            matrix: cs?.matrix === 'bt709' ? 'bt709' : 'bt601',
-            fullRange: cs?.fullRange === true,
-          });
-          if (previewEnabled && !DEBUG.has('nopreview')) snapshotPreview();
-        }
+        await deliverFrame(frame);
       } finally {
         frame.close();
       }
@@ -267,6 +276,8 @@ function stopPump() {
 /** `closeAfterMs` lets a last control message reach the phone before the connection goes. */
 function teardownPeer(closeAfterMs = 0) {
   stopPump();
+  link?.close();
+  link = null;
   const channel = control;
   const peer = pc;
   control = null;
@@ -329,8 +340,10 @@ function waitForIceComplete(peer: RTCPeerConnection, timeoutMs = 2500): Promise<
 }
 
 async function handleOffer(offer: EngineOffer): Promise<EngineAnswer> {
+  if (link) ipcRenderer.send(ENGINE_LINK_SEND, null); // a phone on WebRTC replaces the one on the link
   teardownPeer();
   stats.device = offer.device;
+  stats.transport = 'webrtc';
   stats.trackInfo = undefined;
   stats.caps = undefined;
   setState('connecting');
@@ -405,6 +418,16 @@ async function handleOffer(offer: EngineOffer): Promise<EngineAnswer> {
 
 function onPhoneMessage(msg: PhoneToDesktop) {
   switch (msg.type) {
+    case 'videoConfig':
+      link?.configure(msg);
+      return;
+    // JSON: this is the phone's text, and a newline in it would forge a log line.
+    case 'linkStats':
+      if (++linkStatsSeen % LINK_PHONE_STATS_EVERY === 0) log('link phone:', JSON.stringify(msg.stats));
+      return;
+    case 'linkLog':
+      log('link phone:', JSON.stringify(msg.message));
+      return;
     case 'hello':
       stats.device = msg.device;
       log('phone cameras:', JSON.stringify(msg.cameras));
@@ -438,7 +461,8 @@ function onPhoneMessage(msg: PhoneToDesktop) {
 }
 
 function sendControl(msg: DesktopToPhone) {
-  if (control?.readyState === 'open') control.send(JSON.stringify(msg));
+  if (link) ipcRenderer.send(ENGINE_LINK_SEND, JSON.stringify(msg));
+  else if (control?.readyState === 'open') control.send(JSON.stringify(msg));
 }
 
 // Stats (1 Hz) + stall detection -----------------------------------------------------
@@ -447,6 +471,7 @@ let lastStatsAt = 0;
 let loggedDecoder = '';
 
 async function pollStats() {
+  if (link) return pollLink(link);
   if (!pc) {
     if (stats.state !== 'idle' && stats.state !== 'disconnected') setState('idle');
     return;
@@ -509,6 +534,97 @@ async function pollStats() {
 setInterval(() => void pollStats(), 1000);
 setInterval(() => sendControl({ type: 'ping', t: performance.now() }), 5000);
 
+// Media link: video and audio over the page's own connection, when WebRTC can't reach the desktop ---
+const LINK_LOG_EVERY_S = 30;
+const LINK_PHONE_STATS_EVERY = 6; // the phone reports every 5 s; this keeps its line to one every 30 s too
+const LINK_ACK_EVERY_FRAMES = 15;
+let link: LinkReceiver | null = null;
+let linkDelivering = false;
+let linkPolls = 0;
+let linkStatsSeen = 0;
+
+function startLink() {
+  link = null; // the socket it belonged to is already gone
+  teardownPeer();
+  stats.transport = 'link';
+  stats.trackInfo = undefined;
+  stats.caps = undefined;
+  sessionId = crypto.randomUUID();
+  phoneIdle = false;
+  lastDemandAt = lastFrameAt = lastAudioAt = lastStatsAt = performance.now();
+  stats.framesDecoded = linkPolls = 0;
+  stats.packetsLost = stats.jitterMs = 0;
+  let decoded = 0;
+  link = new LinkReceiver({
+    onFrame(frame) {
+      lastFrameAt = performance.now();
+      stats.width = frame.displayWidth;
+      stats.height = frame.displayHeight;
+      if (++decoded % LINK_ACK_EVERY_FRAMES === 0) sendControl({ type: 'frameAck', t: frame.timestamp });
+      // Like the pump's maxBufferSize of 1: if the copy falls behind, skip frames instead of queueing delay.
+      if (linkDelivering) {
+        frame.close();
+        return false;
+      }
+      linkDelivering = true;
+      void deliverFrame(frame)
+        .catch((err: Error) => warn('link: deliver failed', err.message))
+        .finally(() => {
+          frame.close();
+          linkDelivering = false;
+        });
+      return true;
+    },
+    onMicTrack(track) {
+      micTrack = track;
+      micOut.setTrack(stats.sources?.mic ? micTrack : null);
+    },
+    requestKeyFrame: () => sendControl({ type: 'requestKeyFrame' }),
+    log,
+    warn,
+  });
+  log('link: open');
+  setState('connected');
+}
+
+function pollLink(l: LinkReceiver) {
+  const now = performance.now();
+  const c = l.takeCounts();
+  const seconds = Math.max(0.001, (now - lastStatsAt) / 1000);
+  lastStatsAt = now;
+  stats.fps = Math.round(c.decoded / seconds);
+  stats.bitrateKbps = Math.round((c.bytes * 8) / seconds / 1000);
+  stats.framesDecoded += c.decoded;
+  stats.micLevel = c.level;
+  stats.codec = l.codec;
+  if (c.audioChunks) lastAudioAt = now;
+  // Paused on the phone: no frames for a while, or with the camera off, no audio.
+  stats.state = now - (cameraOn() ? lastFrameAt : lastAudioAt) > STALL_AFTER_MS ? 'stalled' : 'connected';
+  publishStats();
+  ipcRenderer.send(ENGINE_VCAM_STATS, vcamStats());
+  if (++linkPolls % LINK_LOG_EVERY_S === 0) {
+    log(
+      `link: ${stats.fps} fps ${stats.bitrateKbps} kbps ${stats.width}x${stats.height} ${l.codec}, decode ${c.decodeMs.toFixed(1)} ms, queue max ${c.queueMax}, ` +
+        `rtt ${stats.rttMs} ms, mic level ${c.level}, ${c.audioChunks} audio chunks/s, totals ${JSON.stringify(l.totals)}`,
+    );
+  }
+}
+
+ipcRenderer.on(ENGINE_LINK, (_e, event: 'open' | 'close' | Uint8Array | PhoneToDesktop) => {
+  if (event === 'open') {
+    startLink();
+  } else if (event === 'close') {
+    if (!link) return;
+    log('link: closed');
+    teardownPeer();
+    setState('disconnected');
+  } else if (event instanceof Uint8Array) {
+    link?.receive(event);
+  } else {
+    onPhoneMessage(event);
+  }
+});
+
 // IPC wiring -------------------------------------------------------------------------
 ipcRenderer.on(ENGINE_APPLY_SETTINGS, (_e, s: EngineSettings) => applySettings(s));
 ipcRenderer.on(ENGINE_OFFER, (_e, offer: EngineOffer) => {
@@ -525,6 +641,7 @@ ipcRenderer.on(ENGINE_CONTROL, (_e, msg: DesktopToPhone) => sendControl(msg));
 ipcRenderer.on(ENGINE_DISCONNECT, () => {
   // Tell the phone first: it stops its camera and explains, instead of timing out into retries.
   sendControl({ type: 'disconnect' });
+  if (link) setTimeout(() => ipcRenderer.send(ENGINE_LINK_SEND, null), 300);
   teardownPeer(300);
   setState('idle');
 });

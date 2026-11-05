@@ -10,6 +10,20 @@
 
 export const API_SESSION_PATH = '/api/session';
 export const API_HEALTH_PATH = '/api/health';
+
+/**
+ * The media link: a WebSocket on the page's own HTTPS connection, for when WebRTC cannot reach the desktop.
+ * On an iPhone's own hotspot Safari offers WebRTC only its mobile data address, while ordinary requests still
+ * get through. Text messages are JSON (the control messages below); binary ones are one header byte (LINK_*),
+ * a big-endian float64, then the payload. The float64 is the capture time in microseconds for video, and the
+ * sample rate for audio, whose payload is 16-bit mono PCM.
+ */
+export const API_LINK_PATH = '/api/link';
+export const LINK_VIDEO_DELTA = 0;
+export const LINK_VIDEO_KEY = 1;
+export const LINK_AUDIO = 2;
+export const LINK_HEADER_BYTES = 9;
+
 export const DEFAULT_PORT = 28441;
 
 export interface SessionRequest {
@@ -30,7 +44,8 @@ export interface SessionResponse {
 
 export interface SessionError {
   ok: false;
-  error: 'bad-token' | 'bad-request' | 'engine-unavailable' | 'timeout' | 'internal' | 'busy';
+  /** 'use-link': the offer has no address WebRTC could use, so the phone should use the media link. */
+  error: 'bad-token' | 'bad-request' | 'engine-unavailable' | 'timeout' | 'internal' | 'busy' | 'use-link';
   message?: string;
   /** For 'busy': how long the phone should wait before trying again. Mirrors the retry-after header. */
   retryAfterSeconds?: number;
@@ -86,7 +101,11 @@ export type DesktopToPhone =
   | { type: 'setIdle'; idle: boolean }
   /** The user pressed Disconnect: the pairing code is replaced, so the phone should stop, not retry. */
   | { type: 'disconnect' }
-  | { type: 'ping'; t: number };
+  | { type: 'ping'; t: number }
+  /** Media link only: the decoder lost its place and needs a new start. */
+  | { type: 'requestKeyFrame' }
+  /** Media link only: this frame (its capture time) was decoded, so the phone can measure the delay. */
+  | { type: 'frameAck'; t: number };
 
 /** Phone -> desktop */
 export type PhoneToDesktop =
@@ -97,7 +116,12 @@ export type PhoneToDesktop =
   | { type: 'sources'; sources: MediaSources }
   /** `source` and `reason` (the browser's error name) are set when switching a source on failed. */
   | { type: 'error'; message: string; source?: keyof MediaSources; reason?: string }
-  | { type: 'pong'; t: number };
+  | { type: 'pong'; t: number }
+  /** Media link only: how to decode the frames that follow. */
+  | { type: 'videoConfig'; codec: string; codedWidth: number; codedHeight: number; description?: number[] }
+  /** Media link only: the phone's own counters and notes, for the desktop's log. */
+  | { type: 'linkStats'; stats: Record<string, unknown> }
+  | { type: 'linkLog'; message: string };
 
 /** Camera and microphone are negotiated together and switched on and off without renegotiating. */
 export interface MediaSources {

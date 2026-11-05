@@ -17,6 +17,10 @@ export function phoneErrorText(err: PhoneError, platform?: string): string {
     case 'NotReadableError':
     case 'AbortError':
       return `${phone}'s ${what} is busy, probably in a call or another app. Close that app, then try again.`;
+    case 'no-encoder':
+      return `${phone}'s browser can't send video on this network. Update it, or connect the phone and this computer to regular Wi-Fi.`;
+    case 'mic-needs-tap':
+      return `${phone} needs a tap on its screen to turn the microphone on.`;
     case 'NotFoundError':
       return `${phone} has no ${what} the browser can use.`;
     default:

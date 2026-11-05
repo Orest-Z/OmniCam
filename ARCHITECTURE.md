@@ -22,9 +22,10 @@ PipeWire microphone on Linux (see **Phone microphone**).
 |---|---|
 | No app install on the phone | Phone side is a plain web page served by the desktop app. |
 | Mobile browsers require HTTPS for `getUserMedia` | Desktop serves a **self-signed cert**; user accepts a one-time warning. UI walks them through it. (Future opt-in: real domain + per-install cert, Plex-style.) |
-| iOS Safari ignores the cert exception for `wss://` | Signaling uses **plain `fetch` POST, non-trickle ICE** (one round trip). No WebSockets. After that, control messages ride a WebRTC **DataChannel**. |
+| iOS Safari was found to ignore the cert exception for `wss://` (no longer true on current iOS, see the media link) | Signaling uses **plain `fetch` POST, non-trickle ICE** (one round trip), with no WebSocket needed. After that, control messages ride a WebRTC **DataChannel**. |
 | Win10 has no Media Foundation virtual camera API | Virtual camera is a **DirectShow filter** (softcam, MIT) built from source with OmniCam's own name/CLSID. Registered with `regsvr32` (x64 + x86 DLLs) by the installer. |
-| Consumer apps negotiate a camera format once | Virtual camera output is a **fixed size/fps** (720p/1080p @30/60); incoming frames are scaled/letterboxed in native code. |
+| Consumer apps negotiate a camera format once | Virtual camera output is a **fixed size/fps** (720p/1080p/4K @30/60, landscape or portrait); incoming frames are scaled/letterboxed in native code. |
+| An iPhone that is itself the hotspot offers WebRTC only its mobile data address, and its checks never arrive | Video and audio fall back to the **media link**, a WebSocket on the page's own HTTPS connection. See below. |
 | Some Wi-Fi blocks mDNS | Electron runs with `--disable-features=WebRtcHideLocalIpsWithMdns` so the desktop's ICE candidate is a real LAN IP. |
 | Camera must survive closing the window | Hidden **engine** window owns WebRTC + native addon; UI window is optional; app lives in the tray. |
 | Windows has no user-mode virtual microphone; audio drivers must be signed by Microsoft | The phone's audio is **played into a virtual audio cable** (VB-CABLE, installed by the user) with `setSinkId`; apps pick the cable's other end. An own signed driver is roadmap. |
@@ -65,6 +66,33 @@ PHONE (browser)                       DESKTOP (Electron)
   reconnect loop restores the stream. Everything `console.*` in main (engine logs are relayed)
   goes to `%APPDATA%\OmniCam\logs\omnicam.log` (Linux: `~/.config/OmniCam/logs/omnicam.log`), 2 MB with one
   rotation.
+
+## Media link (when WebRTC can't connect)
+
+Measured on an iPhone hotspot (issue #48): the offer's only candidate was the mobile data address. The desktop's
+checks reached the phone and were answered, but no reply and no check of the phone's own ever reached the desktop, while
+`fetch` from the same page worked. The page can't change which interface Safari gives WebRTC, so nothing in ICE fixes it.
+
+- **When:** `offerIncludesAddress` (`pairing-guard.ts`) compares the offer's candidates with the address the request came
+  from. No match means `/api/session` answers `use-link` at once, instead of ICE failing after 15 s. A peer that reaches
+  `failed` without ever connecting switches too. Sticky until Stop. `&link=1` on the page's URL forces it, for testing.
+- **Who:** `main/link.ts` checks the token, the `Origin` and an attempt budget, then passes messages between the socket and
+  the engine. `phone/src/link.ts` sends; `engine/link.ts` receives. If the socket never opens, the phone goes back through
+  `/api/session`, which tells an expired QR code from a refused socket.
+- **Video:** H.264 baseline from WebCodecs `VideoEncoder` (annexb), so iOS 16.4 or newer. Frames are drawn to a canvas
+  first because the camera's own frames stay landscape however the phone is held, and a canvas gets them upright, which
+  matches what WebRTC delivers. The engine decodes with `VideoDecoder` into the same `deliverFrame` as the WebRTC pump.
+  Backlog is dropped before the encoder, never after it, and the bitrate falls while frames are being skipped.
+- **Audio:** 20 ms chunks of 16-bit PCM from an `AudioWorklet`. No codec, because Safari's `AudioEncoder` is too new and
+  768 kbps is nothing on a local link. The engine schedules the chunks back to back into a
+  `MediaStreamAudioDestinationNode`, so the track reaches `MicOutput` like WebRTC's. The iPhone was measured delivering
+  2.6 % fewer samples at 1080p, so playback runs a few percent slower or faster to hold the buffer instead of letting it
+  drain into a gap.
+- **Control:** the same JSON messages as the data channel, as text frames.
+- **Cost**, on the setup in *Performance notes (measured, Linux)*, with camera and microphone: about 60 % of a core against
+  48 % for WebRTC, and about 10 MB more. On the phone at 1080p: about 17 ms to draw and 30 ms to encode each frame.
+- **Prior art:** the design matches [MyCam](https://github.com/whoissaaif/mycam) (MIT), which has no microphone. Its notes
+  are where the landscape frames, the `wss://` result and the bitrate steps came from. No code was copied.
 
 ## Phone microphone
 
@@ -121,7 +149,7 @@ apps/desktop/                Electron app (electron-vite, React, TS)
                              linux.ts (XDG autostart, tray check over D-Bus, camera setup, virtual-mic-linux.ts),
                              and pure, tested helpers (desktop-entry, dbus, pactl, os-release, setup-result)
   src/engine/                engine.ts (WebRTC receiver, stats, preview JPEGs, frame pump), vcam.ts (addon API),
-                             mic.ts (phone audio → virtual cable), sdp.ts (answer tuning)
+                             mic.ts (phone audio → virtual cable), sdp.ts (answer tuning), link.ts (media link receiver)
   src/renderer/              React UI (Pairing, Preview, Controls, Settings)
   src/preload/               contextBridge → window.omnicam (typed in shared/ipc.ts)
   src/shared/ipc.ts          IPC channel names + payload types, settings and stats (single source of truth)
