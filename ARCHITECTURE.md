@@ -24,7 +24,7 @@ PipeWire microphone on Linux (see **Phone microphone**).
 | Mobile browsers require HTTPS for `getUserMedia` | Desktop serves a **self-signed cert**; user accepts a one-time warning. UI walks them through it. (Future opt-in: real domain + per-install cert, Plex-style.) |
 | iOS Safari was found to ignore the cert exception for `wss://` (no longer true on current iOS, see the media link) | Signaling uses **plain `fetch` POST, non-trickle ICE** (one round trip), with no WebSocket needed. After that, control messages ride a WebRTC **DataChannel**. |
 | Win10 has no Media Foundation virtual camera API | Virtual camera is a **DirectShow filter** (softcam, MIT) built from source with OmniCam's own name/CLSID. Registered with `regsvr32` (x64 + x86 DLLs) by the installer. |
-| Consumer apps negotiate a camera format once | Virtual camera output is a **fixed size/fps** (720p/1080p @30/60); incoming frames are scaled/letterboxed in native code. |
+| Consumer apps negotiate a camera format once | Virtual camera output is a **fixed size/fps** (720p/1080p/4K @30/60, landscape or portrait); incoming frames are scaled/letterboxed in native code. |
 | An iPhone that is itself the hotspot offers WebRTC only its mobile data address, and its checks never arrive | Video and audio fall back to the **media link**, a WebSocket on the page's own HTTPS connection. See below. |
 | Some Wi-Fi blocks mDNS | Electron runs with `--disable-features=WebRtcHideLocalIpsWithMdns` so the desktop's ICE candidate is a real LAN IP. |
 | Camera must survive closing the window | Hidden **engine** window owns WebRTC + native addon; UI window is optional; app lives in the tray. |

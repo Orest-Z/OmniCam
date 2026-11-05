@@ -68,8 +68,8 @@ export function nativePaths(): { addonPath: string; nativeDir: string } {
 export function toEngineSettings(s: AppSettings): EngineSettings {
   const preset = RESOLUTION_PRESETS[s.outputPreset] ?? RESOLUTION_PRESETS['720p'];
   return {
-    outputWidth: preset.width,
-    outputHeight: preset.height,
+    outputWidth: s.outputShape === 'portrait' ? preset.height : preset.width,
+    outputHeight: s.outputShape === 'portrait' ? preset.width : preset.height,
     outputFps: s.outputFps,
     mirror: s.mirror,
     rotation: s.rotation,

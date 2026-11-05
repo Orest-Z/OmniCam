@@ -317,6 +317,7 @@ the camera, and it resumes when you come back (the last frame is held meanwhile,
 Five sections in a sidebar. Each starts with how things stand, and a dot marks the one that needs attention.
 
 **Camera**
+- **Output shape** — landscape, or portrait (9:16) for a phone held upright. Video call apps may crop a portrait picture or add bars.
 - **Output resolution** — what Discord, Zoom… receive: 720p, 1080p or 4K at 30 or 60 fps. The frame rate follows the phone (60 for 720p60). 4K is for OBS and recording; Discord, Zoom and Teams send at most 1080p. Consumer apps negotiate a format once, so this is fixed while they run; the phone picture is scaled into it.
 - **When the phone pauses** — hold the last frame or show a placeholder.
 - **Stream details** — the resolution, real fps and bitrate over the preview: always (default) or on hover. The preview itself is a reduced 10 fps snapshot; apps get the full stream.

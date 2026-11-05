@@ -5,6 +5,8 @@ interface Props {
   stats: StreamStats;
   /** Keep the stream numbers on screen instead of only on hover. */
   alwaysShowStats: boolean;
+  /** The virtual camera's output is 9:16, so the preview is too. */
+  portrait: boolean;
   /** Drawn over the preview, bottom left. */
   children?: ReactNode;
 }
@@ -22,7 +24,7 @@ const CHIP: Record<StreamStats['state'], { text: string; cls: string } | null> =
  * blitted with putImageData on a software canvas. Deliberately no ImageBitmap / blob <img> /
  * accelerated canvas: each of those was measured to grow Chromium's GPU process without bound.
  */
-export function Preview({ stats, alwaysShowStats, children }: Props) {
+export function Preview({ stats, alwaysShowStats, portrait, children }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [showStats, setShowStats] = useState(true);
   const live = stats.state === 'connected' || stats.state === 'stalled';
@@ -64,7 +66,7 @@ export function Preview({ stats, alwaysShowStats, children }: Props) {
   const res = stats.height >= 2160 ? '4K' : stats.height >= 1080 ? '1080p' : stats.height >= 720 ? '720p' : `${stats.height}p`;
 
   return (
-    <div className="preview">
+    <div className={'preview' + (portrait ? ' portrait' : '')}>
       {/* The snapshot is the virtual camera's actual output (rotation, mirror and fit/fill applied). */}
       <canvas ref={canvasRef} style={{ opacity: live ? 1 : 0.2 }} />
       {chip && (

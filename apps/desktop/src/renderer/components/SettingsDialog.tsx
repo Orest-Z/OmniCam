@@ -176,6 +176,16 @@ function CameraPane({ settings, vcam, vcamError, platform, distro, stats, onSett
           </span>
         </div>
       )}
+      <Field title="Output shape" sub="Portrait is 9:16, for a phone held upright. Video call apps may crop it or add bars.">
+        <Segmented
+          value={settings.outputShape}
+          options={[
+            { value: 'landscape', label: 'Landscape' },
+            { value: 'portrait', label: 'Portrait' },
+          ]}
+          onChange={(v) => onSettings({ outputShape: v })}
+        />
+      </Field>
       <Field title="When the phone pauses" sub="Locked screen, switched app, lost Wi-Fi.">
         <Segmented
           value={settings.holdLastFrame ? 'hold' : 'placeholder'}

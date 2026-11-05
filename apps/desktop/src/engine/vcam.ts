@@ -103,7 +103,7 @@ export function renderPlaceholder(width: number, height: number, lines: string[]
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  const base = Math.round(height * 0.05);
+  const base = Math.round(Math.min(height * 0.05, width * 0.045)); // a portrait frame is narrow: the hint has to fit
   lines.forEach((line, i) => {
     ctx.font = `${i === 0 ? 600 : 400} ${i === 0 ? base : Math.round(base * 0.68)}px Geist, "Segoe UI", system-ui, sans-serif`;
     ctx.fillStyle = i === 0 ? '#e8e6ef' : '#9d99ab';

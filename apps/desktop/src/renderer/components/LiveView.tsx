@@ -53,7 +53,7 @@ export function LiveView({ stats, vcam, settings, virtualMic, onSettings, onCont
     <div className="live">
       <div className="stage">
         {camera ? (
-          <Preview stats={stats} alwaysShowStats={settings.streamDetails === 'always'}>
+          <Preview stats={stats} alwaysShowStats={settings.streamDetails === 'always'} portrait={settings.outputShape === 'portrait'}>
             {noCable && (
               <button className="overhint" onClick={onOpenMicGuide}>
                 {virtualMic ? "OmniCam Microphone isn't ready: see why" : "The phone's microphone needs a virtual cable: set it up"}
