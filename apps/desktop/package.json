@@ -27,7 +27,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@types/ws": "^8.18.2",
-    "@vitejs/plugin-react": "^5.2.0",
+    "@vitejs/plugin-react": "^6.2.1",
     "electron": "44.10.0",
     "electron-builder": "^26.18.0",
     "electron-updater": "^6.8.11",
@@ -40,7 +40,7 @@
     "selfsigned": "^5.5.0",
     "sharp": "^0.35.5",
     "typescript": "^7.0.2",
-    "vite": "^7.3.7",
+    "vite": "^8.3.5",
     "ws": "^8.22.1"
   },
   "homepage": "https://github.com/Orest-Z/OmniCam"
