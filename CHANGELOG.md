@@ -1,5 +1,37 @@
 # Changelog
 
+## 2.4.0 — 2026-11-05
+
+OmniCam now works when an iPhone is the hotspot, with both the camera and the microphone. You can also
+send apps an upright 9:16 picture.
+
+### Fixed: no video when an iPhone is the hotspot
+- **What happened:** with the computer joined to an iPhone's Personal Hotspot, the phone page opened and the
+  camera started, but OmniCam stayed on "connecting" and no picture ever arrived. It looked like a firewall
+  problem, but it wasn't.
+- **Why:** OmniCam normally sends video the most direct way a browser offers, WebRTC. When an iPhone is the
+  hotspot itself, Safari offers WebRTC only the iPhone's mobile data address and never its hotspot address, so
+  the iPhone's WebRTC traffic never reached the computer. Ordinary page requests still did, which is why the
+  page loaded.
+- **How it's fixed:** OmniCam now spots this straight away and sends the video and microphone over the page's
+  own encrypted connection instead. The iPhone compresses the video itself, and the computer feeds it to the
+  OmniCam camera and microphone as usual. Zoom, torch and the other controls work the same, and nothing leaves
+  your own devices or goes through a server. It also takes over if WebRTC can't connect on any other network.
+- **What wasn't affected:** an Android phone as the hotspot, with the iPhone and the computer both joined to it,
+  already worked and hasn't changed, because the iPhone is then an ordinary Wi-Fi device. Only an iPhone that is
+  itself the hotspot failed. Home and office Wi-Fi keep using WebRTC as before.
+- **The trade-off:** the bar shows **Hotspot mode** while this is in use. It takes more CPU on the computer and
+  more battery on the phone, and can add a little delay, so regular Wi-Fi is still the better choice when you
+  have it. Sending video this way needs iOS 16.4 or newer.
+
+Tested with an iPhone (Safari 26.3) as the hotspot on Fedora 44.
+
+### New
+- **Portrait output:** Settings → Camera → **Output shape** sends apps a 9:16 picture, such as 1080×1920, for a
+  phone held upright. Video call apps may crop it or add bars.
+- **The bar shows how the phone is connected:** *Wi-Fi* the usual way, or *Hotspot mode*, which explains itself
+  when you click it.
+
 ## 2.3.0 — 2026-11-01
 
 On Linux, OmniCam can now install its camera driver itself.
