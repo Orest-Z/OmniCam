@@ -71,7 +71,7 @@ bool planeWithin(const FrameInfo& in, size_t size, int i, int rows) {
 
 } // namespace
 
-Pipeline::Pipeline() : device_(createPlatformCamera()) {}
+Pipeline::Pipeline(int index) : device_(createPlatformCamera(index)) {}
 
 Pipeline::~Pipeline() { stop(); }
 

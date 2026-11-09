@@ -1,4 +1,5 @@
-// N-API surface of omnicam_vcam.node. Mirrors `VcamAddon` in apps/desktop/src/engine/vcam.ts.
+// N-API surface of omnicam_vcam.node. Mirrors `VcamModule` and `VcamAddon` in apps/desktop/src/engine/vcam.ts:
+// camera(index) returns one camera's handle; every method acts on that camera's own pipeline.
 
 #include <napi.h>
 
@@ -16,11 +17,12 @@ using omnicam::Pipeline;
 using omnicam::PixelFormat;
 using omnicam::Transform;
 
-std::unique_ptr<Pipeline> g_pipeline;
+// One pipeline per camera, created the first time JS asks for that camera.
+std::unique_ptr<Pipeline> g_pipelines[omnicam::kCameraCount];
 
-Pipeline& pipeline() {
-    if (!g_pipeline) g_pipeline = std::make_unique<Pipeline>();
-    return *g_pipeline;
+// The pipeline a camera handle's method belongs to (bound as the function's data in Camera()).
+Pipeline& pipeline(const Napi::CallbackInfo& info) {
+    return *static_cast<Pipeline*>(info.Data());
 }
 
 bool parseFormat(const std::string& s, PixelFormat& out) {
@@ -47,14 +49,14 @@ Napi::Value Start(const Napi::CallbackInfo& info) {
     const std::string nativeDir = o.Has("nativeDir") ? o.Get("nativeDir").ToString().Utf8Value() : "";
 
     std::string error;
-    if (!pipeline().start(width, height, fps, nativeDir, error)) {
+    if (!pipeline(info).start(width, height, fps, nativeDir, error)) {
         throw Napi::Error::New(env, error);
     }
     return env.Undefined();
 }
 
 Napi::Value Stop(const Napi::CallbackInfo& info) {
-    if (g_pipeline) g_pipeline->stop();
+    pipeline(info).stop();
     return info.Env().Undefined();
 }
 
@@ -82,7 +84,7 @@ Napi::Value PushFrame(const Napi::CallbackInfo& info) {
         fi.planes[i].offset = p.Get("offset").ToNumber().Uint32Value();
         fi.planes[i].stride = p.Get("stride").ToNumber().Uint32Value();
     }
-    pipeline().pushFrame(data.Data(), data.ByteLength(), fi);
+    pipeline(info).pushFrame(data.Data(), data.ByteLength(), fi);
     return env.Undefined();
 }
 
@@ -98,17 +100,17 @@ Napi::Value SetPlaceholder(const Napi::CallbackInfo& info) {
     if (width <= 0 || height <= 0 || data.ByteLength() < (size_t)width * height * 4) {
         throw Napi::RangeError::New(env, "placeholder buffer too small");
     }
-    pipeline().setPlaceholder(data.Data(), width, height);
+    pipeline(info).setPlaceholder(data.Data(), width, height);
     return env.Undefined();
 }
 
 Napi::Value ShowPlaceholder(const Napi::CallbackInfo& info) {
-    pipeline().showPlaceholder();
+    pipeline(info).showPlaceholder();
     return info.Env().Undefined();
 }
 
 Napi::Value SetHoldLastFrame(const Napi::CallbackInfo& info) {
-    pipeline().setHoldLastFrame(info.Length() > 0 && info[0].ToBoolean().Value());
+    pipeline(info).setHoldLastFrame(info.Length() > 0 && info[0].ToBoolean().Value());
     return info.Env().Undefined();
 }
 
@@ -130,7 +132,7 @@ Napi::Value SetTransform(const Napi::CallbackInfo& info) {
     };
     t.adjust = {level("brightness"), level("contrast"), level("saturation"), level("warmth")};
     if (t.rotation % 90 != 0) throw Napi::RangeError::New(env, "rotation must be a multiple of 90");
-    pipeline().setTransform(t);
+    pipeline(info).setTransform(t);
     return env.Undefined();
 }
 
@@ -139,7 +141,7 @@ Napi::Value SetPreview(const Napi::CallbackInfo& info) {
     const bool enabled = info.Length() > 0 && info[0].ToBoolean().Value();
     const int maxWidth = info.Length() > 1 ? info[1].ToNumber().Int32Value() : 640;
     const int interval = info.Length() > 2 ? info[2].ToNumber().Int32Value() : 80;
-    pipeline().setPreview(enabled, maxWidth, interval);
+    pipeline(info).setPreview(enabled, maxWidth, interval);
     return info.Env().Undefined();
 }
 
@@ -148,7 +150,7 @@ Napi::Value TakePreview(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
     std::vector<uint8_t> rgba;
     int w = 0, h = 0;
-    if (!pipeline().takePreview(rgba, w, h)) return env.Null();
+    if (!pipeline(info).takePreview(rgba, w, h)) return env.Null();
     Napi::Object o = Napi::Object::New(env);
     o.Set("width", w);
     o.Set("height", h);
@@ -158,7 +160,7 @@ Napi::Value TakePreview(const Napi::CallbackInfo& info) {
 
 Napi::Value GetStats(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
-    omnicam::PipelineStats s = pipeline().stats();
+    omnicam::PipelineStats s = pipeline(info).stats();
     Napi::Object o = Napi::Object::New(env);
     o.Set("running", s.running);
     o.Set("width", s.width);
@@ -178,27 +180,46 @@ Napi::Value Probe(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
     const std::string nativeDir = info.Length() > 0 ? info[0].ToString().Utf8Value() : "";
     std::string reason;
-    const bool ok = pipeline().probe(nativeDir, reason);
+    const bool ok = pipeline(info).probe(nativeDir, reason);
     Napi::Object o = Napi::Object::New(env);
     o.Set("ok", ok);
     if (!ok) o.Set("reason", reason);
     return o;
 }
 
+// camera(index) -> the handle of camera `index` (0 = "OmniCam"), the same pipeline on every call
+Napi::Value Camera(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    const int index = info.Length() > 0 && info[0].IsNumber() ? info[0].As<Napi::Number>().Int32Value() : -1;
+    if (index < 0 || index >= omnicam::kCameraCount) {
+        throw Napi::RangeError::New(env, "camera(index) expects 0 to " + std::to_string(omnicam::kCameraCount - 1));
+    }
+    if (!g_pipelines[index]) g_pipelines[index] = std::make_unique<Pipeline>(index);
+    Pipeline* p = g_pipelines[index].get();
+    Napi::Object o = Napi::Object::New(env);
+    const auto method = [&](const char* name, Napi::Value (*fn)(const Napi::CallbackInfo&)) {
+        o.Set(name, Napi::Function::New(env, fn, name, p));
+    };
+    method("start", Start);
+    method("stop", Stop);
+    method("pushFrame", PushFrame);
+    method("setPlaceholder", SetPlaceholder);
+    method("showPlaceholder", ShowPlaceholder);
+    method("setHoldLastFrame", SetHoldLastFrame);
+    method("setTransform", SetTransform);
+    method("setPreview", SetPreview);
+    method("takePreview", TakePreview);
+    method("getStats", GetStats);
+    method("probe", Probe);
+    return o;
+}
+
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
-    exports.Set("start", Napi::Function::New(env, Start));
-    exports.Set("stop", Napi::Function::New(env, Stop));
-    exports.Set("pushFrame", Napi::Function::New(env, PushFrame));
-    exports.Set("setPlaceholder", Napi::Function::New(env, SetPlaceholder));
-    exports.Set("showPlaceholder", Napi::Function::New(env, ShowPlaceholder));
-    exports.Set("setHoldLastFrame", Napi::Function::New(env, SetHoldLastFrame));
-    exports.Set("setTransform", Napi::Function::New(env, SetTransform));
-    exports.Set("setPreview", Napi::Function::New(env, SetPreview));
-    exports.Set("takePreview", Napi::Function::New(env, TakePreview));
-    exports.Set("getStats", Napi::Function::New(env, GetStats));
-    exports.Set("probe", Napi::Function::New(env, Probe));
-    // Make sure the worker thread is gone before the runtime tears down.
-    env.AddCleanupHook([] { g_pipeline.reset(); });
+    exports.Set("camera", Napi::Function::New(env, Camera));
+    // Make sure every worker thread is gone before the runtime tears down.
+    env.AddCleanupHook([] {
+        for (auto& p : g_pipelines) p.reset();
+    });
     return exports;
 }
 

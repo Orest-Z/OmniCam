@@ -13,9 +13,12 @@ namespace omnicam {
 //   YUYV:  Y0,U,Y1,V, width * 2 bytes per row (V4L2_PIX_FMT_YUYV, libyuv "YUY2")
 enum class OutputFormat { BGR24, I420, YUYV };
 
+// Cameras the app can drive: "OmniCam" (index 0) and, on Windows, "OmniCam 2" to "OmniCam 4".
+constexpr int kCameraCount = 4;
+
 // Platform-specific virtual camera device. One backend per OS, chosen at build time:
-//   Windows: softcam DirectShow filter       (win_softcam.cc)
-//   Linux:   v4l2loopback device "OmniCam"   (linux_v4l2.cc)
+//   Windows: softcam DirectShow filter       (win_softcam.cc), cameras 0–3
+//   Linux:   v4l2loopback device "OmniCam"   (linux_v4l2.cc), camera 0 only
 //   macOS:   CoreMediaIO camera extension    (later)
 //
 // Error strings (start() and probe()) begin with a code the UI maps to instructions:
@@ -42,6 +45,7 @@ public:
     virtual bool probe(const std::string& nativeDir, std::string& reason) = 0;
 };
 
-std::unique_ptr<IVirtualCamera> createPlatformCamera();
+// The backend for camera `index` (0 to kCameraCount - 1). Creating it opens nothing.
+std::unique_ptr<IVirtualCamera> createPlatformCamera(int index);
 
 } // namespace omnicam

@@ -63,7 +63,8 @@ struct PipelineStats {
  */
 class Pipeline {
 public:
-    Pipeline();
+    // Drives camera `index` (0 = "OmniCam", see kCameraCount). Opens nothing until start().
+    explicit Pipeline(int index);
     ~Pipeline();
 
     bool start(int width, int height, int fps, const std::string& nativeDir, std::string& error);

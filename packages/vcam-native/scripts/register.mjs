@@ -2,7 +2,7 @@
 // (scripts/register.ps1, admin); Linux has nothing to register: its camera is the v4l2loopback
 // module, which the app sets up once.
 //
-// Usage: node scripts/register.mjs [-Unregister]
+// Usage: node scripts/register.mjs [-Unregister] [-Extra]   (-Extra: cameras 2–4, see register.ps1)
 import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';

@@ -26,10 +26,16 @@ export interface Transform extends Picture {
   fill: boolean;
 }
 
+/** `omnicam_vcam.node` (packages/vcam-native): one handle per virtual camera. */
+export interface VcamModule {
+  /** 0 = "OmniCam"; 1–3 = "OmniCam 2" to "OmniCam 4" (Windows only). Same camera, same pipeline, every call. */
+  camera(index: number): VcamAddon;
+}
+
 /**
- * JS surface of `omnicam_vcam.node` (packages/vcam-native). The native side owns a pacing
- * thread that repeats the most recent frame at the configured fps, so callers just deposit
- * frames whenever they arrive.
+ * One virtual camera of `omnicam_vcam.node`. The native side owns a pacing thread per camera that
+ * repeats the most recent frame at the configured fps, so callers just deposit frames whenever
+ * they arrive.
  */
 export interface VcamAddon {
   /** Throws if the virtual camera driver is not registered / cannot start. */
@@ -56,10 +62,13 @@ declare global {
   }
 }
 
-/** Loads the addon from an absolute path. Returns null (with reason) when it is not built/present. */
+/**
+ * Loads the addon from an absolute path and returns camera 1 ("OmniCam"). Returns null (with
+ * reason) when it is not built/present.
+ */
 export function loadVcam(addonPath: string): { addon: VcamAddon | null; reason?: string } {
   try {
-    const addon = window.require(addonPath) as VcamAddon;
+    const addon = (window.require(addonPath) as VcamModule).camera(0);
     return { addon };
   } catch (err) {
     return { addon: null, reason: `no-addon: native addon not available: ${(err as Error).message}` };
