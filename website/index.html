@@ -15,409 +15,358 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg fill='none' stroke='%23ccb6fe' stroke-linecap='round'%3E%3Ccircle cx='44' cy='56' r='26' stroke-width='8.6'/%3E%3Cpath d='M 59.66 20.83 A 38.5 38.5 0 0 1 80.18 42.83' stroke-width='6'/%3E%3Cpath d='M 64.54 9.87 A 50.5 50.5 0 0 1 91.45 38.73' stroke-width='6'/%3E%3C/g%3E%3Ccircle cx='44' cy='56' r='7.2' fill='%23ccb6fe'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://orest-assets.pages.dev">
   <link rel="stylesheet" href="site.css">
-  <script>document.documentElement.classList.add('js')</script>
+  <!-- Runs before the first paint, so the right download leads without a flash: phone, linux, windows or other. -->
+  <script>
+    (() => {
+      const root = document.documentElement, ua = navigator.userAgent;
+      const phone = /Android|iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+      root.classList.add('js');
+      root.dataset.os = phone ? 'phone' : /Linux/.test(ua) ? 'linux' : /Windows/.test(ua) ? 'windows' : 'other';
+    })();
+  </script>
   <script src="site.js" defer></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
-  <!-- Icons: one 24px line set, 1.6 stroke, round caps. Drawn for this site. -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-    <symbol id="i-frame" viewBox="0 0 24 24"><path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16"/><circle cx="12" cy="12" r="3"/></symbol>
-    <symbol id="i-torch" viewBox="0 0 24 24"><path d="M7 3h10v3c0 1.6-2 2.4-2 4v9.5a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 19.5V10c0-1.6-2-2.4-2-4z"/><path d="M7 6h10M12 12.5v2.5"/></symbol>
-    <symbol id="i-tray" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M9 21h6M12 17v4"/><path d="M15.5 13.5h2"/></symbol>
-    <symbol id="i-p2p" viewBox="0 0 24 24"><rect x="2.5" y="8" width="6" height="11" rx="1.5"/><rect x="13" y="10" width="8.5" height="6.5" rx="1.2"/><path d="M11.5 19.5h11.5"/><path d="M7 4.8a6 6 0 0 1 10 0M9.3 6.6a3 3 0 0 1 5.4 0"/></symbol>
-    <symbol id="i-code" viewBox="0 0 24 24"><path d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14"/></symbol>
-    <symbol id="i-battery" viewBox="0 0 24 24"><rect x="2.5" y="7" width="17" height="10" rx="2.2"/><path d="M22 10.5v3M6 10v4"/></symbol>
-    <symbol id="i-list" viewBox="0 0 24 24"><path d="M10 6.5h10M10 12h10M10 17.5h10"/><path d="m3.5 6.5 1.3 1.3L7.2 5.3M3.5 12l1.3 1.3 2.4-2.5M3.5 17.5l1.3 1.3 2.4-2.5"/></symbol>
-    <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h15m-3.5-3.5L19 8l-3.5 3.5M20 16H5m3.5-3.5L5 16l3.5 3.5"/></symbol>
-    <symbol id="i-branch" viewBox="0 0 24 24"><circle cx="6" cy="5.5" r="2"/><circle cx="6" cy="18.5" r="2"/><circle cx="18" cy="7.5" r="2"/><path d="M6 7.5v9M18 9.5c0 4.5-6.5 3.5-10.5 7.5"/></symbol>
-    <symbol id="i-sign" viewBox="0 0 24 24"><path d="M3 16c2.5 0 3.5-8.5 5.5-8.5S8 17 10.5 17s2.5-5 4.5-5 1 3.5 3 3.5h2.5"/><path d="M3 20.5h18"/></symbol>
-    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M4.5 20h15"/></symbol>
-    <symbol id="i-windows" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M3 3h8.5v8.5H3zM12.5 3H21v8.5h-8.5zM3 12.5h8.5V21H3zM12.5 12.5H21V21h-8.5z"/></symbol>
-    <symbol id="i-linux" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" fill-rule="evenodd" d="M12 2c-2.4 0-3.7 1.9-3.7 4.3 0 1.3-.4 2.3-1.3 3.5-1.3 1.7-2.4 3.6-2.4 6 0 3.1 3.2 5.2 7.4 5.2s7.4-2.1 7.4-5.2c0-2.4-1.1-4.3-2.4-6-.9-1.2-1.3-2.2-1.3-3.5C15.7 3.9 14.4 2 12 2zm0 8.2c-2 0-3.4 2.4-3.4 5.2 0 2.2 1.4 3.6 3.4 3.6s3.4-1.4 3.4-3.6c0-2.8-1.4-5.2-3.4-5.2zM10.6 4.9a.9.9 0 1 0 0 1.8.9.9 0 1 0 0-1.8zm2.8 0a.9.9 0 1 0 0 1.8.9.9 0 1 0 0-1.8zM10.7 7.7h2.6L12 9.1z"/><path fill="currentColor" stroke="none" d="M4.6 20.6c0-.9 1.4-1.6 3-1.6s2.6.8 2.6 1.5-1.2 1.5-2.8 1.5-2.8-.6-2.8-1.4zm14.8 0c0-.9-1.4-1.6-3-1.6s-2.6.8-2.6 1.5 1.2 1.5 2.8 1.5 2.8-.6 2.8-1.4z"/></symbol>
-    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></symbol>
-    <symbol id="i-fork" viewBox="0 0 24 24"><circle cx="6" cy="5.5" r="2"/><circle cx="18" cy="5.5" r="2"/><circle cx="12" cy="18.5" r="2"/><path d="M6 7.5V9a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3V7.5M12 12v4.5"/></symbol>
-    <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3.5 12.1V5A1.5 1.5 0 0 1 5 3.5h7.1a1.5 1.5 0 0 1 1.06.44l7.4 7.4a1.5 1.5 0 0 1 0 2.12l-7.1 7.1a1.5 1.5 0 0 1-2.12 0l-7.4-7.4a1.5 1.5 0 0 1-.44-1.06z"/><circle cx="8.5" cy="8.5" r="1.3"/></symbol>
-    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></symbol>
-    <symbol id="i-github" viewBox="0 0 16 16"><path fill="currentColor" stroke="none" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></symbol>
+    <symbol id="mark" viewBox="0 0 100 100"><g fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="44" cy="56" r="26" stroke-width="8.6"/><path d="M 59.66 20.83 A 38.5 38.5 0 0 1 80.18 42.83" stroke-width="6"/><path d="M 64.54 9.87 A 50.5 50.5 0 0 1 91.45 38.73" stroke-width="6"/></g><circle cx="44" cy="56" r="7.2" fill="currentColor"/></symbol>
+    <!-- The mark's two arcs turned to point right: the signal glyph used for dividers and the microphone path. -->
+    <symbol id="signal" viewBox="0 0 13 16"><circle cx="2" cy="8" r="1.6" fill="currentColor"/><path d="M9.09 4.99A7.7 7.7 0 0 1 9.09 11.01M11.3 4.05A10.1 10.1 0 0 1 11.3 11.95" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+    <symbol id="i-windows" viewBox="0 0 24 24"><path fill="currentColor" d="M2 2h9.5v9.5H2zM12.5 2H22v9.5h-9.5zM2 12.5h9.5V22H2zM12.5 12.5H22V22h-9.5z"/></symbol>
+    <!-- Tux from Simple Icons (simpleicons.org, CC0). -->
+    <symbol id="i-linux" viewBox="0 0 24 24"><path fill="currentColor" d="M12.504 0c-.155 0-.315.008-.48.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.953-1.05 3.02-.885 1.051-2.127 2.75-2.716 4.521-.278.832-.41 1.684-.287 2.489a.424.424 0 00-.11.135c-.26.268-.45.6-.663.839-.199.199-.485.267-.797.4-.313.136-.658.269-.864.68-.09.189-.136.394-.132.602 0 .199.027.4.055.536.058.399.116.728.04.97-.249.68-.28 1.145-.106 1.484.174.334.535.47.94.601.81.2 1.91.135 2.774.6.926.466 1.866.67 2.616.47.526-.116.97-.464 1.208-.946.587-.003 1.23-.269 2.26-.334.699-.058 1.574.267 2.577.2.025.134.063.198.114.333l.003.003c.391.778 1.113 1.132 1.884 1.071.771-.06 1.592-.536 2.257-1.306.631-.765 1.683-1.084 2.378-1.503.348-.199.629-.469.649-.853.023-.4-.2-.811-.714-1.376v-.097l-.003-.003c-.17-.2-.25-.535-.338-.926-.085-.401-.182-.786-.492-1.046h-.003c-.059-.054-.123-.067-.188-.135a.357.357 0 00-.19-.064c.431-1.278.264-2.55-.173-3.694-.533-1.41-1.465-2.638-2.175-3.483-.796-1.005-1.576-1.957-1.56-3.368.026-2.152.236-6.133-3.544-6.139zm.529 3.405h.013c.213 0 .396.062.584.198.19.135.33.332.438.533.105.259.158.459.166.724 0-.02.006-.04.006-.06v.105a.086.086 0 01-.004-.021l-.004-.024a1.807 1.807 0 01-.15.706.953.953 0 01-.213.335.71.71 0 00-.088-.042c-.104-.045-.198-.064-.284-.133a1.312 1.312 0 00-.22-.066c.05-.06.146-.133.183-.198.053-.128.082-.264.088-.402v-.02a1.21 1.21 0 00-.061-.4c-.045-.134-.101-.2-.183-.333-.084-.066-.167-.132-.267-.132h-.016c-.093 0-.176.03-.262.132a.8.8 0 00-.205.334 1.18 1.18 0 00-.09.4v.019c.002.089.008.179.02.267-.193-.067-.438-.135-.607-.202a1.635 1.635 0 01-.018-.2v-.02a1.772 1.772 0 01.15-.768c.082-.22.232-.406.43-.533a.985.985 0 01.594-.2zm-2.962.059h.036c.142 0 .27.048.399.135.146.129.264.288.344.465.09.199.14.4.153.667v.004c.007.134.006.2-.002.266v.08c-.03.007-.056.018-.083.024-.152.055-.274.135-.393.2.012-.09.013-.18.003-.267v-.015c-.012-.133-.04-.2-.082-.333a.613.613 0 00-.166-.267.248.248 0 00-.183-.064h-.021c-.071.006-.13.04-.186.132a.552.552 0 00-.12.27.944.944 0 00-.023.33v.015c.012.135.037.2.08.334.046.134.098.2.166.268.01.009.02.018.034.024-.07.057-.117.07-.176.136a.304.304 0 01-.131.068 2.62 2.62 0 01-.275-.402 1.772 1.772 0 01-.155-.667 1.759 1.759 0 01.08-.668 1.43 1.43 0 01.283-.535c.128-.133.26-.2.418-.2zm1.37 1.706c.332 0 .733.065 1.216.399.293.2.523.269 1.052.468h.003c.255.136.405.266.478.399v-.131a.571.571 0 01.016.47c-.123.31-.516.643-1.063.842v.002c-.268.135-.501.333-.775.465-.276.135-.588.292-1.012.267a1.139 1.139 0 01-.448-.067 3.566 3.566 0 01-.322-.198c-.195-.135-.363-.332-.612-.465v-.005h-.005c-.4-.246-.616-.512-.686-.71-.07-.268-.005-.47.193-.6.224-.135.38-.271.483-.336.104-.074.143-.102.176-.131h.002v-.003c.169-.202.436-.47.839-.601.139-.036.294-.065.466-.065zm2.8 2.142c.358 1.417 1.196 3.475 1.735 4.473.286.534.855 1.659 1.102 3.024.156-.005.33.018.513.064.646-1.671-.546-3.467-1.089-3.966-.22-.2-.232-.335-.123-.335.59.534 1.365 1.572 1.646 2.757.13.535.16 1.104.021 1.67.067.028.135.06.205.067 1.032.534 1.413.938 1.23 1.537v-.043c-.06-.003-.12 0-.18 0h-.016c.151-.467-.182-.825-1.065-1.224-.915-.4-1.646-.336-1.77.465-.008.043-.013.066-.018.135-.068.023-.139.053-.209.064-.43.268-.662.669-.793 1.187-.13.533-.17 1.156-.205 1.869v.003c-.02.334-.17.838-.319 1.35-1.5 1.072-3.58 1.538-5.348.334a2.645 2.645 0 00-.402-.533 1.45 1.45 0 00-.275-.333c.182 0 .338-.03.465-.067a.615.615 0 00.314-.334c.108-.267 0-.697-.345-1.163-.345-.467-.931-.995-1.788-1.521-.63-.4-.986-.87-1.15-1.396-.165-.534-.143-1.085-.015-1.645.245-1.07.873-2.11 1.274-2.763.107-.065.037.135-.408.974-.396.751-1.14 2.497-.122 3.854a8.123 8.123 0 01.647-2.876c.564-1.278 1.743-3.504 1.836-5.268.048.036.217.135.289.202.218.133.38.333.59.465.21.201.477.335.876.335.039.003.075.006.11.006.412 0 .73-.134.997-.268.29-.134.52-.334.74-.4h.005c.467-.135.835-.402 1.044-.7zm2.185 8.958c.037.6.343 1.245.882 1.377.588.134 1.434-.333 1.791-.765l.211-.01c.315-.007.577.01.847.268l.003.003c.208.199.305.53.391.876.085.4.154.78.409 1.066.486.527.645.906.636 1.14l.003-.007v.018l-.003-.012c-.015.262-.185.396-.498.595-.63.401-1.746.712-2.457 1.57-.618.737-1.37 1.14-2.036 1.191-.664.053-1.237-.2-1.574-.898l-.005-.003c-.21-.4-.12-1.025.056-1.69.176-.668.428-1.344.463-1.897.037-.714.076-1.335.195-1.814.12-.465.308-.797.641-.984l.045-.022zm-10.814.049h.01c.053 0 .105.005.157.014.376.055.706.333 1.023.752l.91 1.664.003.003c.243.533.754 1.064 1.189 1.637.434.598.77 1.131.729 1.57v.006c-.057.744-.48 1.148-1.125 1.294-.645.135-1.52.002-2.395-.464-.968-.536-2.118-.469-2.857-.602-.369-.066-.61-.2-.723-.4-.11-.2-.113-.602.123-1.23v-.004l.002-.003c.117-.334.03-.752-.027-1.118-.055-.401-.083-.71.043-.94.16-.334.396-.4.69-.533.294-.135.64-.202.915-.47h.002v-.002c.256-.268.445-.601.668-.838.19-.201.38-.336.663-.336zm7.159-9.074c-.435.201-.945.535-1.488.535-.542 0-.97-.267-1.28-.466-.154-.134-.28-.268-.373-.335-.164-.134-.144-.333-.074-.333.109.016.129.134.199.2.096.066.215.2.36.333.292.2.68.467 1.167.467.485 0 1.053-.267 1.398-.466.195-.135.445-.334.648-.467.156-.136.149-.267.279-.267.128.016.034.134-.147.332a8.097 8.097 0 01-.69.468zm-1.082-1.583V5.64c-.006-.02.013-.042.029-.05.074-.043.18-.027.26.004.063 0 .16.067.15.135-.006.049-.085.066-.135.066-.055 0-.092-.043-.141-.068-.052-.018-.146-.008-.163-.065zm-.551 0c-.02.058-.113.049-.166.066-.047.025-.086.068-.14.068-.05 0-.13-.02-.136-.068-.01-.066.088-.133.15-.133.08-.031.184-.047.259-.005.019.009.036.03.03.05v.02h.003z"/></symbol>
+    <symbol id="i-github" viewBox="0 0 16 16"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></symbol>
   </svg>
+
   <header class="top">
     <div class="wrap top-row">
-      <a class="brand" href="#">
-        <svg viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="44" cy="56" r="26" stroke-width="8.6"/><path d="M 59.66 20.83 A 38.5 38.5 0 0 1 80.18 42.83" stroke-width="6"/><path d="M 64.54 9.87 A 50.5 50.5 0 0 1 91.45 38.73" stroke-width="6"/></g><circle cx="44" cy="56" r="7.2" fill="currentColor"/></svg>
-        OmniCam
-      </a>
+      <a class="brand" href="#main"><svg aria-hidden="true"><use href="#mark"/></svg>OmniCam</a>
       <nav aria-label="Sections">
-        <a href="#how">How it works</a>
+        <a href="#how">Setup</a>
+        <a href="#specs">Specs</a>
         <a href="#mic">Microphone</a>
         <a href="#linux">Linux</a>
         <a href="#trust">Security</a>
         <a href="#faq">FAQ</a>
-        <a class="nav-gh" href="https://github.com/Orest-Z/OmniCam"><svg class="ico" aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
+        <a class="nav-gh" href="https://github.com/Orest-Z/OmniCam"><svg aria-hidden="true"><use href="#i-github"/></svg>GitHub</a>
       </nav>
     </div>
   </header>
 
   <main id="main">
-    <section class="hero">
-      <div class="wrap hero-copy">
-        <p class="eyebrow">Free · open source · Windows 10 / 11 · Linux <a class="new" href="#linux"><svg class="ico" aria-hidden="true"><use href="#i-download"/></svg>New: Linux <span aria-hidden="true">→</span></a></p>
-        <h1>Your phone is the webcam.<br><span>Nothing to install on it.</span></h1>
-        <p class="lede">Scan a QR code, tap <b>Start camera</b>, and a camera named <b>OmniCam</b> shows up in Discord, Zoom,
-          Google Meet, Chrome and OBS, with the phone's <b>microphone</b> too if you want it. Video and sound go from your phone
-          to your PC over your own Wi-Fi. No account, no cloud.</p>
-        <div class="get">
-          <div class="os" data-os="windows">
-            <div class="os-head">
-              <svg class="ico" aria-hidden="true"><use href="#i-windows"/></svg>
-              <div><h3>Windows</h3><p>Windows 10 and 11, 64-bit</p></div>
-              <span class="yours">Your system</span>
-            </div>
-            <a class="btn primary dl" data-asset="exe" href="https://github.com/Orest-Z/OmniCam/releases/latest">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              <span><b>Download for Windows</b><small>Installer (.exe)<span data-size></span></small></span>
-            </a>
-            <p class="os-hint">Run it and follow the steps. OmniCam keeps itself up to date after that.</p>
-            <p class="os-note">Windows may ask you to confirm once. <a href="#trust">Why?</a></p>
-          </div>
-          <div class="os" data-os="linux">
-            <div class="os-head">
-              <svg class="ico" aria-hidden="true"><use href="#i-linux"/></svg>
-              <div><h3>Linux</h3><p>64-bit (x64)</p></div>
-              <span class="yours">Your system</span>
-            </div>
-            <a class="btn primary dl" data-asset="AppImage" href="https://github.com/Orest-Z/OmniCam/releases/latest">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              <span><b>Download AppImage</b><small>Any distribution<span data-size></span></small></span>
-            </a>
-            <div class="pkgs">
-              <a class="btn dl" data-asset="rpm" href="https://github.com/Orest-Z/OmniCam/releases/latest"><span><b>.rpm package</b><small>Fedora</small></span></a>
-              <a class="btn dl" data-asset="deb" href="https://github.com/Orest-Z/OmniCam/releases/latest"><span><b>.deb package</b><small>Ubuntu, Debian</small></span></a>
-            </div>
-            <p class="os-note">The camera needs one kernel module. <a href="#linux">Setup steps</a></p>
-          </div>
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="wrap hero-head">
+        <div>
+          <p class="kicker"><span class="kicker-dot" aria-hidden="true"></span>Free and open source · Windows and Linux ·
+            <a href="https://github.com/Orest-Z/OmniCam/releases/latest">What's new in <span data-version>the latest version</span></a></p>
+          <h1 id="hero-title">Your phone is the <span>webcam.</span></h1>
+          <p class="lede">Nothing to install on the phone. Scan a QR code on your PC, tap <b>Start</b>, and a camera called
+            <b>OmniCam</b> shows up in Discord, Zoom, Google Meet and OBS, with the phone's microphone too if you want it.</p>
         </div>
-        <p class="meta" data-download-meta>Latest version · free · MIT license</p>
-        <div class="cta">
-          <a class="btn ghost" href="#demo" data-play>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg>
-            Watch the demo <span class="dim">1:12</span>
-          </a>
+        <div class="hero-side">
+          <div class="get" id="download">
+            <a class="btn primary" data-for="windows" data-asset="exe" href="https://github.com/Orest-Z/OmniCam/releases/latest">
+              <svg aria-hidden="true"><use href="#i-windows"/></svg>
+              <span>Download for Windows<small>Installer (.exe)<span data-size></span></small></span>
+            </a>
+            <a class="btn primary" data-for="linux" data-asset="AppImage" href="https://github.com/Orest-Z/OmniCam/releases/latest">
+              <svg class="tux" aria-hidden="true"><use href="#i-linux"/></svg>
+              <span>Download for Linux<small>AppImage, any distribution<span data-size></span></small></span>
+            </a>
+            <p class="alt" data-for="windows">Linux: <a data-asset="AppImage" href="https://github.com/Orest-Z/OmniCam/releases/latest">AppImage</a> ·
+              <a data-asset="rpm" href="https://github.com/Orest-Z/OmniCam/releases/latest">.rpm</a> for Fedora ·
+              <a data-asset="deb" href="https://github.com/Orest-Z/OmniCam/releases/latest">.deb</a> for Ubuntu and Debian</p>
+            <p class="alt" data-for="linux">Also <a data-asset="rpm" href="https://github.com/Orest-Z/OmniCam/releases/latest">.rpm</a> for Fedora ·
+              <a data-asset="deb" href="https://github.com/Orest-Z/OmniCam/releases/latest">.deb</a> for Ubuntu and Debian ·
+              <a data-asset="exe" href="https://github.com/Orest-Z/OmniCam/releases/latest">Windows installer</a></p>
+            <p class="meta" data-download-meta>Latest version · free · MIT license</p>
+            <p class="note" data-for="windows">Windows may ask you to confirm once. <a href="#trust">Why?</a></p>
+            <p class="note" data-for="linux">The camera needs one kernel module; OmniCam installs it on Fedora, Debian and Ubuntu. <a href="#linux">Linux setup</a></p>
+            <p class="note note-other">OmniCam runs on Windows and Linux. macOS is on the roadmap.</p>
+          </div>
+
+          <div class="on-phone">
+            <p><b>OmniCam runs on your PC,</b> and this phone becomes its camera. Open this page on your Windows or Linux
+              PC to download it.</p>
+            <button class="btn" type="button" data-share>Share link</button>
+            <p class="share-status" data-share-status role="status"></p>
+          </div>
         </div>
       </div>
 
-      <!-- The hosted demo, autoplaying muted until someone asks for sound.
-           Without JavaScript it is a plain video with controls. -->
       <div class="wrap">
-        <div class="stage reveal">
+        <!-- Without JavaScript this is a plain video with controls. -->
+        <div class="viewfinder">
           <video id="demo" poster="demo-poster.webp" width="1920" height="1080" controls muted playsinline preload="none"
                  aria-label="OmniCam demo: scan the code, tap Start on the phone, and the PC goes live">
-            <source src="https://orest-assets.pages.dev/projects/omnicam/omnicam-demo.mp4" type="video/mp4">
+            <source src="https://orest-assets.pages.dev/projects/omnicam/omnicam-demo-v2.mp4" type="video/mp4">
           </video>
+          <span class="live" aria-hidden="true">
+            <svg viewBox="0 0 100 100"><g fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="44" cy="56" r="26" stroke-width="10"/><path class="arc arc-1" d="M 59.66 20.83 A 38.5 38.5 0 0 1 80.18 42.83" stroke-width="8"/><path class="arc arc-2" d="M 64.54 9.87 A 50.5 50.5 0 0 1 91.45 38.73" stroke-width="8"/></g><circle cx="44" cy="56" r="7.2" fill="currentColor"/></svg>
+            LIVE
+          </span>
           <button class="play" type="button" data-play hidden>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg>
-            Watch with sound <span>1:12</span>
+            Watch with sound <span>1:00</span>
           </button>
         </div>
+        <p class="video-note">The demo didn't load. Reload the page to try again.</p>
+        <!-- Start times match the scene cuts in the video. Each one plays the demo from there, with sound. -->
+        <ol class="chapters" aria-label="Chapters of the demo">
+          <li><button type="button" data-t="0"><time datetime="PT0S">0:00</time>Nothing to install</button></li>
+          <li><button type="button" data-t="15.5"><time datetime="PT15S">0:15</time>Scan</button></li>
+          <li><button type="button" data-t="21.7"><time datetime="PT21S">0:21</time>Tap</button></li>
+          <li><button type="button" data-t="24.8"><time datetime="PT24S">0:24</time>Live</button></li>
+          <li><button type="button" data-t="31.1"><time datetime="PT31S">0:31</time>Up to 4K</button></li>
+          <li><button type="button" data-t="34.1"><time datetime="PT34S">0:34</time>Your Wi-Fi</button></li>
+          <li><button type="button" data-t="37.3"><time datetime="PT37S">0:37</time>Microphone</button></li>
+          <li><button type="button" data-t="40.3"><time datetime="PT40S">0:40</time>Settings</button></li>
+          <li><button type="button" data-t="43.4"><time datetime="PT43S">0:43</time>Free</button></li>
+        </ol>
+
+        <!-- The GitHub numbers are filled in by site.js and stay hidden if that fails, so none is ever made up or stale.
+             Reddit shows view counts only to the poster; these are from the post's insights page, November 8, 2026. -->
+        <p class="proof">
+          <span id="stats" hidden>
+            <a href="https://github.com/Orest-Z/OmniCam/releases"><b data-stat="downloads"></b> downloads, all versions</a>
+            <a href="https://github.com/Orest-Z/OmniCam/stargazers"><b data-stat="stars"></b> stars</a>
+            <a href="https://github.com/Orest-Z/OmniCam/forks"><b data-stat="forks"></b> forks</a>
+            <a href="https://github.com/Orest-Z/OmniCam/releases"><b data-stat="releases"></b> <span data-stat="released"></span></a>
+          </span>
+          <a href="https://www.reddit.com/r/software/s/jCSoeiWOvT">Launch thread on r/software: <b>114K</b> views,
+            <b>280</b> upvotes, <b>150</b> comments <i>(Nov 2026)</i></a>
+        </p>
       </div>
     </section>
 
-    <!-- Filled in by site.js from GitHub's API; stays hidden if that fails, so no number is ever made up or stale. -->
-    <section class="wrap stats-band" aria-label="Project numbers">
-      <ul class="stats" id="stats" hidden>
-        <li><a href="https://github.com/Orest-Z/OmniCam/releases"><svg class="ico" aria-hidden="true"><use href="#i-download"/></svg><b data-stat="downloads"></b><span>downloads</span></a></li>
-        <li><a href="https://github.com/Orest-Z/OmniCam/stargazers"><svg class="ico" aria-hidden="true"><use href="#i-star"/></svg><b data-stat="stars"></b><span>stars on GitHub</span></a></li>
-        <li><a href="https://github.com/Orest-Z/OmniCam/forks"><svg class="ico" aria-hidden="true"><use href="#i-fork"/></svg><b data-stat="forks"></b><span>forks</span></a></li>
-        <li><a href="https://github.com/Orest-Z/OmniCam/releases"><svg class="ico" aria-hidden="true"><use href="#i-tag"/></svg><b data-stat="releases"></b><span data-stat="released"></span></a></li>
-      </ul>
-      <!-- Reddit shows view counts only to the poster; numbers from the post's insights page, October 4, 2026. -->
-      <a class="reddit" href="https://www.reddit.com/r/software/s/jCSoeiWOvT">
-        <span>Launch thread on <b>r/software</b></span>
-        <span><b>78K</b> views · <b>228</b> upvotes · <b>140</b> comments · <b>376</b> shares <i>(Oct 2026)</i></span>
-      </a>
-      <p class="facts">Every installer and package built by <a href="https://github.com/Orest-Z/OmniCam/actions/workflows/build.yml">public CI</a> from tagged source · code scanned by <a href="https://github.com/Orest-Z/OmniCam/actions/workflows/codeql.yml">CodeQL</a> · zero telemetry · MIT</p>
+    <section id="how" class="setup" aria-labelledby="how-title">
+      <div class="wrap">
+        <div class="rule" aria-hidden="true"><svg><use href="#signal"/></svg></div>
+        <div class="head">
+          <h2 id="how-title">Scan, tap, live.</h2>
+          <p>About thirty seconds the first time. After that the phone only scans the code.</p>
+        </div>
+        <ol class="steps">
+          <li class="step">
+            <div class="step-text">
+              <h3><span class="step-n">1</span>Scan</h3>
+              <p>Open OmniCam on your PC and it shows a QR code. Point the phone's camera at it and open the link.</p>
+              <p>Phone and PC on the same Wi-Fi, or the PC joined to the phone's hotspot. The link only works from your
+                network, and changes every time you make a new one.</p>
+            </div>
+            <a class="shot" href="../docs/media/screenshots/desktop-pair.webp">
+              <img src="../docs/media/screenshots/desktop-pair.webp" loading="lazy" width="1920" height="1020" alt="OmniCam pairing screen: the QR code and the four setup steps">
+            </a>
+          </li>
+          <li class="step" id="warning">
+            <div class="step-text">
+              <h3><span class="step-n">2</span>Tap</h3>
+              <p>The page opens in Safari or Chrome. Tap <b>Start camera</b> and allow the camera. The first time on each
+                network, the browser warns you before that.</p>
+              <p>Browsers only give a page the camera over HTTPS, and a certificate for a private address like
+                <code>192.168.1.11</code> can't come from a public authority, so OmniCam makes its own. Your phone is
+                talking straight to your PC. Accepting applies to that address on that network only, once per phone.</p>
+              <p><b>iPhone:</b> tap <i>Show Details</i>, then <i>visit this website</i> at the bottom.<br>
+                <b>Android:</b> tap <i>Advanced</i>, then <i>Proceed to 192.168…</i></p>
+            </div>
+            <ol class="seq">
+              <li><img src="../docs/media/screenshots/phone-1-warning.webp" loading="lazy" width="592" height="1280" alt="Safari: This Connection Is Not Private."><span>Tap <b>Show Details</b></span></li>
+              <li><img src="../docs/media/screenshots/phone-2-details.webp" loading="lazy" width="592" height="1280" alt="Safari details page with the visit this website link."><span>Tap <b>visit this website</b></span></li>
+              <li><img src="../docs/media/screenshots/phone-3-start.webp" loading="lazy" width="592" height="1280" alt="OmniCam phone page with the Start camera button."><span>Tap <b>Start camera</b></span></li>
+              <li><img src="../docs/media/screenshots/phone-4-live.webp" loading="lazy" width="592" height="1280" alt="Phone streaming live, with the desktop preview visible on the laptop."><span>You're live</span></li>
+            </ol>
+          </li>
+          <li class="step">
+            <div class="step-text">
+              <h3><span class="step-n">3</span>Live</h3>
+              <p>Pick <b>OmniCam</b> as the camera in Discord, Zoom, Google Meet, Teams (classic), Chrome, Firefox, OBS or
+                Slack. Restart an app that was already open: apps list cameras when they start.</p>
+              <p>The window shows exactly what apps receive, with the resolution and frame rate they get.</p>
+            </div>
+            <a class="shot" href="../docs/media/screenshots/desktop-live.webp">
+              <img src="../docs/media/screenshots/desktop-live.webp" loading="lazy" width="1920" height="1020" alt="OmniCam live view: the preview with front/back, resolution, torch, mirror, rotate and Fill/Fit controls">
+            </a>
+          </li>
+        </ol>
+      </div>
     </section>
 
-    <section id="how" class="wrap">
-      <p class="label reveal">01 — Setup</p>
-      <h2 class="reveal">Three steps, about thirty seconds, once</h2>
-      <ol class="steps">
-        <li class="reveal">
-          <span class="n">1</span>
-          <h3>Install and open OmniCam</h3>
-          <p>The installer registers the OmniCam camera on your PC (on Linux, one click and your password). The window shows a QR code.</p>
-        </li>
-        <li class="reveal">
-          <span class="n">2</span>
-          <h3>Scan it with your phone</h3>
-          <p>Same Wi-Fi as the PC. iPhone (Safari) or Android (Chrome). The first time, the browser shows a
-            certificate warning. <a href="#warning">Why, and what to tap.</a></p>
-        </li>
-        <li class="reveal">
-          <span class="n">3</span>
-          <h3>Pick "OmniCam" in your app</h3>
-          <p>Discord, Zoom, Google Meet, Teams (classic), Chrome, Firefox, OBS, Slack: any app that lists webcams.</p>
-        </li>
+    <section id="specs" class="specs" aria-labelledby="specs-title">
+      <div class="wrap specs-grid">
+        <div>
+          <h2 id="specs-title">What it does, exactly.</h2>
+          <div class="plate">
+            <p class="plate-head"><svg aria-hidden="true"><use href="#mark"/></svg>OmniCam <span class="mono" data-version>latest</span></p>
+            <dl>
+              <div><dt>Capture</dt><dd><span class="mono">720p · 720p60 · 1080p · 4K</span> from the phone's camera. 60 fps is 720p, the only 60 fps mode phone browsers offer.</dd></div>
+              <div><dt>Output</dt><dd><span class="mono">720p · 1080p · 4K</span> at 30 or 60 fps, landscape or portrait 9:16 (<span class="mono">1080×1920</span>). Discord, Zoom and Teams send at most 1080p; 4K is for OBS and recording.</dd></div>
+              <div><dt>Encoder</dt><dd>The phone's hardware H.264.</dd></div>
+              <div><dt>Zoom</dt><dd><span class="mono">0.5× · 1× · 2× · 3×</span>, as far as the phone's camera goes. On an iPhone's back camera 0.5× switches to the ultra-wide lens.</dd></div>
+              <div><dt>Controls</dt><dd>Front or back camera, torch, mirror, rotate, Fill or Fit, from the PC or the phone. On the front camera the torch turns the phone's screen white.</dd></div>
+              <div><dt>Picture</dt><dd>Brightness, contrast, saturation and warmth, adjusted on the PC, so they work the same with every phone.</dd></div>
+              <div><dt>Connection</dt><dd>Peer-to-peer WebRTC on your own network, no relay servers. When WebRTC can't connect, as with an iPhone as the hotspot, <i>Hotspot mode</i> uses the page's own encrypted connection (on an iPhone, iOS 16.4 or newer).</dd></div>
+              <div><dt>Microphone</dt><dd>Camera and microphone, or microphone only. Built in on Linux; through VB-CABLE on Windows.</dd></div>
+              <div><dt>PC load</dt><dd>About a quarter of a CPU core at 1080p.</dd></div>
+              <div><dt>Idle</dt><dd>The phone drops to <span class="mono">5 fps</span> when no app is using the camera and the window is hidden.</dd></div>
+              <div><dt>Phone</dt><dd>iPhone (Safari) or Android (Chrome). Nothing to install.</dd></div>
+              <div><dt>PC</dt><dd>Windows 10 (1809 or newer) and 11, 64-bit. Linux x64 as an AppImage, rpm or deb.</dd></div>
+              <div><dt>License</dt><dd>MIT. Free, no account, no ads.</dd></div>
+            </dl>
+          </div>
+        </div>
+        <figure class="settings">
+          <img src="../docs/media/screenshots/desktop-settings.webp" loading="lazy" width="1560" height="1120" alt="OmniCam Settings, Camera section: output resolution, when the phone pauses, stream details">
+          <img src="../docs/media/screenshots/desktop-settings-2.webp" loading="lazy" width="1560" height="1120" alt="OmniCam Settings, Microphone section: ready, with the cable the phone's sound plays into">
+          <figcaption>Settings has five sections: Camera, Microphone, Connection, App and About. Each says how things stand,
+            and a dot marks the one that needs you.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="mic" class="wrap mic" aria-labelledby="mic-title">
+      <div>
+        <h2 id="mic-title">The phone is your microphone too.</h2>
+        <p class="sub">Pick <b>Camera + microphone</b> or <b>Microphone only</b> before tapping Start, and switch any time
+          from the phone or the PC, without reconnecting.</p>
+        <ol class="path" aria-label="How the sound reaches your app">
+          <li>Phone mic</li>
+          <li>OmniCam</li>
+          <li><span>VB-CABLE <small>Windows</small></span><span>OmniCam Microphone <small>Linux</small></span></li>
+          <li>Your app</li>
+        </ol>
+        <ul class="points">
+          <li><b>Sent raw, like a USB mic.</b> Your call app's noise suppression and echo cancellation do the rest.</li>
+          <li><b>Microphone only keeps the camera off:</b> far lighter on the phone's battery, and nothing to decode on the PC.</li>
+          <li><b>It stays on your network</b> like the video, and never plays on your speakers.</li>
+          <li><b>On Windows it needs VB-CABLE,</b> a free virtual audio cable from VB-Audio, because Windows only lets a signed
+            driver add a microphone. <i>Settings → Microphone → Set up</i> walks through it and ticks each step off.</li>
+          <li><b>On Linux there is nothing to install:</b> while OmniCam runs, apps get a microphone called
+            <i>OmniCam Microphone</i>.</li>
+        </ul>
+      </div>
+      <ol class="mic-phones">
+        <li><img src="../docs/media/screenshots/phone-mic-1-start.webp" loading="lazy" width="740" height="1600" alt="OmniCam on an iPhone: the OmniCam and microphone marks, Camera + microphone picked, and Start camera and mic."><span>Camera + microphone</span></li>
+        <li><img src="../docs/media/screenshots/phone-mic-2-mic-only.webp" loading="lazy" width="740" height="1600" alt="OmniCam on an iPhone: the microphone mark, Microphone only picked, and Start microphone."><span>Microphone only</span></li>
+        <li><img src="../docs/media/screenshots/phone-mic-3-live.webp" loading="lazy" width="740" height="1600" alt="OmniCam on an iPhone, live as a microphone only, with the mode picker at the bottom."><span>Live, camera off</span></li>
       </ol>
-      <div class="pair">
-        <figure class="reveal">
-          <img src="../docs/media/screenshots/desktop-pair.webp" loading="lazy" width="1920" height="1020" alt="OmniCam pairing screen: the QR code and the four setup steps">
-          <figcaption><span>Before</span> Scan the code.</figcaption>
-        </figure>
-        <figure class="reveal">
-          <img src="../docs/media/screenshots/desktop-live.webp" loading="lazy" width="1920" height="1020" alt="OmniCam live view: a 1080p preview with front/back, resolution, torch, mirror, rotate and Fill/Fit controls">
-          <figcaption><span>After</span> Live, with exactly what apps receive.</figcaption>
-        </figure>
-      </div>
     </section>
 
-    <section class="wrap">
-      <p class="label reveal">02 — Features</p>
-      <h2 class="reveal">What you get</h2>
-      <div class="bento">
-        <div class="card wide reveal"><svg class="ico" aria-hidden="true"><use href="#i-frame"/></svg><h3>Up to 4K from the phone</h3><p>720p, 720p60, 1080p or 4K capture, encoded by the phone's hardware H.264 encoder.</p><span class="big" aria-hidden="true">4K</span></div>
-        <div class="card reveal"><svg class="ico" aria-hidden="true"><use href="#i-torch"/></svg><h3>Front, back, torch</h3><p>Switch cameras, toggle the flashlight, mirror, rotate, Fill or Fit, from the PC or the phone.</p></div>
-        <div class="card reveal"><svg class="ico" aria-hidden="true"><use href="#i-tray"/></svg><h3>Out of the way</h3><p>Runs from the tray; closing the window keeps the camera live. About a quarter of a CPU core at 1080p.</p></div>
-        <div class="card wide reveal"><svg class="ico" aria-hidden="true"><use href="#i-p2p"/></svg><h3>Stays on your network</h3><p>Peer-to-peer WebRTC over your Wi-Fi. No relay servers, nothing uploaded anywhere.</p><span class="big" aria-hidden="true">P2P</span></div>
-        <div class="card wide reveal"><svg class="ico" aria-hidden="true"><use href="#i-code"/></svg><h3>Free and open</h3><p>MIT licensed. Read every line on GitHub, build it yourself, or send a fix.</p><span class="big" aria-hidden="true">MIT</span></div>
-        <div class="card reveal"><svg class="ico" aria-hidden="true"><use href="#i-battery"/></svg><h3>Saves the phone's battery when idle</h3><p>Drops to 5 fps when no app is using the camera and the window is hidden.</p></div>
-      </div>
-    </section>
-
-    <section id="mic" class="wrap">
-      <div class="mic">
-        <div class="reveal">
-          <p class="label">03 — Microphone</p>
-          <h2>The phone is your microphone too</h2>
-          <p>Pick <b>Camera + microphone</b> or <b>Microphone only</b> before tapping Start, and switch any time from the
-            phone or the PC, without reconnecting.</p>
-          <!-- The path the sound takes, as the app's setup guide draws it. -->
-          <ol class="flow" aria-label="How the sound reaches your app">
-            <li>Phone mic</li>
-            <li>OmniCam</li>
-            <li>VB-CABLE · OmniCam Microphone</li>
-            <li>Your app</li>
-          </ol>
+    <section id="linux" class="linux" aria-labelledby="linux-title">
+      <div class="wrap linux-grid">
+        <div>
+          <h2 id="linux-title">On Linux too.</h2>
+          <p class="sub">The same phone page and picture, a camera OmniCam sets up itself, and a microphone with nothing to install.</p>
           <ul class="points">
-            <li><b>Sent raw, like a USB mic.</b> Your call app's noise suppression and echo cancellation do the rest.</li>
-            <li><b>Microphone only</b> keeps the camera off: far lighter on the phone's battery, nothing to decode on the PC.</li>
-            <li><b>Stays on your network</b> like the video, and is never played on your speakers.</li>
-            <li><b>On Windows it needs VB-CABLE</b>, a free virtual audio cable from VB-Audio: Windows only lets a signed
-              driver add a microphone. OmniCam's setup guide shows each step with pictures, about two minutes.</li>
-            <li><b>On Linux there is nothing to install:</b> while OmniCam runs, apps get a microphone called
-              <i>OmniCam Microphone</i>.</li>
+            <li><b>The camera</b> is a v4l2loopback device, the standard virtual camera on Linux. On Fedora, Debian and
+              Ubuntu, click <b>Install camera driver</b> and enter your password once; OmniCam lists what it will do, then
+              installs the module and sets up the camera. On Arch and others it shows the commands.</li>
+            <li><b>Secure Boot:</b> OmniCam asks it to trust the driver's key and shows a one-time password for the blue
+              screen at the next restart. No BIOS change.</li>
+            <li><b>The microphone</b>, <i>OmniCam Microphone</i>, appears while OmniCam runs, made with PipeWire or
+              PulseAudio, no root.</li>
+            <li><b>Tested</b> end to end on Fedora 44 (GNOME, Wayland). Ubuntu, Debian, Mint, Pop!_OS and Arch are
+              supported, not tested yet. <a href="https://github.com/Orest-Z/OmniCam/issues">Say how it went</a>.</li>
           </ul>
         </div>
-        <ol class="phones three">
-          <li class="reveal"><img src="../docs/media/screenshots/phone-mic-1-start.webp" loading="lazy" width="740" height="1600" alt="OmniCam on an iPhone: the OmniCam and microphone marks, Camera + microphone picked, and Start camera and mic."><span><b>Camera + microphone</b></span></li>
-          <li class="reveal"><img src="../docs/media/screenshots/phone-mic-2-mic-only.webp" loading="lazy" width="740" height="1600" alt="OmniCam on an iPhone: the microphone mark, Microphone only picked, and Start microphone."><span><b>Microphone only</b></span></li>
-          <li class="reveal"><img src="../docs/media/screenshots/phone-mic-3-live.webp" loading="lazy" width="740" height="1600" alt="OmniCam on an iPhone, live as a microphone only, with the mode picker at the bottom."><span>Live, camera off</span></li>
-        </ol>
+        <div class="term">
+          <div class="term-row"><a data-asset="AppImage" href="https://github.com/Orest-Z/OmniCam/releases/latest">AppImage</a><span>Any distribution. It updates itself.</span><code>chmod +x OmniCam-x.y.z.AppImage</code></div>
+          <div class="term-row"><a data-asset="rpm" href="https://github.com/Orest-Z/OmniCam/releases/latest">.rpm</a><span>Fedora and other RHEL-likes</span><code>sudo dnf install ./OmniCam-x.y.z.rpm</code></div>
+          <div class="term-row"><a data-asset="deb" href="https://github.com/Orest-Z/OmniCam/releases/latest">.deb</a><span>Debian, Ubuntu, Mint</span><code>sudo apt install ./OmniCam-x.y.z.deb</code></div>
+          <p class="term-foot"><a href="https://github.com/Orest-Z/OmniCam#install-linux">Step-by-step install, Secure Boot and troubleshooting</a></p>
+        </div>
       </div>
     </section>
 
-    <section id="linux" class="wrap">
-      <p class="label reveal">04 — Linux</p>
-      <h2 class="reveal">On Linux too</h2>
-      <p class="sub reveal">The same phone page, the same quality, and a microphone that needs nothing installed. The camera is
-        a v4l2loopback device, the standard virtual camera on Linux, which apps list like any webcam.</p>
-      <div class="grid two">
-        <div class="card reveal">
-          <svg class="ico" aria-hidden="true"><use href="#i-download"/></svg>
-          <h3>Pick a download</h3>
+    <section id="trust" class="wrap trust" aria-labelledby="trust-title">
+      <div class="rule" aria-hidden="true"><svg><use href="#signal"/></svg></div>
+      <h2 id="trust-title">What it asks for, what it sends, what it can't do.</h2>
+      <p class="sub">OmniCam asks for administrator rights and opens a port on your network. Here is exactly what it does with them, and where it falls short.</p>
+      <div class="ledger">
+        <section aria-labelledby="asks">
+          <h3 id="asks">Asks for</h3>
           <ul>
-            <li><b><a data-asset="AppImage" href="https://github.com/Orest-Z/OmniCam/releases/latest">AppImage</a></b>, any distribution: make it executable and run it. It updates itself.</li>
-            <li><b><a data-asset="rpm" href="https://github.com/Orest-Z/OmniCam/releases/latest">rpm</a></b> for Fedora: <code>sudo dnf install ./OmniCam-x.y.z.rpm</code></li>
-            <li><b><a data-asset="deb" href="https://github.com/Orest-Z/OmniCam/releases/latest">deb</a></b> for Debian and Ubuntu: <code>sudo apt install ./OmniCam-x.y.z.deb</code></li>
+            <li><b>Administrator rights, once, on Windows.</b> The installer registers the OmniCam camera (a DirectShow
+              filter, 64- and 32-bit) and adds one Windows Firewall rule so your phone can reach it. Both are listed on the
+              installer's first page and removed when you uninstall. Nothing else runs as administrator.</li>
+            <li><b>Your password, once, on Linux,</b> to install the camera driver if it's missing (on Fedora that also
+              turns on the RPM Fusion free repository) and to set up the camera, which writes two small config files that
+              are removed with the package. The microphone needs no root.</li>
+            <li><b>A click past SmartScreen.</b> Installers aren't code-signed yet, so Windows asks you to confirm:
+              <i>More info → Run anyway</i>. Free signing by SignPath Foundation is being set up.
+              <a href="https://github.com/Orest-Z/OmniCam/blob/main/CODE_SIGNING.md">Code signing policy</a></li>
           </ul>
-          <p>x64, from <a href="https://github.com/Orest-Z/OmniCam/releases/latest">GitHub Releases</a>, like the Windows installer.</p>
-        </div>
-        <div class="card reveal">
-          <svg class="ico" aria-hidden="true"><use href="#i-list"/></svg>
-          <h3>Which distributions</h3>
+        </section>
+        <section aria-labelledby="sends">
+          <h3 id="sends">Sends</h3>
           <ul>
-            <li><b>Fedora 44</b> (GNOME, Wayland): tested end to end.</li>
-            <li><b>Ubuntu, Debian, Mint, Pop!_OS</b>: the deb or the AppImage. Supported, not tested yet.</li>
-            <li><b>Arch, Manjaro, EndeavourOS</b> and the rest: the AppImage. Supported, not tested yet.</li>
+            <li><b>Phone ↔ PC, on your network:</b> the pairing page, the encrypted video, and the microphone's sound if
+              you turn it on. No relay servers. Hotspot mode uses the page's own encrypted connection, still straight from
+              phone to PC.</li>
+            <li><b>PC → GitHub:</b> a daily update check you can turn off in Settings. Updates download only when you click.</li>
+            <li><b>Nothing else.</b> No account, no telemetry, no analytics, no crash reports.
+              <a href="https://github.com/Orest-Z/OmniCam/blob/main/PRIVACY.md">Privacy details</a></li>
+            <li><b>Where the installer comes from:</b> every installer and package is built by the project's
+              <a href="https://github.com/Orest-Z/OmniCam/actions/workflows/build.yml">public CI</a> from the tagged source,
+              with a signed build attestation, and published on <a href="https://github.com/Orest-Z/OmniCam/releases">GitHub Releases</a>.
+              The code is scanned by <a href="https://github.com/Orest-Z/OmniCam/actions/workflows/codeql.yml">CodeQL</a>.
+              This site hosts no downloads of its own.
+              <span class="mono checksum" id="checksum" hidden></span></li>
           </ul>
-          <p>Tried one of those? <a href="https://github.com/Orest-Z/OmniCam/issues">Say how it went</a>.</p>
-        </div>
-        <div class="card reveal">
-          <svg class="ico" aria-hidden="true"><use href="#i-frame"/></svg>
-          <h3>The camera: one module, one click</h3>
-          <p>Install <b>v4l2loopback</b> from your distribution (Fedora: <code>akmod-v4l2loopback</code> from RPM Fusion; Debian
-            and Ubuntu: <code>v4l2loopback-dkms</code>), then click <b>Set up camera</b> in OmniCam and enter your password once.
-            It stays set up after restarts. With Secure Boot on, OmniCam shows the one-time key enrolment: free, no BIOS change.</p>
-        </div>
-        <div class="card reveal">
-          <svg class="ico" aria-hidden="true"><use href="#i-mic"/></svg>
-          <h3>The microphone: nothing to install</h3>
-          <p>While OmniCam runs, your apps get <b>OmniCam Microphone</b>, made with PipeWire or PulseAudio, no root. Your speakers
-            stay the sound output. On GNOME without a tray extension, closing the window minimises OmniCam instead of hiding it.</p>
-        </div>
-      </div>
-      <p class="sub reveal"><a href="https://github.com/Orest-Z/OmniCam#install-linux">Step-by-step Linux install, Secure Boot and troubleshooting</a></p>
-    </section>
-
-    <section class="wrap">
-      <div class="split">
-        <div class="reveal">
-          <p class="label">05 — Settings</p>
-          <h2>Settings you'll actually use</h2>
-          <p>Five sections: Camera, Microphone, Connection, App and About. Each says how things stand, and a dot marks the
-            one that needs you. Output resolution up to 4K, what to show when the phone pauses, which cable the phone's
-            microphone plays into, light or dark, start when you sign in, updates. The frame rate follows the phone on its own.</p>
-        </div>
-        <div class="settings-shot">
-          <img class="reveal" src="../docs/media/screenshots/desktop-settings.webp" loading="lazy" width="1560" height="1120" alt="OmniCam Settings, Camera section: output resolution, when the phone pauses, stream details">
-          <img class="reveal" src="../docs/media/screenshots/desktop-settings-2.webp" loading="lazy" width="1560" height="1120" alt="OmniCam Settings, Microphone section: ready, with the cable the phone's sound plays into">
-        </div>
-      </div>
-    </section>
-
-    <section id="trust" class="wrap">
-      <p class="label reveal">06 — Trust</p>
-      <h2 class="reveal">Security and privacy, plainly</h2>
-      <p class="sub reveal">OmniCam asks for administrator rights and opens a port on your network. Here is exactly what it does with them.</p>
-      <div class="grid two">
-        <div class="card reveal">
-          <svg class="ico" aria-hidden="true"><use href="#i-list"/></svg>
-          <h3>What the installer changes</h3>
+        </section>
+        <section aria-labelledby="cant">
+          <h3 id="cant">Can't do yet</h3>
           <ul>
-            <li>Registers the <b>OmniCam</b> camera device (a DirectShow filter, 64- and 32-bit).</li>
-            <li>Adds one Windows Firewall rule so your phone can reach OmniCam on your local network.</li>
+            <li><b>A microphone of its own on Windows.</b> That needs a signed audio driver, so the sound goes through
+              VB-CABLE for now. It's on the roadmap; Linux has one already.</li>
+            <li><b>macOS.</b> Windows 10 and 11 and Linux, 64-bit. macOS is on the roadmap.</li>
+            <li><b>The newer Windows camera stack.</b> The Windows Camera app and the new Microsoft Teams won't list
+              OmniCam; apps that use DirectShow do.</li>
+            <li><b>Linux without a kernel module.</b> The camera needs v4l2loopback, and with Secure Boot a key enrolled once.</li>
+            <li><b>Two phones at once,</b> or a locked phone. The page must stay open with the screen on, so long calls want a charger.</li>
+            <li><b>USB.</b> Wi-Fi, or a hotspot with the PC joined to it. Hotspot mode costs more CPU and battery than Wi-Fi.</li>
+            <li><b>Skip the browser warning.</b> Once per phone and network, until a mode with a real certificate lands.</li>
           </ul>
-          <p>Both are listed on the installer's first page and removed when you uninstall. Nothing else runs as administrator.</p>
-          <p>On Linux, root is asked for once, through your desktop's password prompt, to set up the camera module: two small
-            config files, removed with the package. The microphone needs no root.</p>
-        </div>
-        <div class="card reveal">
-          <svg class="ico" aria-hidden="true"><use href="#i-swap"/></svg>
-          <h3>What goes over the network</h3>
-          <ul>
-            <li>Phone ↔ PC on your local network: the pairing page, the encrypted video, and the microphone's sound if you turn it on.</li>
-            <li>PC → GitHub: a daily update check you can turn off in Settings.</li>
-          </ul>
-          <p>No account, no telemetry, no analytics, no crash reports. <a href="https://github.com/Orest-Z/OmniCam/blob/main/PRIVACY.md">Privacy details</a></p>
-        </div>
-        <div class="card reveal">
-          <svg class="ico" aria-hidden="true"><use href="#i-branch"/></svg>
-          <h3>Where the installer comes from</h3>
-          <p>Every installer and Linux package is built by the project's public GitHub Actions workflow from the tagged source, and published on
-            <a href="https://github.com/Orest-Z/OmniCam/releases">GitHub Releases</a>. This site links there; it hosts no downloads of its own.</p>
-          <p class="mono small" id="checksum" hidden></p>
-        </div>
-        <div class="card reveal">
-          <svg class="ico" aria-hidden="true"><use href="#i-sign"/></svg>
-          <h3>Code signing</h3>
-          <p>Releases are moving to free code signing provided by SignPath.io, certificate by SignPath Foundation, so
-            Windows shows a verified publisher. Until that is in place, Windows SmartScreen asks you to confirm:
-            <b>More info → Run anyway</b>.</p>
-          <p><a href="https://github.com/Orest-Z/OmniCam/blob/main/CODE_SIGNING.md">Code signing policy</a> · <a href="https://github.com/Orest-Z/OmniCam/blob/main/SECURITY.md">Report a vulnerability</a></p>
-        </div>
+        </section>
       </div>
     </section>
 
-    <section id="warning" class="wrap">
-      <p class="label reveal">07 — First run</p>
-      <h2 class="reveal">About the warning on your phone</h2>
-      <div class="stack">
-        <div class="reveal">
-          <p>Browsers only allow camera access over HTTPS. A certificate for a private address like
-            <code>192.168.1.11</code> can't come from a public authority, so OmniCam creates its own on your PC, and the
-            phone's browser warns about it the first time.</p>
-          <p>Your phone is talking directly to your PC. Accepting it applies to that address on that network only, and you
-            only do it once per phone and network.</p>
-          <p><b>iPhone:</b> tap <i>Show Details</i>, then <i>visit this website</i> at the bottom.<br>
-            <b>Android:</b> tap <i>Advanced</i>, then <i>Proceed to 192.168…</i></p>
-        </div>
-        <ol class="phones">
-          <li class="reveal"><img src="../docs/media/screenshots/phone-1-warning.webp" loading="lazy" width="592" height="1280" alt="Safari: This Connection Is Not Private."><span>Tap <b>Show Details</b></span></li>
-          <li class="reveal"><img src="../docs/media/screenshots/phone-2-details.webp" loading="lazy" width="592" height="1280" alt="Safari details page with the visit this website link."><span>Tap <b>visit this website</b></span></li>
-          <li class="reveal"><img src="../docs/media/screenshots/phone-3-start.webp" loading="lazy" width="592" height="1280" alt="OmniCam phone page with the Start camera button."><span>Tap <b>Start camera</b></span></li>
-          <li class="reveal"><img src="../docs/media/screenshots/phone-4-live.webp" loading="lazy" width="592" height="1280" alt="Phone streaming live, with the desktop preview visible on the laptop."><span>You're live</span></li>
-        </ol>
-      </div>
-    </section>
-
-    <section class="wrap">
-      <p class="label reveal">08 — Limits</p>
-      <h2 class="reveal">What it doesn't do yet</h2>
-      <ul class="limits">
-        <li class="reveal"><b>On Windows the microphone needs VB-CABLE.</b> A free virtual cable from VB-Audio; an "OmniCam" microphone of its own needs a signed driver and is on the roadmap. Linux has one already.</li>
-        <li class="reveal"><b>Windows and Linux, 64-bit.</b> macOS is on the roadmap.</li>
-        <li class="reveal"><b>DirectShow apps only on Windows.</b> The Windows Camera app and the new Microsoft Teams won't list it yet.</li>
-        <li class="reveal"><b>A kernel module on Linux.</b> The camera needs v4l2loopback installed once, and with Secure Boot a key enrolled once.</li>
-        <li class="reveal"><b>One phone at a time</b>, and the page must stay open with the screen on, so long calls want a charger.</li>
-        <li class="reveal"><b>No USB.</b> Wi-Fi, or a phone hotspot with the PC on it.</li>
-      </ul>
-    </section>
-
-    <section id="faq" class="wrap faq">
-      <div class="reveal">
-        <p class="label">09 — FAQ</p>
-        <h2>Questions</h2>
+    <section id="faq" class="wrap faq" aria-labelledby="faq-title">
+      <div>
+        <h2 id="faq-title">Questions</h2>
         <p class="sub">Something else? <a href="https://github.com/Orest-Z/OmniCam/issues">Open an issue</a>.</p>
       </div>
-      <div class="reveal">
+      <div>
         <details><summary>Is it really free?</summary><p>Yes. MIT license, no paid tier, no account, no ads. If it helps you, a star on GitHub or a bug report is the best thanks.</p></details>
-        <details><summary>The phone can't open the page</summary><p>Phone and PC must be on the same Wi-Fi, not a guest network or mobile data. Some routers isolate Wi-Fi devices from each other; use another network or a phone hotspot. With VPNs or virtual adapters, pick your Wi-Fi under Settings → Network interface.</p></details>
-        <details><summary>"OmniCam" doesn't show up in my app</summary><p>Restart the app; apps list cameras when they start. If it's still missing, run the installer again to re-register the camera. On Linux, OmniCam's own window says what is missing and how to fix it; apps installed from Flathub need device access.</p></details>
-        <details><summary>How do I use my phone as a microphone?</summary><p>Install <a href="https://vb-audio.com/Cable/">VB-CABLE</a> (free) and restart. On the phone pick <i>Camera + microphone</i> or <i>Microphone only</i>, then choose <b>CABLE Output</b> as the microphone in Discord, Zoom or Teams. <i>Settings → Microphone → Set up</i> in OmniCam walks through it with pictures and ticks each step off as you go. On Linux skip VB-CABLE: choose <b>OmniCam Microphone</b>.</p></details>
+        <details><summary>The phone can't open the page</summary><p>Phone and PC must be on the same network: the same Wi-Fi (not a guest network or mobile data), or the PC joined to the phone's hotspot. Some routers isolate Wi-Fi devices from each other; use another network or a phone hotspot. With VPNs or virtual adapters, pick your Wi-Fi under <i>Settings → Connection → Network</i>. On Linux, <i>Settings → Connection</i> also shows the firewall command for your port.</p></details>
+        <details><summary>Does it work with an iPhone as the hotspot?</summary><p>Yes, since version 2.4.0. Safari won't use WebRTC there, so OmniCam sends the video and sound over the page's own encrypted connection instead, and the bar says <b>Hotspot mode</b>. It takes more CPU and battery than regular Wi-Fi, and needs iOS 16.4 or newer.</p></details>
+        <details><summary>"OmniCam" doesn't show up in my app</summary><p>Restart the app; apps list cameras when they start. If it's still missing, run the installer again to re-register the camera. The Windows Camera app and the new Microsoft Teams don't list it. On Linux, OmniCam's own window says what is missing and how to fix it; apps installed from Flathub need device access.</p></details>
+        <details><summary>How do I use my phone as a microphone?</summary><p>Install <a href="https://vb-audio.com/Cable/">VB-CABLE</a> (free) and restart. On the phone pick <i>Camera + microphone</i> or <i>Microphone only</i>, then choose <b>CABLE Output</b> as the microphone in Discord, Zoom or Teams. <i>Settings → Microphone → Set up</i> in OmniCam walks through it and ticks each step off as you go. On Linux skip VB-CABLE: choose <b>OmniCam Microphone</b>.</p></details>
         <details><summary>Why does the microphone need VB-CABLE?</summary><p>Call apps only list microphones that come from an audio driver, and Windows only loads drivers Microsoft has signed. VB-CABLE is a free, signed virtual cable: OmniCam plays the phone's sound into one end and your app records from the other. The camera needs nothing like it, because Windows lets an app add a camera without a driver. Linux lets an app add a microphone without a driver, so there OmniCam makes its own.</p></details>
-        <details><summary>Does any video or sound go through the internet?</summary><p>No. Video and sound go peer-to-peer from your phone to your PC on your local network. There are no relay servers.</p></details>
+        <details><summary>Does any video or sound go through the internet?</summary><p>No. Video and sound go from your phone to your PC on your local network: peer-to-peer WebRTC, or in Hotspot mode the page's own encrypted connection. There are no relay servers.</p></details>
         <details><summary>How was it built?</summary><p>By one developer, with AI assistance for parts of the implementation, documentation and testing. The <a href="https://github.com/Orest-Z/OmniCam#ai-involvement">README</a> says where it helped and where it didn't, and the <a href="https://github.com/Orest-Z/OmniCam/blob/main/ARCHITECTURE.md">architecture notes</a> explain every design decision.</p></details>
-      </div>
-    </section>
-
-    <section class="wrap closer reveal">
-      <h2>Ready when you are.<br><span>Free, no account, nothing on the phone.</span></h2>
-      <div class="get">
-        <div class="os" data-os="windows">
-          <div class="os-head">
-            <svg class="ico" aria-hidden="true"><use href="#i-windows"/></svg>
-            <div><h3>Windows</h3><p>Windows 10 and 11, 64-bit</p></div>
-            <span class="yours">Your system</span>
-          </div>
-          <a class="btn primary dl" data-asset="exe" href="https://github.com/Orest-Z/OmniCam/releases/latest">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span><b>Download for Windows</b><small>Installer (.exe)<span data-size></span></small></span>
-          </a>
-          <p class="os-hint">Run it and follow the steps. OmniCam keeps itself up to date after that.</p>
-          <p class="os-note">Windows may ask you to confirm once. <a href="#trust">Why?</a></p>
-        </div>
-        <div class="os" data-os="linux">
-          <div class="os-head">
-            <svg class="ico" aria-hidden="true"><use href="#i-linux"/></svg>
-            <div><h3>Linux</h3><p>64-bit (x64)</p></div>
-            <span class="yours">Your system</span>
-          </div>
-          <a class="btn primary dl" data-asset="AppImage" href="https://github.com/Orest-Z/OmniCam/releases/latest">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span><b>Download AppImage</b><small>Any distribution<span data-size></span></small></span>
-          </a>
-          <div class="pkgs">
-            <a class="btn dl" data-asset="rpm" href="https://github.com/Orest-Z/OmniCam/releases/latest"><span><b>.rpm package</b><small>Fedora</small></span></a>
-            <a class="btn dl" data-asset="deb" href="https://github.com/Orest-Z/OmniCam/releases/latest"><span><b>.deb package</b><small>Ubuntu, Debian</small></span></a>
-          </div>
-          <p class="os-note">The camera needs one kernel module. <a href="#linux">Setup steps</a></p>
-        </div>
-      </div>
-      <p class="meta" data-download-meta>Latest version · free · MIT license</p>
-      <div class="cta">
-        <a class="btn ghost" href="https://github.com/Orest-Z/OmniCam"><svg class="ico" aria-hidden="true"><use href="#i-github"/></svg>View source</a>
       </div>
     </section>
   </main>
 
-  <footer class="wrap foot">
-    <span>OmniCam · MIT License</span>
-    <a href="https://github.com/Orest-Z/OmniCam">Source</a>
-    <a href="https://github.com/Orest-Z/OmniCam/releases">Releases</a>
-    <a href="https://github.com/Orest-Z/OmniCam/blob/main/PRIVACY.md">Privacy</a>
-    <a href="https://github.com/Orest-Z/OmniCam/blob/main/CODE_SIGNING.md">Code signing</a>
-    <a href="https://github.com/Orest-Z/OmniCam/blob/main/SECURITY.md">Security</a>
-    <a href="https://github.com/Orest-Z/OmniCam/issues">Issues</a>
+  <footer class="foot">
+    <div class="wrap">
+      <p class="foot-get">
+        <svg aria-hidden="true"><use href="#mark"/></svg>
+        <span>OmniCam <span data-version></span> for
+          <a data-asset="exe" href="https://github.com/Orest-Z/OmniCam/releases/latest">Windows</a>,
+          <a data-asset="AppImage" href="https://github.com/Orest-Z/OmniCam/releases/latest">Linux AppImage</a>,
+          <a data-asset="rpm" href="https://github.com/Orest-Z/OmniCam/releases/latest">.rpm</a> or
+          <a data-asset="deb" href="https://github.com/Orest-Z/OmniCam/releases/latest">.deb</a>. Free, MIT license.</span>
+      </p>
+      <nav class="foot-links" aria-label="Project">
+        <a href="https://github.com/Orest-Z/OmniCam">Source</a>
+        <a href="https://github.com/Orest-Z/OmniCam/releases">Releases</a>
+        <a href="https://github.com/Orest-Z/OmniCam/blob/main/PRIVACY.md">Privacy</a>
+        <a href="https://github.com/Orest-Z/OmniCam/blob/main/CODE_SIGNING.md">Code signing</a>
+        <a href="https://github.com/Orest-Z/OmniCam/blob/main/SECURITY.md">Security</a>
+        <a href="https://github.com/Orest-Z/OmniCam/issues">Issues</a>
+      </nav>
+    </div>
   </footer>
 </body>
 </html>
