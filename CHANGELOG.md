@@ -24,6 +24,10 @@ anything else that wants several cameras.
 - **One microphone:** only camera 1's phone can be the microphone, because there is one virtual cable.
 - **Off by default:** if you use one phone, nothing changes and apps still list a single OmniCam.
 
+### Fixed
+- **A phone that reconnected while on standby stayed at 5 fps**, even once an app was using its camera. It now
+  returns to full frame rate.
+
 Measured with four simulated phones on one PC (Ryzen 7 5700X): at 720p60 and at 1080p30 all four cameras held
 their frame rate with no dropped frames, using well under one CPU core in total. Not on Linux yet, where
 OmniCam has one camera.

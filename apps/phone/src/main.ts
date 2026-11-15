@@ -580,6 +580,9 @@ function connectLink() {
 }
 
 function teardownPeer() {
+  // Standby was the old connection's: the desktop starts every new one at full rate and says nothing
+  // until that changes, so keeping it would leave a reconnected phone at 5 fps while an app reads it.
+  idleMode = false;
   link?.close();
   link = null;
   control?.close();
