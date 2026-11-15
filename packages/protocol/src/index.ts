@@ -89,6 +89,8 @@ export interface ResolutionPreset {
 }
 
 export const RESOLUTION_PRESETS: Record<string, ResolutionPreset> = {
+  // For phones that encode in software and can't keep 720p up. 848 and not 854: encoders like multiples of 16.
+  '480p': { width: 848, height: 480, frameRate: 30 },
   '720p': { width: 1280, height: 720, frameRate: 30 },
   '1080p': { width: 1920, height: 1080, frameRate: 30 },
   // Phone browsers (all of iOS) only offer 60 fps below 1080p, so the high-rate preset is 720p.

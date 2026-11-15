@@ -21,6 +21,7 @@ anything else that wants several cameras.
   follows camera 1's phone.
 - **Each camera its own way:** the rotate button and the phone controls (resolution, front/back, zoom) act on
   the camera whose tab is open, so phones mounted differently can each be turned upright.
+- **480p for older phones:** a phone that can't keep up with 720p can film at 480p; it remembers the choice.
 - **One microphone:** only camera 1's phone can be the microphone, because there is one virtual cable.
 - **Off by default:** if you use one phone, nothing changes and apps still list a single OmniCam.
 

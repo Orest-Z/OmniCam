@@ -107,7 +107,8 @@ Up to four cameras, "OmniCam" and "OmniCam 2" to "OmniCam 4", one phone each, al
 - **Shared settings:** one output format and picture for all cameras; the "output fps follows the phone" rule
   follows camera 1's phone only.
 - **Per camera:** the rotation (`rotation` for camera 1, `extraRotations` for the others) and what the phone
-  films: the window's phone controls, resolution included, go to the selected camera's phone only.
+  films: the window's phone controls, resolution included, go to the selected camera's phone only, so one old
+  phone can run at 480p. The phone page remembers its resolution.
 - **Upright phones:** the answer SDP drops `urn:3gpp:video-orientation` (`sdp.ts`), so Safari turns the frames
   itself. With it an iPhone held upright arrived on its side (the frame pump never sees the flag) while an
   Android arrived upright, and no single rotation suited both.

@@ -310,6 +310,7 @@ async function handleControl(msg: DesktopToPhone) {
       const preset = RESOLUTION_PRESETS[msg.preset];
       if (preset) {
         els.res.value = msg.preset;
+        rememberResolution();
         await camera.setResolution(preset);
         refreshTrackInfo();
         if (sender) void tuneSender(sender);
@@ -748,6 +749,7 @@ els.screenlight.addEventListener('click', () => void setLight(false));
 els.res.addEventListener('change', () => {
   const preset = RESOLUTION_PRESETS[els.res.value];
   if (preset) {
+    rememberResolution();
     void camera.setResolution(preset).then(() => {
       refreshTrackInfo();
       if (sender) void tuneSender(sender);
@@ -756,10 +758,19 @@ els.res.addEventListener('change', () => {
 });
 window.addEventListener('beforeunload', () => teardownPeer());
 
-// The mode is remembered for next time (storage can be unavailable, e.g. private mode).
+/** A phone that needs 480p needs it after every reload too, wherever it was picked (here or on the desktop). */
+function rememberResolution() {
+  try {
+    localStorage.setItem('omnicam.res', els.res.value);
+  } catch { /* storage can be unavailable */ }
+}
+
+// The mode and the resolution are remembered for next time (storage can be unavailable, e.g. private mode).
 try {
   els.mode.value = localStorage.getItem('omnicam.mode') ?? 'camera';
-} catch { /* the default stays */ }
+  const res = localStorage.getItem('omnicam.res');
+  if (res && RESOLUTION_PRESETS[res]) els.res.value = res;
+} catch { /* the defaults stay */ }
 if (!els.mode.value) els.mode.value = 'camera';
 if (!micAllowed) {
   // An extra camera: it says which one it is, and sends its camera only.

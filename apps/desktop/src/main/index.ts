@@ -147,7 +147,7 @@ function wireIpc(): void {
 
   ipcMain.handle(UI_SET_SETTINGS, (_e, patch: Partial<AppSettings>) => changeSettings(patch));
 
-  // To the phone of the camera the window shows: phones differ, so each has its own.
+  // To the phone of the camera the window shows: phones differ (an old one may need 480p), so each has its own.
   ipcMain.handle(UI_CONTROL, (_e, msg: DesktopToPhone) => engine.control(engine.shown, msg));
 
   ipcMain.handle(UI_SELECT_CAMERA, async (_e, camera: unknown) => {

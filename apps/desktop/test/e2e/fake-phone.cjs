@@ -1,7 +1,7 @@
 // A phone without a phone: opens the phone page in Chromium with its fake camera (a moving pattern)
 // and fake microphone (beeps), and starts streaming at once (&auto=1). Dev tool, never packaged.
 // Usage: npx electron apps/desktop/test/e2e/fake-phone.cjs '<phone URL from the dev log>' [camera|both|mic] [fps] [preset]
-// fps: the fake camera's frame rate (Chromium's default is 20). preset: 720p, 720p60, 1080p or 4k, picked on the
+// fps: the fake camera's frame rate (Chromium's default is 20). preset: 480p, 720p, 720p60, 1080p or 4k, picked on the
 // page once it streams, as a person would; `60 720p60` exercises the 60 fps path.
 // Add &cam=2 (3, 4) to the URL to feed an extra camera; run one fake phone per camera.
 // Add &link=1 to the URL to send over the media link instead of WebRTC.
@@ -15,7 +15,7 @@ const { join } = require('node:path');
 const args = process.argv.slice(2);
 const url = process.env.OMNICAM_PHONE_URL || args.shift();
 const [mode = 'camera', fps = '', preset = ''] = args;
-const PRESETS = ['', '720p', '720p60', '1080p', '4k'];
+const PRESETS = ['', '480p', '720p', '720p60', '1080p', '4k'];
 if (!url || (fps && !/^[1-9]\d?$/.test(fps)) || !PRESETS.includes(preset) || !['camera', 'both', 'mic'].includes(mode)) {
   console.error("usage: electron fake-phone.cjs '<phone URL>' [camera|both|mic] [fps] [preset]");
   process.exit(2);

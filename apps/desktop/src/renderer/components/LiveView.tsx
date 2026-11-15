@@ -129,6 +129,7 @@ export function LiveView({ stats, vcam, settings, virtualMic, cameraIndex, micAl
                 value={preset}
                 disabled={!live}
                 options={[
+                  { value: '480p', label: '480p', title: "For an older phone that can't keep up with 720p." },
                   { value: '720p', label: '720p' },
                   {
                     value: '720p60',
