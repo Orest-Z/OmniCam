@@ -26,6 +26,14 @@ export const LINK_HEADER_BYTES = 9;
 
 export const DEFAULT_PORT = 28441;
 
+/**
+ * Virtual cameras one desktop can offer: "OmniCam" and, on Windows with Extra cameras on, "OmniCam 2" to
+ * "OmniCam 4". Each has its own QR code, whose URL carries `&cam=N` (none means camera 1); the phone sends
+ * that number back on /api/session (`camera`) and on the media link (`&cam=N`), so it always lands on, and
+ * comes back to, its own camera.
+ */
+export const MAX_CAMERAS = 4;
+
 export interface SessionRequest {
   /** Pairing token embedded in the QR URL (`?t=`). */
   token: string;
@@ -33,6 +41,8 @@ export interface SessionRequest {
   sdp: string;
   /** Free-form device description for the desktop UI. */
   device: DeviceInfo;
+  /** Which camera this phone feeds, 1 to MAX_CAMERAS, from the page URL's `cam`. Absent means camera 1. */
+  camera?: number;
 }
 
 export interface SessionResponse {
@@ -79,6 +89,8 @@ export interface ResolutionPreset {
 }
 
 export const RESOLUTION_PRESETS: Record<string, ResolutionPreset> = {
+  // For phones that encode in software and can't keep 720p up. 848 and not 854: encoders like multiples of 16.
+  '480p': { width: 848, height: 480, frameRate: 30 },
   '720p': { width: 1280, height: 720, frameRate: 30 },
   '1080p': { width: 1920, height: 1080, frameRate: 30 },
   // Phone browsers (all of iOS) only offer 60 fps below 1080p, so the high-rate preset is 720p.
@@ -119,8 +131,9 @@ export type PhoneToDesktop =
   | { type: 'pong'; t: number }
   /** Media link only: how to decode the frames that follow. */
   | { type: 'videoConfig'; codec: string; codedWidth: number; codedHeight: number; description?: number[] }
-  /** Media link only: the phone's own counters and notes, for the desktop's log. */
+  /** Media link only: the phone's own counters, for the desktop's log. */
   | { type: 'linkStats'; stats: Record<string, unknown> }
+  /** A note from the phone for the desktop's log: the media link's, and what limits the WebRTC sender. */
   | { type: 'linkLog'; message: string };
 
 /** Camera and microphone are negotiated together and switched on and off without renegotiating. */

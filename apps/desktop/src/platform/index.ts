@@ -14,6 +14,7 @@ const fallback: Platform = {
   distro: 'other',
   virtualMic: null,
   setupCamera: null,
+  extraCameras: null,
   updates: () => (app.isPackaged ? 'supported' : 'dev'),
 };
 

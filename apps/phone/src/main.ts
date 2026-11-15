@@ -12,7 +12,7 @@ import { PhoneLink } from './link';
 import { installFonts } from './fonts';
 
 installFonts();
-import { exchangeSdp, waitForIceComplete, describeDevice, SignalingError } from './signaling';
+import { cameraNumber, exchangeSdp, waitForIceComplete, describeDevice, SignalingError } from './signaling';
 
 // ---------------------------------------------------------------------------
 // DOM
@@ -43,6 +43,12 @@ const els = {
 };
 
 const token = new URLSearchParams(location.search).get('t') ?? '';
+/**
+ * Which of the desktop's cameras this phone feeds. Only camera 1's phone can send its microphone: the
+ * desktop has one virtual cable for it.
+ */
+const cameraNo = cameraNumber();
+const micAllowed = cameraNo === 1;
 const camera = new CameraController();
 const mic = new MicController();
 const device = describeDevice();
@@ -304,6 +310,7 @@ async function handleControl(msg: DesktopToPhone) {
       const preset = RESOLUTION_PRESETS[msg.preset];
       if (preset) {
         els.res.value = msg.preset;
+        rememberResolution();
         await camera.setResolution(preset);
         refreshTrackInfo();
         if (sender) void tuneSender(sender);
@@ -320,7 +327,7 @@ async function handleControl(msg: DesktopToPhone) {
       // Mirroring is applied on the desktop side; nothing to do on the phone.
       break;
     case 'setMic':
-      await setSource('mic', msg.on);
+      if (micAllowed) await setSource('mic', msg.on);
       break;
     case 'setCamera':
       await setSource('camera', msg.on);
@@ -409,6 +416,37 @@ async function tuneSender(s: RTCRtpSender) {
  * Replaces the requested size/fps on screen with what is actually being sent: browsers report the
  * constraints they accepted, and a phone asked for 60 fps may still deliver 30.
  */
+/** What the last sender report said, and how many 2 s polls ago: it is sent on a change, or every 30 s. */
+let senderReport = '';
+let senderReportAge = 0;
+
+/**
+ * Tells the desktop's log what the WebRTC sender does and what holds it back, since only the phone knows:
+ * a slow stream is the camera (dim light), the encoder (`cpu`) or the network (`bandwidth`).
+ */
+function reportSender(r: Record<string, unknown>) {
+  const s = camera.track?.getSettings();
+  const fps = Math.round((r.framesPerSecond as number | undefined) ?? 0);
+  // What changes the picture of the problem; the frame rate only in steps, so jitter doesn't flood the log.
+  const key = [r.frameWidth, r.frameHeight, Math.round(fps / 10), r.qualityLimitationReason, r.encoderImplementation, idleMode].join();
+  if (key === senderReport && ++senderReportAge < 15) return;
+  senderReport = key;
+  senderReportAge = 0;
+  send({
+    type: 'linkLog',
+    message: `webrtc sender: ${JSON.stringify({
+      sent: `${r.frameWidth}x${r.frameHeight}@${fps}`,
+      camera: s ? `${s.width}x${s.height}@${Math.round(s.frameRate ?? 0)}` : 'off',
+      limitedBy: r.qualityLimitationReason ?? 'unknown',
+      limitedSeconds: r.qualityLimitationDurations,
+      encoder: r.encoderImplementation ?? 'unknown',
+      hardware: r.powerEfficientEncoder,
+      targetKbps: Math.round(((r.targetBitrate as number | undefined) ?? 0) / 1000),
+      idle: idleMode,
+    })}`,
+  });
+}
+
 async function showMeasuredRate() {
   if (link?.isOpen && link.width && sources.camera) {
     els.trackinfo.textContent = idleMode ? `${link.width}×${link.height} · standby` : `${link.width}×${link.height} · ${link.fps} fps`;
@@ -418,6 +456,7 @@ async function showMeasuredRate() {
   const stats = await sender.getStats().catch(() => null);
   stats?.forEach((r) => {
     if (r.type !== 'outbound-rtp' || r.kind !== 'video' || !r.frameWidth) return;
+    reportSender(r as Record<string, unknown>);
     const fps = Math.round(r.framesPerSecond ?? 0);
     // Short of the preset's rate: show what the camera itself runs at and allows, so it's clear
     // whether the camera or the encoder is holding it back.
@@ -492,7 +531,7 @@ async function connect() {
 
   let answer;
   try {
-    answer = await exchangeSdp(token, peer.localDescription!.sdp, device);
+    answer = await exchangeSdp(token, peer.localDescription!.sdp, device, cameraNo);
   } catch (err) {
     if (!(err instanceof SignalingError) || err.code !== 'use-link') throw err;
     linkReason = 'the offer has no address WebRTC could use';
@@ -506,6 +545,7 @@ async function connect() {
 function connectLink() {
   const current: PhoneLink = new PhoneLink({
     token,
+    camera: cameraNo,
     video: els.preview,
     bitrateFor: (width, height) => bitrateFor(width, height, camera.trackInfo()?.frameRate ?? 30),
     frameRate: () => Math.round(camera.trackInfo()?.frameRate || camera.wantedFrameRate),
@@ -541,6 +581,9 @@ function connectLink() {
 }
 
 function teardownPeer() {
+  // Standby was the old connection's: the desktop starts every new one at full rate and says nothing
+  // until that changes, so keeping it would leave a reconnected phone at 5 fps while an app reads it.
+  idleMode = false;
   link?.close();
   link = null;
   control?.close();
@@ -706,6 +749,7 @@ els.screenlight.addEventListener('click', () => void setLight(false));
 els.res.addEventListener('change', () => {
   const preset = RESOLUTION_PRESETS[els.res.value];
   if (preset) {
+    rememberResolution();
     void camera.setResolution(preset).then(() => {
       refreshTrackInfo();
       if (sender) void tuneSender(sender);
@@ -714,11 +758,26 @@ els.res.addEventListener('change', () => {
 });
 window.addEventListener('beforeunload', () => teardownPeer());
 
-// The mode is remembered for next time (storage can be unavailable, e.g. private mode).
+/** A phone that needs 480p needs it after every reload too, wherever it was picked (here or on the desktop). */
+function rememberResolution() {
+  try {
+    localStorage.setItem('omnicam.res', els.res.value);
+  } catch { /* storage can be unavailable */ }
+}
+
+// The mode and the resolution are remembered for next time (storage can be unavailable, e.g. private mode).
 try {
   els.mode.value = localStorage.getItem('omnicam.mode') ?? 'camera';
-} catch { /* the default stays */ }
+  const res = localStorage.getItem('omnicam.res');
+  if (res && RESOLUTION_PRESETS[res]) els.res.value = res;
+} catch { /* the defaults stay */ }
 if (!els.mode.value) els.mode.value = 'camera';
+if (!micAllowed) {
+  // An extra camera: it says which one it is, and sends its camera only.
+  els.mode.value = 'camera';
+  els.mode.hidden = els.modeLive.hidden = true;
+  els.brand.querySelector('h1')!.textContent = `OmniCam · Camera ${cameraNo}`;
+}
 showMode();
 els.mode.addEventListener('change', () => showMode());
 els.modeLive.addEventListener('change', () => enqueue(() => setMode(els.modeLive.value as Mode)));

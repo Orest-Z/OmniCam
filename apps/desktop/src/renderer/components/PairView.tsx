@@ -5,6 +5,8 @@ import { CameraHelp } from './CameraHelp';
 
 interface Props {
   pairing: PairingInfo | null;
+  /** The camera this code is for, 0-based. */
+  camera: number;
   vcam: VirtualCamStats;
   vcamError: string | null;
   platform: NodeJS.Platform;
@@ -12,7 +14,7 @@ interface Props {
   onOpenSettings: () => void;
 }
 
-export function PairView({ pairing, vcam, vcamError, platform, distro, onOpenSettings }: Props) {
+export function PairView({ pairing, camera, vcam, vcamError, platform, distro, onOpenSettings }: Props) {
   const [copied, setCopied] = useState(false);
   const [os, setOs] = useState<'iphone' | 'android'>('iphone');
 
@@ -26,7 +28,7 @@ export function PairView({ pairing, vcam, vcamError, platform, distro, onOpenSet
   return (
     <div className="pair">
       <section className="card qrcard">
-        <h1>Scan to connect your phone</h1>
+        <h1>{camera === 0 ? 'Scan to connect your phone' : `Scan to connect a phone to OmniCam ${camera + 1}`}</h1>
         <p>Point the phone's camera app at the code. No app to install.</p>
         {pairing ? <img src={pairing.qrDataUrl} alt="Pairing QR code" /> : <p className="muted">Starting…</p>}
         <div className="url">

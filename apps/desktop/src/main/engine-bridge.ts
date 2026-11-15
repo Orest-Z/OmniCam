@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import {
+  MAX_CAMERAS,
   RESOLUTION_PRESETS,
   type DesktopToPhone,
   type DeviceInfo,
@@ -25,6 +26,7 @@ import {
   ENGINE_STATS,
   ENGINE_VCAM_STATS,
   ENGINE_VCAM_ERROR,
+  rotationOf,
   type AppSettings,
   type EngineAnswer,
   type EngineOffer,
@@ -65,18 +67,19 @@ export function nativePaths(): { addonPath: string; nativeDir: string } {
   return { addonPath: join(nativeDir, 'omnicam_vcam.node'), nativeDir };
 }
 
-export function toEngineSettings(s: AppSettings): EngineSettings {
+export function toEngineSettings(s: AppSettings, cameras: number): EngineSettings {
   const preset = RESOLUTION_PRESETS[s.outputPreset] ?? RESOLUTION_PRESETS['720p'];
   return {
     outputWidth: s.outputShape === 'portrait' ? preset.height : preset.width,
     outputHeight: s.outputShape === 'portrait' ? preset.width : preset.height,
     outputFps: s.outputFps,
     mirror: s.mirror,
-    rotation: s.rotation,
+    rotations: Array.from({ length: MAX_CAMERAS }, (_, camera) => rotationOf(s, camera)),
     scaleMode: s.scaleMode,
     picture: s.picture,
     holdLastFrame: s.holdLastFrame,
     micOutput: s.micOutput,
+    cameras,
     ...nativePaths(),
   };
 }
@@ -85,8 +88,9 @@ export function toEngineSettings(s: AppSettings): EngineSettings {
  * Main-process handle on the hidden engine window. The engine hosts the RTCPeerConnection and
  * the native virtual-camera addon; this class is the only thing that talks to it.
  *
- * Events: 'stats' (StreamStats), 'vcam' (VirtualCamStats), 'preview' (Buffer jpeg),
- *         'phone' (PhoneToDesktop), 'ready', 'restarted' (after a renderer crash + reload)
+ * Events, each with the camera's index first: 'stats' (StreamStats), 'vcam' (VirtualCamStats),
+ *         'preview' (PreviewFrame), 'phone' (PhoneToDesktop), 'vcam-error' (string | null),
+ *         'link-send' (string | null); and 'ready', 'restarted' (after a renderer crash + reload)
  */
 class EngineBridge extends EventEmitter {
   private win: BrowserWindow | null = null;
@@ -94,8 +98,35 @@ class EngineBridge extends EventEmitter {
   private restarts: number[] = [];
   private crashed = false;
   private pending = new Map<string, { resolve: (a: EngineAnswer) => void; timer: NodeJS.Timeout }>();
-  stats: StreamStats = { ...EMPTY_STREAM_STATS };
-  vcam: VirtualCamStats = { ...EMPTY_VCAM_STATS };
+  private streams: StreamStats[] = Array.from({ length: MAX_CAMERAS }, () => ({ ...EMPTY_STREAM_STATS }));
+  private vcams: VirtualCamStats[] = Array.from({ length: MAX_CAMERAS }, () => ({ ...EMPTY_VCAM_STATS }));
+  private errors: (string | null)[] = Array.from({ length: MAX_CAMERAS }, () => null);
+  private previewOn = false;
+  /** Cameras that run: 1, or MAX_CAMERAS while Extra cameras is on. */
+  count = 1;
+  /** The camera the window shows: its preview runs, and its state is the window's. */
+  shown = 0;
+
+  statsOf(camera: number): StreamStats {
+    return this.streams[camera] ?? EMPTY_STREAM_STATS;
+  }
+
+  vcamOf(camera: number): VirtualCamStats {
+    return this.vcams[camera] ?? EMPTY_VCAM_STATS;
+  }
+
+  errorOf(camera: number): string | null {
+    return this.errors[camera] ?? null;
+  }
+
+  /** Connection state of every running camera. */
+  states(): StreamStats['state'][] {
+    return this.streams.slice(0, this.count).map((s) => s.state);
+  }
+
+  private known(camera: unknown): camera is number {
+    return typeof camera === 'number' && Number.isInteger(camera) && camera >= 0 && camera < MAX_CAMERAS;
+  }
 
   create(): void {
     if (this.win) return;
@@ -117,7 +148,8 @@ class EngineBridge extends EventEmitter {
     ipcMain.on(ENGINE_READY, (e) => {
       if (e.sender !== win.webContents) return;
       this.ready = true;
-      this.send(ENGINE_APPLY_SETTINGS, toEngineSettings(settings.get()));
+      this.send(ENGINE_APPLY_SETTINGS, toEngineSettings(settings.get(), this.count));
+      this.send(ENGINE_PREVIEW, this.shown, this.previewOn);
       this.emit('ready');
       if (this.crashed) {
         this.crashed = false;
@@ -133,31 +165,32 @@ class EngineBridge extends EventEmitter {
       this.pending.delete(answer.id);
       p.resolve(answer);
     });
-    ipcMain.on(ENGINE_STATS, (e, s: StreamStats) => {
-      if (e.sender !== win.webContents) return;
-      this.stats = s;
-      this.emit('stats', s);
+    ipcMain.on(ENGINE_STATS, (e, camera: number, s: StreamStats) => {
+      if (e.sender !== win.webContents || !this.known(camera)) return;
+      this.streams[camera] = s;
+      this.emit('stats', camera, s);
     });
-    ipcMain.on(ENGINE_VCAM_STATS, (e, s: VirtualCamStats) => {
-      if (e.sender !== win.webContents) return;
-      this.vcam = s;
-      this.emit('vcam', s);
+    ipcMain.on(ENGINE_VCAM_STATS, (e, camera: number, s: VirtualCamStats) => {
+      if (e.sender !== win.webContents || !this.known(camera)) return;
+      this.vcams[camera] = s;
+      this.emit('vcam', camera, s);
     });
-    ipcMain.on(ENGINE_PREVIEW_FRAME, (e, frame: PreviewFrame) => {
-      if (e.sender !== win.webContents) return;
-      this.emit('preview', frame);
+    ipcMain.on(ENGINE_PREVIEW_FRAME, (e, camera: number, frame: PreviewFrame) => {
+      if (e.sender !== win.webContents || !this.known(camera)) return;
+      this.emit('preview', camera, frame);
     });
-    ipcMain.on(ENGINE_PHONE_MESSAGE, (e, msg: PhoneToDesktop) => {
-      if (e.sender !== win.webContents) return;
-      this.emit('phone', msg);
+    ipcMain.on(ENGINE_PHONE_MESSAGE, (e, camera: number, msg: PhoneToDesktop) => {
+      if (e.sender !== win.webContents || !this.known(camera)) return;
+      this.emit('phone', camera, msg);
     });
-    ipcMain.on(ENGINE_VCAM_ERROR, (e, message: string) => {
-      if (e.sender !== win.webContents) return;
-      this.emit('vcam-error', message);
+    ipcMain.on(ENGINE_VCAM_ERROR, (e, camera: number, message: string | null) => {
+      if (e.sender !== win.webContents || !this.known(camera)) return;
+      this.errors[camera] = message;
+      this.emit('vcam-error', camera, message);
     });
-    ipcMain.on(ENGINE_LINK_SEND, (e, text: string | null) => {
-      if (e.sender !== win.webContents) return;
-      this.emit('link-send', text);
+    ipcMain.on(ENGINE_LINK_SEND, (e, camera: number, text: string | null) => {
+      if (e.sender !== win.webContents || !this.known(camera)) return;
+      this.emit('link-send', camera, text);
     });
     ipcMain.on(ENGINE_LOG, (e, level: 'log' | 'warn' | 'error', ...args: unknown[]) => {
       if (e.sender !== win.webContents) return;
@@ -176,12 +209,16 @@ class EngineBridge extends EventEmitter {
         this.pending.delete(id);
         p.resolve({ id, error: 'engine restarted' });
       }
-      this.stats = { ...EMPTY_STREAM_STATS };
-      this.vcam = { ...EMPTY_VCAM_STATS };
-      this.emit('stats', this.stats);
-      this.emit('vcam', this.vcam);
+      for (let camera = 0; camera < MAX_CAMERAS; camera++) {
+        this.streams[camera] = { ...EMPTY_STREAM_STATS };
+        this.vcams[camera] = { ...EMPTY_VCAM_STATS };
+        this.emit('stats', camera, this.streams[camera]);
+        this.emit('vcam', camera, this.vcams[camera]);
+      }
       if (!restartBudget(this.restarts)) {
-        this.emit('vcam-error', 'The camera engine crashed repeatedly. Quit OmniCam from the tray and start it again; the log folder (Settings) has details.');
+        const message = 'The camera engine crashed repeatedly. Quit OmniCam from the tray and start it again; the log folder (Settings) has details.';
+        this.errors.fill(message);
+        this.emit('vcam-error', this.shown, message);
         return;
       }
       setTimeout(() => this.win?.webContents.reload(), 500);
@@ -204,7 +241,7 @@ class EngineBridge extends EventEmitter {
   }
 
   /** Hands the phone's offer to the engine and resolves with the complete answer SDP. */
-  negotiate(sdp: string, device: DeviceInfo): Promise<{ sdp: string; sessionId: string }> {
+  negotiate(camera: number, sdp: string, device: DeviceInfo): Promise<{ sdp: string; sessionId: string }> {
     if (!this.win || !this.ready) return Promise.reject(new Error('engine not ready'));
     const id = randomUUID();
     return new Promise((resolve, reject) => {
@@ -216,30 +253,46 @@ class EngineBridge extends EventEmitter {
         timer,
         resolve: (a) => ('error' in a ? reject(new Error(a.error)) : resolve({ sdp: a.sdp, sessionId: a.sessionId })),
       });
-      const offer: EngineOffer = { id, sdp, device };
+      const offer: EngineOffer = { id, camera, sdp, device };
       this.send(ENGINE_OFFER, offer);
     });
   }
 
   applySettings(s: AppSettings): void {
-    this.send(ENGINE_APPLY_SETTINGS, toEngineSettings(s));
+    this.send(ENGINE_APPLY_SETTINGS, toEngineSettings(s, this.count));
   }
 
-  disconnect(): void {
-    this.send(ENGINE_DISCONNECT);
+  /** Runs one camera, or all of them (Extra cameras). A camera that stops lets go of its phone. */
+  setCount(count: number): void {
+    if (count === this.count) return;
+    this.count = count;
+    if (this.shown >= count) this.show(0);
+    this.applySettings(settings.get());
   }
 
-  control(msg: DesktopToPhone): void {
-    this.send(ENGINE_CONTROL, msg);
+  /** Makes `camera` the one the window shows; the preview moves with it. */
+  show(camera: number): void {
+    this.shown = camera;
+    this.send(ENGINE_PREVIEW, camera, this.previewOn);
+  }
+
+  disconnect(camera: number): void {
+    this.send(ENGINE_DISCONNECT, camera);
+  }
+
+  control(camera: number, msg: DesktopToPhone): void {
+    this.send(ENGINE_CONTROL, camera, msg);
   }
 
   /** The media link's events for the engine: 'open', 'close', a binary message or a parsed text one. */
-  link(event: 'open' | 'close' | Uint8Array | object): void {
-    this.send(ENGINE_LINK, event);
+  link(camera: number, event: 'open' | 'close' | Uint8Array | object): void {
+    this.send(ENGINE_LINK, camera, event);
   }
 
+  /** The preview of the camera the window shows. */
   setPreview(enabled: boolean): void {
-    this.send(ENGINE_PREVIEW, enabled);
+    this.previewOn = enabled;
+    this.send(ENGINE_PREVIEW, this.shown, enabled);
   }
 
   osPid(): number | undefined {

@@ -2,16 +2,21 @@
 // pushes a moving I420 test pattern (colour bars, a sweeping white bar, a frame counter) at 30 fps
 // and prints probe(), every change in the consumer count, and the pipeline's convert time.
 //
-// Build and run (Linux):
-//   cmake -S packages/vcam-native -B packages/vcam-native/build-selftest -DCMAKE_BUILD_TYPE=Release
-//         -DOMNICAM_BUILD_ADDON=OFF -DOMNICAM_BUILD_SELFTEST=ON          (one line)
-//   cmake --build packages/vcam-native/build-selftest --target vcam_selftest
-//   packages/vcam-native/build-selftest/vcam_selftest [seconds per size, default 10] [WxH ...]
-// Sizes default to 1280x720 and 1920x1080. OMNICAM_V4L2_FORMAT=i420 and OMNICAM_V4L2_DEVICE
-// work as they do in the app. Open the device in a viewer meanwhile to see consumers go up.
+// Build (one line each):
+//   cmake -S packages/vcam-native -B packages/vcam-native/build/selftest -DCMAKE_BUILD_TYPE=Release
+//         -DOMNICAM_BUILD_ADDON=OFF -DOMNICAM_BUILD_SELFTEST=ON
+//   cmake --build packages/vcam-native/build/selftest --config Release --target vcam_selftest
+// Run: vcam_selftest [--camera N] [seconds per size, default 10] [WxH ...]
+//   Linux:   packages/vcam-native/build/selftest/vcam_selftest
+//   Windows: packages\vcam-native\build\selftest\Release\vcam_selftest.exe (the filter DLL must be
+//            registered; cameras 2–4 also with /n /i:extra). One process per camera, all at once is fine.
+// --camera picks "OmniCam N" (default 1; 2–4 are Windows only). Sizes default to 1280x720 and
+// 1920x1080. OMNICAM_V4L2_FORMAT=i420 and OMNICAM_V4L2_DEVICE work as they do in the app. Open the
+// camera in a viewer meanwhile to see consumers go up.
 
 #include "pipeline.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -32,7 +37,7 @@ constexpr uint8_t kBars[7][3] = {
     {84, 184, 198},  {65, 100, 212}, {35, 212, 114},
 };
 
-void drawPattern(std::vector<uint8_t>& buf, int w, int h, int frame) {
+void drawPattern(std::vector<uint8_t>& buf, int w, int h, int frame, int camera) {
     const int cw = w / 2, ch = h / 2;
     uint8_t* y = buf.data();
     uint8_t* u = y + (size_t)w * h;
@@ -70,9 +75,15 @@ void drawPattern(std::vector<uint8_t>& buf, int w, int h, int frame) {
             std::memset(v + (size_t)(bs / 2 + row) * cw + bs / 2 * (bit + 1), 128, bs / 2);
         }
     }
+    // The camera number as that many white squares at the bottom left (over the grey ramp), so a
+    // viewer showing camera 2's picture under "OmniCam 3" is caught at a glance.
+    const int sq = (h / 10) & ~1;
+    for (int n = 0; n < camera; n++) {
+        for (int row = 0; row < sq; row++) std::memset(y + (size_t)(h - 2 * sq + row) * w + sq * (1 + 2 * n), 235, sq);
+    }
 }
 
-bool runSize(Pipeline& p, int w, int h, int seconds) {
+bool runSize(Pipeline& p, int camera, int w, int h, int seconds) {
     std::string error;
     if (!p.start(w, h, 30, "", error)) {
         std::printf("start %dx%d failed: %s\n", w, h, error.c_str());
@@ -90,7 +101,7 @@ bool runSize(Pipeline& p, int w, int h, int seconds) {
     const PipelineStats base = p.stats();
     uint64_t usBefore = base.convertUs, nBefore = base.convertN;
     for (int frame = 0; frame < seconds * 30; frame++) {
-        drawPattern(buf, w, h, frame);
+        drawPattern(buf, w, h, frame, camera);
         p.pushFrame(buf.data(), buf.size(), info);
         const PipelineStats s = p.stats();
         if (s.consumers != consumers) {
@@ -122,23 +133,32 @@ bool runSize(Pipeline& p, int w, int h, int seconds) {
 
 int main(int argc, char** argv) {
     int seconds = 10;
+    int camera = 1;
     std::vector<std::pair<int, int>> sizes;
     for (int i = 1; i < argc; i++) {
         int w, h;
-        if (std::sscanf(argv[i], "%dx%d", &w, &h) == 2) sizes.emplace_back(w, h);
+        if (std::strcmp(argv[i], "--camera") == 0 && i + 1 < argc) camera = std::atoi(argv[++i]);
+        else if (std::sscanf(argv[i], "%dx%d", &w, &h) == 2) sizes.emplace_back(w, h);
         else seconds = std::max(1, std::atoi(argv[i]));
     }
     if (sizes.empty()) sizes = {{1280, 720}, {1920, 1080}};
+    if (camera < 1 || camera > kCameraCount) {
+        std::printf("--camera must be 1 to %d\n", kCameraCount);
+        return 2;
+    }
 
+    std::printf("camera: OmniCam%s\n", camera == 1 ? "" : (" " + std::to_string(camera)).c_str());
+#ifndef _WIN32
     const char* fmt = std::getenv("OMNICAM_V4L2_FORMAT");
     std::printf("output format: %s\n", fmt && std::strcmp(fmt, "i420") == 0 ? "I420" : "YUYV");
-    Pipeline p;
+#endif
+    Pipeline p(camera - 1);
     std::string reason;
     const bool ok = p.probe("", reason);
     std::printf("probe: %s%s\n", ok ? "ok" : "failed: ", ok ? "" : reason.c_str());
     if (!ok) return 1;
     for (const auto& [w, h] : sizes) {
-        if (!runSize(p, w, h, seconds)) return 1;
+        if (!runSize(p, camera, w, h, seconds)) return 1;
     }
     return 0;
 }

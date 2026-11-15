@@ -110,6 +110,16 @@ svg { display: block; }
 .status.connecting i, .status.stalled i { background: var(--warn); }
 .status.disconnected i { background: var(--danger); }
 /* Update badge in the title bar: same shape as the status pill, but a button. */
+/* Camera tabs (Extra cameras on): one per camera, with its connection state as a dot. */
+.camtabs { display: inline-flex; gap: 2px; padding: 2px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); }
+.camtabs button { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 500; color: var(--text-3); white-space: nowrap; }
+.camtabs button:hover { color: var(--text); }
+.camtabs button.on { background: var(--accent-tint); color: var(--accent-soft); }
+.camtabs i { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); }
+.camtabs .connected i { background: var(--live); }
+.camtabs .connecting i, .camtabs .stalled i { background: var(--warn); }
+.camtabs .disconnected i { background: var(--danger); }
+
 .status.update { color: var(--accent-soft); background: var(--accent-tint); transition: background 0.12s; }
 .status.update:hover { background: rgba(138, 92, 243, 0.24); }
 .status.update i { background: var(--accent); }
@@ -257,7 +267,22 @@ svg { display: block; }
 .iconbtn.speaking { box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.35); }
 
 .bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+/* One quiet line under the controls: a question that can wait, never a popup. */
+.nudge { display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 14px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface-2); color: var(--text-2); font-size: 12.5px; }
+.nudge > span:first-child { flex: 1; }
+/* The developer's thank-you under the release notes. */
+.thanks { margin-top: 14px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface-2); color: var(--text-2); font-size: 13px; line-height: 1.55; }
+.thanks p { margin: 8px 0 0; }
+.thanks b { color: var(--text); font-weight: 600; }
+.thanks .ask { display: flex; align-items: center; gap: 14px; margin-top: 10px; }
+.thanks .ask > span:first-child { flex: 1; }
+.thanks .done { color: var(--text-3); white-space: nowrap; }
+.thanks-line { margin: 14px 0 0; color: var(--text-2); font-size: 13px; }
+.stars { display: inline-flex; }
+.stars button { background: none; border: 0; padding: 0 2px; font-size: 19px; line-height: 1; color: var(--text-3); cursor: pointer; }
+.stars button.on { color: var(--warn); }
 .bar .group { display: inline-flex; align-items: center; gap: 6px; }
+.bar .group[hidden] { display: none; }
 .bar .spacer { flex: 1; }
 .inuse { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--text-2); }
 .inuse i { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); }
@@ -366,6 +391,10 @@ svg { display: block; }
 .notes li { margin: 5px 0; }
 .notes li::marker { color: var(--text-3); }
 .notes strong { color: var(--text); font-weight: 600; }
+/* With the note, the release notes take what room is left and scroll in their own box, so the note is never below the fold. */
+.dialog.update:has(.thanks) { display: flex; flex-direction: column; width: min(700px, calc(100vw - 48px)); }
+.dialog.update:has(.thanks) > * { flex: none; }
+.dialog.update:has(.thanks) > .notes { flex: 1 1 auto; min-height: 150px; max-height: none; }
 .notes code { font-family: var(--mono); font-size: 11.5px; }
 .notes .link { display: inline; font-size: inherit; }
 .dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }

@@ -5,6 +5,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(OMNICAM_BUILD_ADDON "Build the N-API addon (needs cmake-js variables)" ON)
+# Pipeline + camera backend without Node, for testing the device by hand (tools/vcam_selftest.cc).
+option(OMNICAM_BUILD_SELFTEST "Build vcam_selftest" OFF)
 if(WIN32)
   option(OMNICAM_BUILD_FILTER "Build the DirectShow filter DLL"                ON)
 else()
@@ -12,8 +14,6 @@ else()
   if(OMNICAM_BUILD_FILTER)
     message(FATAL_ERROR "OMNICAM_BUILD_FILTER: the DirectShow filter only builds on Windows")
   endif()
-  # Pipeline + camera backend without Node, for testing the device by hand (tools/vcam_selftest.cc).
-  option(OMNICAM_BUILD_SELFTEST "Build vcam_selftest (Linux only)" OFF)
 endif()
 
 set(SOFTCAM_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/softcam/src")
@@ -51,14 +51,15 @@ if(WIN32)
   # No NOMINMAX here: the DirectShow base classes rely on the min/max macros.
   add_compile_definitions(WIN32 _WINDOWS _CRT_SECURE_NO_WARNINGS UNICODE _UNICODE)
 
-  # --- softcam sender core (shared memory + watchdog), shm names patched to "OmniCam/*" ------
+  # --- softcam sender core (shared memory + watchdog), one set of shm names per camera -------
   include(cmake/patch_softcam.cmake)
   add_library(softcam_core STATIC
-    "${SOFTCAM_DIR}/softcamcore/SenderAPI.cpp"
-    "${SOFTCAM_FRAMEBUFFER_CPP}"
+    "${SOFTCAM_GEN_DIR}/SenderAPI.cpp"
+    "${SOFTCAM_GEN_DIR}/FrameBuffer.cpp"
     "${SOFTCAM_DIR}/softcamcore/Misc.cpp"
     "${SOFTCAM_DIR}/softcamcore/Watchdog.cpp")
-  target_include_directories(softcam_core PUBLIC "${SOFTCAM_DIR}" "${SOFTCAM_DIR}/softcamcore")
+  # The patched copies first, so #include "FrameBuffer.h" never finds softcam's own.
+  target_include_directories(softcam_core PUBLIC "${SOFTCAM_GEN_DIR}" "${SOFTCAM_DIR}" "${SOFTCAM_DIR}/softcamcore")
   target_link_libraries(softcam_core PUBLIC winmm)
 else()
   # The addon exports only its N-API entry point; libyuv is linked in statically and stays private.
@@ -79,7 +80,7 @@ if(OMNICAM_BUILD_FILTER)
   add_library(omnicam_vcam_filter SHARED
     src/filter/omnicam_filter.cpp
     src/filter/omnicam_filter.def
-    "${SOFTCAM_DIR}/softcamcore/DShowSoftcam.cpp")
+    "${SOFTCAM_GEN_DIR}/DShowSoftcam.cpp")
   set_target_properties(omnicam_vcam_filter PROPERTIES OUTPUT_NAME "omnicam_vcam" PREFIX "")
   omnicam_version_resource(omnicam_vcam_filter "omnicam_vcam.dll" "OmniCam virtual camera (DirectShow filter)")
   target_include_directories(omnicam_vcam_filter PRIVATE "${SOFTCAM_DIR}")
@@ -92,7 +93,9 @@ if(OMNICAM_BUILD_ADDON OR OMNICAM_BUILD_SELFTEST)
   set(LIBYUV_DISABLE_JPEG ON CACHE BOOL "" FORCE)
   set(UNIT_TEST OFF CACHE BOOL "" FORCE)
   add_subdirectory("${LIBYUV_DIR}" EXCLUDE_FROM_ALL)
-  if(NOT WIN32)
+  if(WIN32)
+    target_compile_options(yuv PRIVATE /w)
+  else()
     target_compile_options(yuv_common_objects PRIVATE -w)
     find_package(Threads REQUIRED)
   endif()
@@ -117,7 +120,6 @@ if(OMNICAM_BUILD_ADDON)
   set_target_properties(omnicam_vcam PROPERTIES PREFIX "" SUFFIX ".node")
 
   if(WIN32)
-    target_compile_options(yuv PRIVATE /w)
     omnicam_version_resource(omnicam_vcam "omnicam_vcam.node" "OmniCam frame pipeline (Node addon)")
     target_include_directories(omnicam_vcam PRIVATE
       ${CMAKE_JS_INC}
@@ -145,6 +147,12 @@ if(OMNICAM_BUILD_SELFTEST)
   add_executable(vcam_selftest tools/vcam_selftest.cc src/pipeline.cc ${OMNICAM_BACKEND})
   target_include_directories(vcam_selftest PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
   target_include_directories(vcam_selftest SYSTEM PRIVATE "${LIBYUV_DIR}/include")
-  target_compile_options(vcam_selftest PRIVATE -Wall -Wextra)
-  target_link_libraries(vcam_selftest PRIVATE yuv Threads::Threads)
+  if(WIN32)
+    target_compile_definitions(vcam_selftest PRIVATE NOMINMAX)
+    target_compile_options(vcam_selftest PRIVATE /EHsc /W4)
+    target_link_libraries(vcam_selftest PRIVATE yuv softcam_core advapi32)
+  else()
+    target_compile_options(vcam_selftest PRIVATE -Wall -Wextra)
+    target_link_libraries(vcam_selftest PRIVATE yuv Threads::Threads)
+  endif()
 endif()

@@ -75,6 +75,20 @@ export function Dialog({ title, onClose, children, className = '' }: { title?: s
   );
 }
 
+/** Five stars to click; the ones up to the pointer light up. */
+export function Stars({ onPick }: { onPick: (stars: number) => void }) {
+  const [lit, setLit] = useState(0);
+  return (
+    <span className="stars" onMouseLeave={() => setLit(0)}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button key={n} className={n <= lit ? 'on' : ''} aria-label={`${n} of 5 stars`} onMouseEnter={() => setLit(n)} onFocus={() => setLit(n)} onBlur={() => setLit(0)} onClick={() => onPick(n)}>
+          ★
+        </button>
+      ))}
+    </span>
+  );
+}
+
 /** A shell command to paste into a terminal, with a copy button. */
 export function Command({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);

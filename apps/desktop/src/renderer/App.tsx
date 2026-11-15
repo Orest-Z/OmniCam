@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Bug, Heart, Moon, Settings as SettingsIcon, Sun } from 'lucide-react';
-import type { ConnectionState, UpdateState } from '../shared/ipc';
+import { RATE_AFTER_DAYS, type ConnectionState, type UpdateState } from '../shared/ipc';
 import { LiveView } from './components/LiveView';
 import { MicGuide } from './components/MicGuide';
 import { Mark } from './components/Mark';
 import { PairView } from './components/PairView';
 import { SettingsDialog, portFallback, portFallbackMessage } from './components/SettingsDialog';
 import { UpdateDialog, WhatsNewDialog, updateOnOffer } from './components/UpdateDialog';
-import { Dialog, IconButton } from './components/ui';
+import { Dialog, IconButton, Stars } from './components/ui';
 import { useAppState } from './useAppState';
 import { Toasts, useToasts } from './toasts';
 
@@ -59,6 +59,7 @@ export function App() {
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   const { toasts, push } = useToasts();
   const prevState = useRef<ConnectionState>('idle');
+  const prevCamera = useRef(0);
   const prevCheckedAt = useRef<number | null | undefined>(undefined);
   const prevPortFallback = useRef<string | null>(null);
 
@@ -68,13 +69,20 @@ export function App() {
   // Toasts on meaningful transitions only.
   useEffect(() => {
     const s = state?.stats.state;
-    if (!s || s === prevState.current) return;
+    if (!s) return;
+    // Another camera's tab: its state is not news, it is just what that camera was doing all along.
+    if (state.camera !== prevCamera.current) {
+      prevCamera.current = state.camera;
+      prevState.current = s;
+      return;
+    }
+    if (s === prevState.current) return;
     const phone = state.stats.device?.platform ?? 'Phone';
     if (s === 'connected' && prevState.current !== 'stalled') push(`${phone} connected`, 'ok');
     if (s === 'disconnected') push(`${phone} disconnected — waiting for it to come back`, 'warn');
     if (s === 'idle' && prevState.current !== 'idle') setQrOpen(false);
     prevState.current = s;
-  }, [state?.stats.state, state?.stats.device, push]);
+  }, [state?.stats.state, state?.stats.device, state?.camera, push]);
 
   // The server ended up on a different port than the one in settings: say so once, here rather than
   // only in Settings, because someone who set a port may never open that dialog again.
@@ -114,8 +122,21 @@ export function App() {
   }, [notesUnseen]);
 
   if (!state) return <div className="app" />;
-  const { pairing, settings, stats, vcam, vcamError } = state;
+  const { pairing, settings, stats, vcam, vcamError, camera, cameraStates } = state;
   const showLive = stats.state !== 'idle';
+  const rate = async (stars: number) => {
+    const sent = await window.omnicam.sendRating(stars);
+    push(sent ? 'Thanks for the rating' : "Couldn't send the rating. Try again later.", sent ? 'ok' : 'bad');
+  };
+  // Two questions that can wait, each asked once, one at a time, as a line under the live picture: by then
+  // OmniCam works for this person, and nothing ever pops up over what they are doing.
+  const nudge = !state.usagePingAvailable
+    ? null
+    : settings.usagePing === 'ask'
+      ? 'ping'
+      : settings.rating === 'ask' && settings.daysUsed >= RATE_AFTER_DAYS
+        ? 'rate'
+        : null;
   const badge = updateBadge(state.update);
   // What is on screen now ('system' resolves through the OS); the toggle picks the other one.
   const dark = settings.theme === 'system' ? matchMedia('(prefers-color-scheme: dark)').matches : settings.theme === 'dark';
@@ -127,6 +148,23 @@ export function App() {
           <Mark />
           OmniCam
         </div>
+        {cameraStates.length > 1 && (
+          <div className="camtabs" role="tablist" aria-label="Cameras">
+            {cameraStates.map((s, i) => (
+              <button
+                key={i}
+                role="tab"
+                aria-selected={i === camera}
+                className={`${s}${i === camera ? ' on' : ''}`}
+                title={`${i === 0 ? 'OmniCam' : `OmniCam ${i + 1}`}: ${STATUS[s]}`}
+                onClick={() => void window.omnicam.selectCamera(i)}
+              >
+                <i />
+                Cam {i + 1}
+              </button>
+            ))}
+          </div>
+        )}
         <span className={`status ${stats.state}`}>
           <i />
           {STATUS[stats.state]}
@@ -164,6 +202,29 @@ export function App() {
             vcam={vcam}
             settings={settings}
             virtualMic={state.virtualMic}
+            cameraIndex={camera}
+            notice={
+              nudge === 'ping' ? (
+                <div className="nudge" role="note">
+                  <span>Count this install? One anonymous ping a month says only the app version and your system, so the developer can see OmniCam is used. No ID, and your IP address is never saved.</span>
+                  <button className="btn sm" onClick={() => void setSettings({ usagePing: 'on' })}>
+                    Yes
+                  </button>
+                  <button className="btn ghost sm" onClick={() => void setSettings({ usagePing: 'off' })}>
+                    No
+                  </button>
+                </div>
+              ) : nudge === 'rate' ? (
+                <div className="nudge" role="note">
+                  <span>How is OmniCam working for you? An anonymous rating, sent once.</span>
+                  <Stars onPick={(n) => void rate(n)} />
+                  <button className="btn ghost sm" onClick={() => void setSettings({ rating: 'dismissed' })}>
+                    No thanks
+                  </button>
+                </div>
+              ) : null
+            }
+            micAllowed={camera === 0}
             onSettings={(p) => void setSettings(p)}
             onControl={(m) => void control(m)}
             onShowQr={() => setQrOpen(true)}
@@ -171,7 +232,7 @@ export function App() {
             onOpenSettings={() => setSettingsOpen(true)}
           />
         ) : (
-          <PairView pairing={pairing} vcam={vcam} vcamError={vcamError} platform={state.platform} distro={state.distro} onOpenSettings={() => setSettingsOpen(true)} />
+          <PairView pairing={pairing} camera={camera} vcam={vcam} vcamError={vcamError} platform={state.platform} distro={state.distro} onOpenSettings={() => setSettingsOpen(true)} />
         )}
       </main>
 
@@ -183,10 +244,13 @@ export function App() {
           vcamError={vcamError}
           update={state.update}
           version={state.version}
+          usagePingAvailable={state.usagePingAvailable}
+          onRate={(n) => void rate(n)}
           platform={state.platform}
           distro={state.distro}
           trayAvailable={state.trayAvailable}
           virtualMic={state.virtualMic}
+          extraCameras={state.extraCameras}
           stats={stats}
           onSettings={(p) => void setSettings(p)}
           onControl={(m) => void control(m)}
@@ -208,9 +272,19 @@ export function App() {
       {whatsNewOpen && (
         <WhatsNewDialog
           version={state.version}
+          settings={settings}
+          counter={state.usagePingAvailable}
+          onSettings={(p) => void setSettings(p)}
+          onRate={(n) => void rate(n)}
           onClose={() => {
             setWhatsNewOpen(false);
-            if (settings.notesSeen !== state.version) void setSettings({ notesSeen: state.version });
+            // The note and its two questions were on screen: that was the one time they are asked this way.
+            void setSettings({
+              notesSeen: state.version,
+              thanksSeen: true,
+              ...(state.usagePingAvailable && !settings.thanksSeen && settings.usagePing === 'ask' ? { usagePing: 'off' as const } : {}),
+              ...(state.usagePingAvailable && !settings.thanksSeen && settings.rating === 'ask' ? { rating: 'dismissed' as const } : {}),
+            });
           }}
         />
       )}
@@ -224,7 +298,9 @@ export function App() {
         <Dialog className="qr" onClose={() => setQrOpen(false)}>
           <img src={pairing.qrDataUrl} alt="Pairing QR code" />
           <p className="muted" style={{ margin: '0 0 12px', fontSize: 12.5 }}>
-            Scanning with another phone replaces the current one.
+            {cameraStates.length > 1
+              ? `This code is for camera ${camera + 1}. Scanning it with another phone replaces this camera's phone.`
+              : 'Scanning with another phone replaces the current one.'}
           </p>
           <button className="btn" onClick={() => setQrOpen(false)}>
             Done

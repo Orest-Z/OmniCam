@@ -24,6 +24,7 @@ PipeWire microphone on Linux (see **Phone microphone**).
 | Mobile browsers require HTTPS for `getUserMedia` | Desktop serves a **self-signed cert**; user accepts a one-time warning. UI walks them through it. (Future opt-in: real domain + per-install cert, Plex-style.) |
 | iOS Safari was found to ignore the cert exception for `wss://` (no longer true on current iOS, see the media link) | Signaling uses **plain `fetch` POST, non-trickle ICE** (one round trip), with no WebSocket needed. After that, control messages ride a WebRTC **DataChannel**. |
 | Win10 has no Media Foundation virtual camera API | Virtual camera is a **DirectShow filter** (softcam, MIT) built from source with OmniCam's own name/CLSID. Registered with `regsvr32` (x64 + x86 DLLs) by the installer. |
+| Several phones at once (motion capture) must not clutter everyone's camera list | The DLL holds **four cameras**, but only "OmniCam" is listed until the user turns on **Extra cameras** (Windows only). See **Extra cameras**. |
 | Consumer apps negotiate a camera format once | Virtual camera output is a **fixed size/fps** (720p/1080p/4K @30/60, landscape or portrait); incoming frames are scaled/letterboxed in native code. |
 | An iPhone that is itself the hotspot offers WebRTC only its mobile data address, and its checks never arrive | Video and audio fall back to the **media link**, a WebSocket on the page's own HTTPS connection. See below. |
 | Some Wi-Fi blocks mDNS | Electron runs with `--disable-features=WebRtcHideLocalIpsWithMdns` so the desktop's ICE candidate is a real LAN IP. |
@@ -57,15 +58,65 @@ PHONE (browser)                       DESKTOP (Electron)
 
 - **Frames never cross Electron IPC.** The engine loads the addon in-process.
 - **The native thread owns the camera clock.** JS deposits frames; C++ repeats the last one when
-  the source stalls and shows a placeholder when nothing is connected.
+  the source stalls and shows a placeholder when nothing is connected. No two frames in a row are
+  bit-identical (the first byte's lowest bit alternates): FreeMoCap skips a camera whose first two
+  frames are equal as "probably a virtual camera".
 - **Security model:** per-launch random token in the QR URL; `/api/session` rejects anything
-  else (constant-time compare, one negotiation at a time, 6 attempts/min per client); one active
-  phone at a time.
+  else (constant-time compare, one negotiation at a time per camera, an attempt budget per client); one
+  active phone per camera. The camera a phone names is untrusted input like the rest of its request
+  (`cameraIndex` in `pairing-guard.ts`): 1 to 4, and 2 to 4 only while Extra cameras is on.
 - **Crash recovery:** both renderers are reloaded on `render-process-gone` (at most 3 times per
   minute, then the UI shows an error). The engine re-attaches the addon and the phone's own
   reconnect loop restores the stream. Everything `console.*` in main (engine logs are relayed)
   goes to `%APPDATA%\OmniCam\logs\omnicam.log` (Linux: `~/.config/OmniCam/logs/omnicam.log`), 2 MB with one
   rotation.
+
+## Extra cameras (Windows)
+
+Up to four cameras, "OmniCam" and "OmniCam 2" to "OmniCam 4", one phone each, all readable at once by one app
+(FreeMoCap opens every camera from one process). Off by default.
+
+- **Driver:** `omnicam_vcam.dll` has four filter classes with fixed CLSIDs (`omnicam_filter.cpp`; the same table is
+  in `win_softcam.cc`). `regsvr32` registers all four COM classes but lists only "OmniCam" in the video input
+  category, so an install looks as it always did. `regsvr32 /n /i:extra` (`DllInstall`) lists cameras 2 to 4,
+  `/u /n /i:extra` unlists them, and `/u` removes everything. Camera 1 keeps its CLSID and its registry instance
+  name; cameras 2 to 4 are listed under their CLSID.
+- **One shared memory per camera:** "OmniCam/SharedMemory" and "OmniCam/NamedMutex" for camera 1 (unchanged, so a
+  2.4.0 app and a 2.5.0 driver still fit together), "OmniCam N/…" for the others. softcam hard-codes one pair, so
+  `cmake/patch_softcam.cmake` writes patched copies of its frame buffer and filter into the build tree: the frame
+  buffer takes the camera's name, and each filter instance uses the name its own CLSID maps to, everywhere it
+  opens the buffer. Every replacement is counted, and configure stops if one no longer matches the submodule.
+- **Sender:** softcam's `SenderAPI` allows one camera per process, so `win_softcam.cc` writes to the frame buffer
+  directly (what `SenderAPI` does with a frame rate of 0). The DLL's exported `sc*` API still goes through
+  `SenderAPI` and is camera 1.
+- **Addon:** `camera(index)` returns a handle with the same methods as before, each bound to that camera's own
+  `Pipeline` (and pacing thread). On Linux any index but 0 fails with `no-device`.
+- **The switch** (Settings → Camera): `platform/win.ts` reads the truth from the registry (`reg query` for camera
+  2's entry in the video input category), never a saved flag. Changing it runs one elevated PowerShell (one UAC
+  prompt) that calls `regsvr32` for the 64-bit and the 32-bit DLL; both scripts travel as `-EncodedCommand`, so
+  no path is ever quoted on a command line (`platform/extra-cameras-win.ts`, tested). Exit code 1223 means the
+  prompt was dismissed. The installer keeps the registration across updates (`${isUpdated}` in `installer.nsh`)
+  and removes all four cameras on a real uninstall.
+- **Engine:** one `Camera` object per camera (`engine.ts`) owns its peer connection or media link, frame pump,
+  stats and pipeline; they share only the settings and the microphone output. Every engine IPC message that
+  concerns one camera carries its index first. Main runs 1 or 4 of them (`EngineSettings.cameras`).
+- **Pairing:** camera N's QR URL ends in `&cam=N` (none for camera 1). The phone page sends it back on
+  `/api/session` (`camera`) and on the media link's URL, so a reconnect lands on the same camera, and a new phone
+  only replaces the phone of the camera it asks for. All cameras share the per-launch token; Disconnect rotates
+  it only when no other camera has a phone, which would otherwise never get back in after a Wi-Fi drop.
+- **Shared settings:** one output format and picture for all cameras; the "output fps follows the phone" rule
+  follows camera 1's phone only.
+- **Per camera:** the rotation (`rotation` for camera 1, `extraRotations` for the others) and what the phone
+  films: the window's phone controls, resolution included, go to the selected camera's phone only, so one old
+  phone can run at 480p. The phone page remembers its resolution.
+- **Upright phones:** the answer SDP drops `urn:3gpp:video-orientation` (`sdp.ts`), so Safari turns the frames
+  itself. With it an iPhone held upright arrived on its side (the frame pump never sees the flag) while an
+  Android arrived upright, and no single rotation suited both.
+- **One microphone:** only camera 1's phone plays into the virtual cable. The page of cameras 2 to 4 hides the
+  microphone choices and ignores `setMic`.
+- **Window:** `AppState` carries the selected camera's `pairing`, `stats`, `vcam` and `vcamError`, plus
+  `cameraStates` for the tabs, so the views know nothing about other cameras. Only the selected camera's preview
+  runs. The tray is live when any camera is.
 
 ## Media link (when WebRTC can't connect)
 
@@ -163,7 +214,7 @@ apps/phone/                  Vanilla TS page (camera.ts, mic.ts, signaling.ts, m
 packages/protocol/           Wire types the phone and desktop exchange (HTTP API, DataChannel messages)
 packages/vcam-native/        C++: addon.cc (N-API), pipeline.cc (double buffer + pacing + libyuv),
                              backend/ivcam.h (per-OS interface), backend/win_softcam.cc, backend/linux_v4l2.cc,
-                             tools/vcam_selftest.cc (Linux: pushes a test pattern without Electron),
+                             tools/vcam_selftest.cc (pushes a test pattern into camera N without Electron),
                              filter/omnicam_filter.cpp (DirectShow DLL entry), third_party/{softcam,libyuv} submodules
 ```
 
@@ -253,7 +304,20 @@ runs `build/linux/omnicam-camera-setup.sh`. `npm run dist:linux` builds the AppI
   point `publish.owner/repo` in `electron-builder.yml` at a releases-only repo (and give CI a token
   for it), or use `provider: generic` against a static host. Neither changes what the app does with
   the feed. Every check downloads `latest.yml`, so its download count on a release is a rough measure
-  of running installs (checks, not unique users); OmniCam has no telemetry.
+  of running installs (checks, not unique users). The only telemetry is the opt-in count below.
+- **Usage ping and star rating (opt-in):** `main/usage-ping.ts`. Once a calendar month, for people who said yes to a
+  one-time question (Settings → About switches it), main POSTs `{ v, os }` to `DEFAULT_PING_URL`: no ID,
+  nothing else. A click on the stars sends `{ v, os, stars }` to `/rate` next to it, once per install. Both
+  are offered once, in the developer's thank-you note under the release notes in What's new (the one dialog an
+  update already shows; closing it ends the asking, and later updates show one line of thanks). An install that
+  never saw that note (a fresh one) gets a quiet line under the live picture instead: the ping question the
+  first time a phone streams, the stars after a phone has streamed on 5 days. Settings → About has both for good. The counter is live at
+  `omnicam-counter.orest-zogju.workers.dev` (`DEFAULT_PING_URL`); `OMNICAM_PING_URL` points a dev build at the counter run
+  locally instead (`node tools/counter/local.mjs`), so testing never adds to the real counts. The counter is a Cloudflare Worker with a D1 database
+  (`tools/counter`, deploy steps at the top of `worker.mjs`); it keeps counts per day, version and system, and
+  shows them on a dashboard at `/stats` (`dashboard.mjs`: one page, no libraries, redrawn every 5 s), which asks
+  for the key and sends it in a header: the key is a Worker secret and never part of an address. PRIVACY.md, the README and the website
+  describe both messages; `test/usage-ping.test.ts` fails if PRIVACY.md stops naming the counter's host.
 - **Code signing** (SignPath Foundation, [CODE_SIGNING.md](CODE_SIGNING.md)): the CI steps run only for a
   release build and only once the repository variable `SIGNPATH_ORGANIZATION_ID` is set (plus
   `SIGNPATH_PROJECT_SLUG`, `SIGNPATH_POLICY_SLUG` and the secret `SIGNPATH_API_TOKEN`). Inside out: the
@@ -311,12 +375,32 @@ Numbers from the perf pass on 2026-09-12; re-measure before changing any of thes
   `willReadFrequently` canvas in the UI. Keep it that way.
 - libyuv under MSVC x64 has no SIMD for NV12→RGB24 (10 ms/frame); NV12 goes through I420 (1.5 ms).
 - Nothing is copied or converted while no app reads the camera and the preview is hidden; after
-  5 s of that the phone is told to drop to 5 fps (`setIdle`) to save its battery.
+  5 s of that the phone is told to drop to 5 fps (`setIdle`) to save its battery. With Extra
+  cameras on, a live preview in the window keeps every camera's phone at full rate, not only the
+  shown one, so four phones can be set up without three of them reading "standby".
 - H.264 High profile is preferred only on Safari. Chrome's software encoder advertises High but
   stalls the sender after ~30 s when it is selected.
 - Diagnostics: `OMNICAM_DEBUG=timing,cpu` (engine copy/convert times, per-process CPU),
   `nocopy` / `nopreview` to bisect the pipeline; `OMNICAM_UI_DEBUG=metrics` logs renderer
   layout/style counters. `scripts`: see `packages/vcam-native/scripts`.
+
+## Performance notes (measured, four cameras on Windows)
+
+Measured on 2026-11-10: Win10, AMD Ryzen 7 5700X (8 cores, 16 threads), dev build, software H.264 decoding, four
+`fake-phone.cjs` instances on the same PC (so their encoding competes for the same CPU), one Chromium process
+reading all four cameras at once for 30 s. Engine CPU is `OMNICAM_DEBUG=cpu`'s share of all 16 threads.
+
+| Setup | Each camera delivers | Dropped by the engine | copyTo / convert per frame | Engine CPU |
+|---|---|---|---|---|
+| 4 × 720p60 | 60 fps (frame gaps: median 11 ms, 99th percentile 22 ms) | 0 | 0.25 ms / 0.5 ms | 3.8% (about 0.6 of a core) |
+| 4 × 1080p30 | 30 fps (frame gaps: median 33 ms, 99th percentile 45 ms) | 0 | 0.4 ms / 1.2 ms | 4.5% (about 0.7 of a core) |
+
+- The four fake phones managed about 50 fps each at 720p60 on this PC, so the cameras repeated frames to hold 60.
+  Real phones encode on their own hardware; re-measure with them.
+- The media link works per camera (checked on camera 2 and 3). A fake phone whose window is covered by another
+  sends nothing over the link, because the link draws from a visible page: keep the windows apart when testing.
+- 4K output with picture adjustments costs about 62 ms per frame in the native pipeline, per camera: not a
+  multi-camera setting.
 
 ## Performance notes (measured, Linux)
 

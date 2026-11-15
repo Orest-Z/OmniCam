@@ -59,7 +59,7 @@ button.round svg { width: 26px; height: 26px; }
 button.round.stop { width: 74px; height: 74px; background: #fff; color: #0a0a0d; }
 button.round.on { background: var(--accent); color: #fff; }
 button.round:active { filter: brightness(0.85); }
-button[hidden] { display: none; }
+button[hidden], .select[hidden] { display: none; }
 .zoom { display: flex; gap: 6px; padding: 4px; border-radius: 999px; background: var(--glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 .zoom[hidden] { display: none; }
 .zoom button { min-width: 38px; height: 38px; border-radius: 999px; background: transparent; color: var(--fg); font-size: 13px; font-weight: 600; }

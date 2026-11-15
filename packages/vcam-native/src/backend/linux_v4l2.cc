@@ -136,7 +136,7 @@ std::string fourcc(uint32_t f) {
 
 class V4l2Backend final : public IVirtualCamera {
 public:
-    V4l2Backend() {
+    explicit V4l2Backend(int index) : index_(index) {
         const char* f = std::getenv("OMNICAM_V4L2_FORMAT");
         format_ = f && std::strcmp(f, "i420") == 0 ? OutputFormat::I420 : OutputFormat::YUYV;
     }
@@ -269,6 +269,10 @@ public:
 private:
     // Finds the OmniCam device, or explains (with a C1 code) why there is none to use.
     bool locate(std::string& dev, std::string& reason) const {
+        if (index_ != 0) {
+            reason = "no-device: Linux has one OmniCam camera; extra cameras are Windows only";
+            return false;
+        }
         if (const char* forced = std::getenv("OMNICAM_V4L2_DEVICE"); forced && *forced) {
             dev = forced;
             if (access(dev.c_str(), F_OK) != 0) {
@@ -335,6 +339,7 @@ private:
         openers_ = 0;
     }
 
+    const int index_;
     OutputFormat format_ = OutputFormat::YUYV;
     int fd_ = -1;
     size_t frameBytes_ = 0;
@@ -351,8 +356,8 @@ private:
 
 } // namespace
 
-std::unique_ptr<IVirtualCamera> createPlatformCamera() {
-    return std::make_unique<V4l2Backend>();
+std::unique_ptr<IVirtualCamera> createPlatformCamera(int index) {
+    return std::make_unique<V4l2Backend>(index);
 }
 
 } // namespace omnicam

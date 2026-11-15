@@ -6,6 +6,9 @@
  *   from ~300 kbps over several seconds. Safari ignores unknown fmtp params (harmless).
  * - `b=AS:` on the video section: an upper bound every browser honors, so a misbehaving bandwidth
  *   estimate cannot push the phone past what the LAN comfortably carries.
+ * - No `urn:3gpp:video-orientation`: with it, Safari sends the camera's frames lying on their side plus a
+ *   "turn me" flag, which the frame pump (raw frames, no video element) never sees, so an iPhone held upright
+ *   arrived sideways while an Android arrived upright. Without it the phone turns the frames itself.
  * - Opus for the phone's microphone: mono at 64 kbps (clear for voice, fine for music) with in-band
  *   FEC, which rides out lost Wi-Fi packets. The phone's encoder takes these from our answer.
  */
@@ -49,6 +52,7 @@ export function tuneAnswerSdp(sdp: string): string {
       continue;
     }
     if (inVideo && line.startsWith('b=')) continue; // replaced above
+    if (/^a=extmap:\d+(\/\w+)? urn:3gpp:video-orientation\s*$/.test(line)) continue;
     out.push(line);
   }
 

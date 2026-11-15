@@ -47,7 +47,7 @@
 
 Scan a QR code, tap **Start camera**, and a camera named **OmniCam** appears in Discord, Zoom, Google Meet,
 Chrome, OBS — anything that lists webcams. Video goes phone → PC directly over your Wi-Fi with hardware-encoded
-H.264; nothing leaves your network, and there is no account, no cloud and no app store.
+H.264; your video never leaves your network, and there is no account, no cloud and no app store.
 
 - **Windows and Linux** — Windows 10/11, and Linux x64 as an AppImage, rpm or deb ([which distributions](#install-linux)).
   On Linux the phone's microphone needs nothing extra installed.
@@ -117,7 +117,8 @@ becomes the default output, OmniCam switches it back.
   with Secure Boot on, a signing key enrolled once ([Install (Linux)](#install-linux)).
 - **A browser warning the first time** on each phone, per network — unavoidable without a public certificate, and
   explained step by step below.
-- **One phone at a time.** Scanning the code with another phone replaces the current one.
+- **One phone per camera.** One camera by default; up to four on Windows with [Extra cameras](#settings). Scanning a
+  camera's code with another phone replaces that camera's phone. Only camera 1's phone can be the microphone.
 - **The installer isn't code-signed yet**, so SmartScreen asks you to confirm. Signing through SignPath
   Foundation is being set up; [CODE_SIGNING.md](CODE_SIGNING.md) has the policy.
 - **No USB path yet** — Wi-Fi, or a hotspot/tethering so both devices share one network.
@@ -319,6 +320,7 @@ Five sections in a sidebar. Each starts with how things stand, and a dot marks t
 **Camera**
 - **Output shape** — landscape, or portrait (9:16) for a phone held upright. Video call apps may crop a portrait picture or add bars.
 - **Output resolution** — what Discord, Zoom… receive: 720p, 1080p or 4K at 30 or 60 fps. The frame rate follows the phone (60 for 720p60). 4K is for OBS and recording; Discord, Zoom and Teams send at most 1080p. Consumer apps negotiate a format once, so this is fixed while they run; the phone picture is scaled into it.
+- **Extra cameras** (Windows) — adds **OmniCam 2**, **3** and **4** for setups with several phones, such as motion capture. Windows asks for permission once. The window then has a tab per camera, each with its own QR code: one phone per camera, all streaming at once, and an app can open all four together. They share the output settings above (each camera keeps its own rotation), and only camera 1's phone can be the microphone. Off by default; turning it off removes them. For FreeMoCap 2, tick *Include virtual cameras when detecting devices* in its settings and untick any camera that isn't an OmniCam.
 - **When the phone pauses** — hold the last frame or show a placeholder.
 - **Stream details** — the resolution, real fps and bitrate over the preview: always (default) or on hover. The preview itself is a reduced 10 fps snapshot; apps get the full stream.
 - **Advanced → Hardware video decoding** — off by default; software decoding measured faster up to 1080p. Try on for 4K.
@@ -337,7 +339,9 @@ Five sections in a sidebar. Each starts with how things stand, and a dot marks t
 
 **About**
 - **Updates** — OmniCam also checks quietly when it starts and once a day, unless you turn off
-  *Check for updates automatically*; that check is the only connection it makes beyond your network ([PRIVACY.md](PRIVACY.md)). When a new version is out, an *Update available* badge appears in the title bar; nothing is downloaded or installed until you click.
+  *Check for updates automatically*; that check is the only connection it makes beyond your network unless you opt in to being counted or send a rating ([PRIVACY.md](PRIVACY.md)). When a new version is out, an *Update available* badge appears in the title bar; nothing is downloaded or installed until you click.
+- **Count this install** — off unless you turn it on. When on, OmniCam sends one anonymous message a month with its version and your operating system, nothing else, so the developer can see it is being used ([PRIVACY.md](PRIVACY.md)).
+- **Rate OmniCam** — five stars, anonymous, sent once.
 - **Log file** — opens the folder with `omnicam.log`, for bug reports. Nothing is sent automatically.
 
 </td>
@@ -419,7 +423,7 @@ PHONE (browser)                                DESKTOP
 ```
 
 - The PC runs a tiny HTTPS server that serves the phone page and a one-shot signaling endpoint. The QR code carries a
-  per-launch random token; only one phone can be connected at a time.
+  per-launch random token; each camera takes one phone at a time.
 - Video is WebRTC, peer-to-peer on your LAN. The desktop's ICE candidate is a real LAN IP so it also works on Wi-Fi
   that blocks mDNS.
 - When WebRTC can't connect, the phone sends video and microphone over the page's own encrypted connection instead,

@@ -47,6 +47,8 @@ describe('activePreset', () => {
 
   test('nothing known yet reads as 720p', () => {
     assert.equal(activePreset(undefined), '720p');
+    assert.equal(activePreset({ width: 848, height: 480, frameRate: 30 }), '480p');
+    assert.equal(activePreset({ width: 480, height: 640, frameRate: 30 }), '480p');
   });
 });
 

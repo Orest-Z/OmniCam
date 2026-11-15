@@ -10,6 +10,8 @@ const ANSWER = [
   't=0 0',
   'm=video 9 UDP/TLS/RTP/SAVPF 96 97 102',
   'c=IN IP4 0.0.0.0',
+  'a=extmap:3 urn:3gpp:video-orientation',
+  'a=extmap:4 http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01',
   'a=rtpmap:96 VP8/90000',
   'a=rtpmap:97 rtx/90000',
   'a=fmtp:97 apt=96',
@@ -28,6 +30,11 @@ const ANSWER = [
 const lines = tuneAnswerSdp(ANSWER).split('\r\n');
 
 describe('tuneAnswerSdp', () => {
+  test('video orientation is not accepted, so the phone sends upright frames; other extensions stay', () => {
+    assert.equal(lines.some((l) => l.includes('video-orientation')), false);
+    assert.ok(lines.includes('a=extmap:4 http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01'));
+  });
+
   test('Opus: mono, 64 kbps, in-band FEC, other parameters kept', () => {
     assert.ok(lines.includes('a=fmtp:111 minptime=10;useinbandfec=1;stereo=0;maxaveragebitrate=64000'));
     assert.ok(lines.includes('a=fmtp:63 111/111'), 'RED is left alone');

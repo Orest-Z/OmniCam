@@ -28,19 +28,27 @@ export function createTray(): Tray {
   tray = new Tray(icon(false));
   tray.setToolTip('OmniCam');
   tray.on('click', () => createOrShowUiWindow());
-  updateTray(engine.stats);
+  updateTray();
   return tray;
 }
 
-export function updateTray(stats: StreamStats): void {
+const isLive = (state: StreamStats['state']) => state === 'connected' || state === 'stalled';
+
+/** Live when any camera is; the label and the menu are about the camera the window shows. */
+export function updateTray(): void {
   if (!tray) return;
-  const live = stats.state === 'connected' || stats.state === 'stalled';
+  const stats = engine.statsOf(engine.shown);
+  const liveCameras = engine.states().filter(isLive).length;
+  const live = liveCameras > 0;
   if (live !== liveIcon) {
     tray.setImage(icon(live));
     liveIcon = live;
   }
   const phone = stats.device?.platform;
-  const label = STATE_LABEL[stats.state] + (live && phone ? ` · ${phone}` : '');
+  const label =
+    engine.count > 1 && live
+      ? `${liveCameras} of ${engine.count} cameras live`
+      : STATE_LABEL[stats.state] + (live && phone ? ` · ${phone}` : '');
   tray.setToolTip(`OmniCam — ${label}`);
   tray.setContextMenu(
     Menu.buildFromTemplate([
@@ -49,8 +57,8 @@ export function updateTray(stats: StreamStats): void {
       { label: 'Open OmniCam', click: () => createOrShowUiWindow() },
       {
         label: 'Switch camera',
-        enabled: live && stats.sources?.camera !== false,
-        click: () => engine.control({ type: 'switchCamera' }),
+        enabled: isLive(stats.state) && stats.sources?.camera !== false,
+        click: () => engine.control(engine.shown, { type: 'switchCamera' }),
       },
       {
         label: 'Disconnect phone',

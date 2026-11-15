@@ -1,4 +1,4 @@
-import type { CameraSetupResult, Distro, VirtualMicState } from '../shared/ipc';
+import type { CameraSetupResult, Distro, ExtraCamerasResult, VirtualMicState } from '../shared/ipc';
 
 /**
  * What the main process needs from the operating system. One implementation per OS (win.ts,
@@ -30,8 +30,18 @@ export interface Platform {
    * installer). `driver`: install the driver package first.
    */
   setupCamera: ((driver: boolean) => Promise<CameraSetupResult>) | null;
+  /** "OmniCam 2" to "OmniCam 4", or null where there is one camera (Linux). */
+  extraCameras: ExtraCameras | null;
   /** Whether in-app updates can replace this install: not in dev, not an rpm/deb (their updates come from Releases). */
   updates(): 'supported' | 'dev' | 'package';
+}
+
+/** The cameras after the first, which apps list only once the user turns them on. */
+export interface ExtraCameras {
+  /** Whether apps list them now, as the system says (not a saved setting). */
+  registered(): Promise<boolean>;
+  /** Lists or unlists them; asks for administrator rights. `nativeDir` holds the camera driver. */
+  set(on: boolean, nativeDir: string): Promise<ExtraCamerasResult>;
 }
 
 /** The phone's microphone as a device apps can pick, for as long as OmniCam runs. */

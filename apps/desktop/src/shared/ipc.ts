@@ -1,5 +1,6 @@
 import {
   DEFAULT_PORT,
+  MAX_CAMERAS,
   type DesktopToPhone,
   type DeviceInfo,
   type MediaSources,
@@ -14,6 +15,8 @@ import {
  *   ui      — visible renderer (sandboxed, talks through the preload bridge)
  */
 
+// Engine channels that concern one camera carry its index (0 = "OmniCam") as their first argument,
+// or inside the payload for ENGINE_OFFER. ENGINE_APPLY_SETTINGS and ENGINE_SHUTDOWN are for all cameras.
 // main -> engine
 export const ENGINE_OFFER = 'engine:offer';
 export const ENGINE_APPLY_SETTINGS = 'engine:apply-settings';
@@ -53,6 +56,12 @@ export const UI_UPDATE_DOWNLOAD = 'ui:update-download';
 export const UI_UPDATE_INSTALL = 'ui:update-install';
 export const UI_CAMERA_SETUP = 'ui:camera-setup';
 export const UI_CAMERA_RETRY = 'ui:camera-retry';
+export const UI_SELECT_CAMERA = 'ui:select-camera';
+export const UI_SET_EXTRA_CAMERAS = 'ui:set-extra-cameras';
+export const UI_SEND_RATING = 'ui:send-rating';
+
+/** The star rating is offered once a phone has streamed on this many days: by then it is someone's own opinion. */
+export const RATE_AFTER_DAYS = 5;
 
 // Desktop state shared by main, engine and UI (the phone never sees these)
 export type ConnectionState =
@@ -128,6 +137,21 @@ export interface Picture {
 
 export const NEUTRAL_PICTURE: Picture = { brightness: 0, contrast: 0, saturation: 0, warmth: 0 };
 
+export type Rotation = 0 | 90 | 180 | 270;
+
+/** The rotation of one camera (0-based): camera 1 keeps `rotation`, the others have theirs in `extraRotations`. */
+export function rotationOf(s: Pick<AppSettings, 'rotation' | 'extraRotations'>, camera: number): Rotation {
+  return camera === 0 ? s.rotation : (s.extraRotations[camera - 1] ?? 0);
+}
+
+/** The settings change that gives one camera (0-based) a rotation and leaves the others alone. */
+export function rotationPatch(s: Pick<AppSettings, 'extraRotations'>, camera: number, rotation: Rotation): Partial<AppSettings> {
+  if (camera === 0) return { rotation };
+  const extraRotations = Array.from({ length: MAX_CAMERAS - 1 }, (_, i) => s.extraRotations[i] ?? 0);
+  extraRotations[camera - 1] = rotation;
+  return { extraRotations };
+}
+
 export interface AppSettings {
   port: number;
   /** Preferred LAN IP for the QR; empty = auto. */
@@ -138,7 +162,10 @@ export interface AppSettings {
   outputShape: 'landscape' | 'portrait';
   outputFps: 30 | 60;
   mirror: boolean;
-  rotation: 0 | 90 | 180 | 270;
+  /** Camera 1's rotation (the only one before Extra cameras). */
+  rotation: Rotation;
+  /** The rotation of cameras 2 to 4: phones are mounted each their own way. */
+  extraRotations: Rotation[];
   /** fit = letterbox/pillarbox (never crops); fill = crop to fill the output like a webcam. */
   scaleMode: 'fit' | 'fill';
   picture: Picture;
@@ -166,9 +193,26 @@ export interface AppSettings {
   hardwareDecode: boolean;
   /**
    * Ask GitHub for a newer release at launch and once a day. Off = only when the user clicks
-   * "Check for updates". The only connection OmniCam makes beyond the local network.
+   * "Check for updates". The only connection OmniCam makes beyond the local network, unless `usagePing` is on.
    */
   autoUpdateCheck: boolean;
+  /**
+   * The anonymous usage ping (main/usage-ping.ts): 'ask' until the one-time question is answered, then what
+   * was answered. Only 'on' ever sends anything.
+   */
+  usagePing: 'ask' | 'on' | 'off';
+  /** The UTC month (YYYY-MM) of the last ping that got through: one a month. */
+  lastPingMonth: string;
+  /** The developer's thank-you note in What's new was shown: once in full, one line of thanks from then on. */
+  thanksSeen: boolean;
+  /**
+   * The star rating: 'ask' until the one quiet invitation was answered or closed, 'sent' once a rating went
+   * out (one per install). Settings → About keeps the stars until then.
+   */
+  rating: 'ask' | 'dismissed' | 'sent';
+  /** On how many UTC days a phone streamed, and the last of them. Never sent anywhere: it times the invitation. */
+  daysUsed: number;
+  lastUsedDay: string;
   /** Last window geometry; restored on launch. */
   windowBounds?: { x: number; y: number; width: number; height: number };
 }
@@ -181,6 +225,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   outputFps: 30,
   mirror: false,
   rotation: 0,
+  extraRotations: [],
   scaleMode: 'fill',
   picture: NEUTRAL_PICTURE,
   holdLastFrame: true,
@@ -192,10 +237,18 @@ export const DEFAULT_SETTINGS: AppSettings = {
   launchAtLogin: false,
   hardwareDecode: false,
   autoUpdateCheck: true,
+  usagePing: 'ask',
+  lastPingMonth: '',
+  thanksSeen: false,
+  rating: 'ask',
+  daysUsed: 0,
+  lastUsedDay: '',
 };
 
 export interface EngineOffer {
   id: string;
+  /** The camera this phone feeds, 0-based. */
+  camera: number;
   sdp: string;
   device: DeviceInfo;
 }
@@ -207,11 +260,14 @@ export interface EngineSettings {
   outputHeight: number;
   outputFps: number;
   mirror: boolean;
-  rotation: 0 | 90 | 180 | 270;
+  /** Each camera's rotation, by camera index. */
+  rotations: Rotation[];
   scaleMode: 'fit' | 'fill';
   picture: Picture;
   holdLastFrame: boolean;
   micOutput: string;
+  /** How many cameras run: 1, or MAX_CAMERAS while Extra cameras is on. */
+  cameras: number;
   /** Absolute path to the native addon (.node), or empty to run without a virtual camera. */
   addonPath: string;
   /** Directory containing softcam.dll (Windows). */
@@ -270,6 +326,13 @@ export interface CameraSetupResult {
   message?: string;
 }
 
+/** How switching Extra cameras ended. `cancelled`: the Windows permission prompt was dismissed. */
+export interface ExtraCamerasResult {
+  status: 'ok' | 'cancelled' | 'failed';
+  /** One sentence for the user when it failed. */
+  message?: string;
+}
+
 /** Linux distribution family, for the install commands the UI shows ('other' off Linux too). */
 export type Distro = 'fedora' | 'debian' | 'arch' | 'other';
 
@@ -287,17 +350,29 @@ export interface VirtualMicState {
   feedIsDefault?: boolean;
 }
 
+/**
+ * `pairing`, `stats`, `vcam` and `vcamError` are those of the selected camera (`camera`), so the window
+ * shows one camera at a time and needs to know nothing more about the others than `cameraStates`.
+ */
 export interface AppState {
   pairing: PairingInfo | null;
   settings: AppSettings;
   stats: StreamStats;
   vcam: VirtualCamStats;
   vcamError: string | null;
+  /** The camera the window shows, 0-based. Always 0 unless Extra cameras is on. */
+  camera: number;
+  /** Every running camera's connection state, for the camera tabs: one entry, or MAX_CAMERAS with Extra cameras on. */
+  cameraStates: ConnectionState[];
+  /** "OmniCam 2" to "OmniCam 4" (Windows): registered or not, as the registry says; unsupported elsewhere. */
+  extraCameras: 'unsupported' | 'off' | 'on';
   update: UpdateState;
   version: string;
   platform: NodeJS.Platform;
   /** A tray icon is shown. False on desktops without a tray host (stock GNOME): closing minimises. */
   trayAvailable: boolean;
+  /** This build has a counter to send the usage ping and the rating to; without it neither is ever offered. */
+  usagePingAvailable: boolean;
   distro: Distro;
   /** Null where OmniCam creates no microphone (Windows: the user installs VB-CABLE). */
   virtualMic: VirtualMicState | null;
@@ -315,9 +390,16 @@ export interface PreviewFrame {
 export interface UiApi {
   getState(): Promise<AppState>;
   setSettings(patch: Partial<AppSettings>): Promise<AppSettings>;
+  /** To the selected camera's phone. */
   control(msg: DesktopToPhone): Promise<void>;
   rotateToken(): Promise<void>;
-  /** Drops the current phone and invalidates its QR code. */
+  /** Shows another camera in the window (0-based). */
+  selectCamera(camera: number): Promise<void>;
+  /** Adds or removes "OmniCam 2" to "OmniCam 4" (Windows asks for permission). The new state arrives as a patch. */
+  setExtraCameras(on: boolean): Promise<ExtraCamerasResult>;
+  /** Sends the star rating (1 to 5), once per install. False when it could not be sent. */
+  sendRating(stars: number): Promise<boolean>;
+  /** Drops the selected camera's phone and invalidates the QR codes. */
   disconnect(): Promise<void>;
   setPreview(enabled: boolean): Promise<void>;
   openExternal(url: string): Promise<void>;

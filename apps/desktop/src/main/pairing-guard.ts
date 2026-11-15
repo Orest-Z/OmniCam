@@ -46,6 +46,18 @@ function isFile(path: string): boolean {
 }
 
 /**
+ * The camera a phone asks for, as a 0-based index, or null when it may not have it. The phone sends 1 to
+ * `cameras` (the page URL's `cam`: a number on /api/session, text on the media link's URL); nothing
+ * means camera 1. Cameras after the first exist only while Extra cameras is on (`extras`).
+ */
+export function cameraIndex(given: unknown, extras: boolean, cameras = 4): number | null {
+  if (given === undefined || given === null) return 0;
+  const n = typeof given === 'number' ? given : typeof given === 'string' && /^[1-9]$/.test(given) ? Number(given) : NaN;
+  if (!Number.isInteger(n) || n < 1 || n > cameras) return null;
+  return n === 1 || extras ? n - 1 : null;
+}
+
+/**
  * Whether WebRTC has a way to reach the phone: the address its request came from is one it offers (or it
  * hides its addresses behind .local names, so there is no telling). An iPhone's own hotspot offers only the
  * mobile data address, and the checks then fail after 15 s; the phone can skip that and use the media link.

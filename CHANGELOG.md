@@ -1,5 +1,49 @@
 # Changelog
 
+## 2.5.0 — 2026-11-15
+
+Up to four phones at once on Windows, each as its own camera: for motion capture, multi-angle streaming, or
+anything else that wants several cameras.
+
+### New: extra cameras (Windows)
+- **Turn them on:** Settings → Camera → **Extra cameras**. Windows asks for permission once, then apps list
+  **OmniCam 2**, **OmniCam 3** and **OmniCam 4** next to **OmniCam**. Turning it off removes them again. Apps
+  that are open may need restarting to see the change.
+- **One phone per camera:** with Extra cameras on, the window gets a tab for each camera, and each tab has its
+  own QR code. Scan camera 2's code with a second phone, camera 3's with a third, and so on. A phone that loses
+  Wi-Fi comes back to its own camera, and one phone leaving doesn't disturb the others.
+- **All at once in one app:** an app can open all four cameras together, which is what motion capture tools
+  such as FreeMoCap do. In FreeMoCap 2, tick *Include virtual cameras when detecting devices* in its settings,
+  and untick any camera that isn't an OmniCam before connecting.
+- **No standby while you set up:** while the window shows a live picture, every camera's phone stays at full
+  frame rate, not only the one whose tab is open.
+- **Shared settings:** every camera uses the same output resolution, shape and frame rate. The frame rate
+  follows camera 1's phone.
+- **Each camera its own way:** the rotate button and the phone controls (resolution, front/back, zoom) act on
+  the camera whose tab is open, so phones mounted differently can each be turned upright.
+- **480p for older phones:** a phone that can't keep up with 720p can film at 480p; it remembers the choice.
+- **One microphone:** only camera 1's phone can be the microphone, because there is one virtual cable.
+- **Off by default:** if you use one phone, nothing changes and apps still list a single OmniCam.
+
+### New: a thank-you, and two optional ways to help
+- **Count this install:** OmniCam can now tell its developer that it is in use, with one anonymous message a
+  month: the app version and your operating system, nothing else, and your IP address is never saved. It is
+  **off unless you say yes**, and Settings → About switches it at any time.
+- **Rate OmniCam:** five stars, anonymous, sent once, only if you click one.
+- Both are asked once, in a note under these release notes. [PRIVACY.md](PRIVACY.md) shows exactly what is sent.
+
+### Fixed
+- **iPhones held upright arrive upright.** An iPhone used to send its picture lying on its side, so it needed
+  the rotate button while an Android did not. Both now arrive the right way up with no rotation.
+- **A phone that reconnected while on standby stayed at 5 fps**, even once an app was using its camera. It now
+  returns to full frame rate.
+- **Apps that skip "frozen" cameras now list OmniCam.** Some motion capture tools read two frames and drop a
+  camera when they are identical, which OmniCam's placeholder and repeated frames were.
+
+Measured with four simulated phones on one PC (Ryzen 7 5700X): at 720p60 and at 1080p30 all four cameras held
+their frame rate with no dropped frames, using well under one CPU core in total. Not on Linux yet, where
+OmniCam has one camera.
+
 ## 2.4.0 — 2026-11-05
 
 OmniCam now works when an iPhone is the hotspot, with both the camera and the microphone. You can also

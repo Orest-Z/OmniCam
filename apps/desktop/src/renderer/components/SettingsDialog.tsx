@@ -1,13 +1,13 @@
 import { useState, type ReactNode } from 'react';
 import { AlertTriangle, AppWindow, CheckCircle2, ChevronRight, Info, Mic, Video, Wifi, type LucideIcon } from 'lucide-react';
 import type { DesktopToPhone } from '@omnicam/protocol';
-import type { AppSettings, Distro, PairingInfo, StreamStats, UpdateState, VirtualCamStats, VirtualMicState } from '../../shared/ipc';
+import type { AppSettings, AppState, Distro, PairingInfo, StreamStats, UpdateState, VirtualCamStats, VirtualMicState } from '../../shared/ipc';
 import { micNameFor, OMNICAM_MIC, pickSink } from '../../shared/audio-sink';
 import { firewallSteps } from '../../shared/firewall';
 import { HOTSPOT_HELP } from '../../shared/stream-format';
 import { useLoopbacks } from '../useLoopbacks';
 import { CameraHelp } from './CameraHelp';
-import { Command, Dialog, Segmented, Switch } from './ui';
+import { Command, Dialog, Segmented, Stars, Switch } from './ui';
 import { RELEASES_URL, updateOnOffer, updateSummary } from './UpdateDialog';
 
 interface Props {
@@ -22,6 +22,9 @@ interface Props {
   trayAvailable: boolean;
   /** Linux: OmniCam's own microphone; null on Windows (VB-CABLE). */
   virtualMic: VirtualMicState | null;
+  extraCameras: AppState['extraCameras'];
+  usagePingAvailable: boolean;
+  onRate: (stars: number) => void;
   stats: StreamStats;
   onSettings: (patch: Partial<AppSettings>) => void;
   onControl: (msg: DesktopToPhone) => void;
@@ -56,7 +59,7 @@ const SECTIONS: { id: SectionId; label: string; icon: LucideIcon }[] = [
  * Settings as five sections in a sidebar. Each opens with a status line, and a section that needs
  * attention carries a dot. Long explanations sit in ⓘ tooltips.
  */
-export function SettingsDialog({ settings, pairing, vcam, vcamError, update, version, platform, distro, trayAvailable, virtualMic, stats, onSettings, onControl, onOpenUpdate, onOpenMicGuide, onOpenWhatsNew, onClose }: Props) {
+export function SettingsDialog({ settings, pairing, vcam, vcamError, update, version, platform, distro, trayAvailable, virtualMic, extraCameras, usagePingAvailable, onRate, stats, onSettings, onControl, onOpenUpdate, onOpenMicGuide, onOpenWhatsNew, onClose }: Props) {
   const fallback = portFallback(pairing);
   const loopbacks = useLoopbacks();
   const sink = loopbacks && pickSink(loopbacks.outputs, settings.micOutput);
@@ -72,7 +75,7 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, update, ver
   const [picked, setSection] = useState<SectionId | null>(null);
   const section = picked ?? SECTIONS.find((s) => attention[s.id] === 'bad' || attention[s.id] === 'warn')?.id ?? 'camera';
   const pane = {
-    camera: <CameraPane settings={settings} vcam={vcam} vcamError={vcamError} platform={platform} distro={distro} stats={stats} onSettings={onSettings} onControl={onControl} />,
+    camera: <CameraPane settings={settings} vcam={vcam} vcamError={vcamError} platform={platform} distro={distro} stats={stats} extraCameras={extraCameras} onSettings={onSettings} onControl={onControl} />,
     mic: virtualMic ? (
       <LinuxMicPane virtualMic={virtualMic} onOpenMicGuide={onOpenMicGuide} />
     ) : (
@@ -80,7 +83,7 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, update, ver
     ),
     connection: <ConnectionPane settings={settings} pairing={pairing} platform={platform} distro={distro} onSettings={onSettings} />,
     app: <AppPane settings={settings} platform={platform} trayAvailable={trayAvailable} onSettings={onSettings} />,
-    about: <AboutPane settings={settings} update={update} version={version} onSettings={onSettings} onOpenUpdate={onOpenUpdate} onOpenWhatsNew={onOpenWhatsNew} />,
+    about: <AboutPane settings={settings} update={update} version={version} usagePingAvailable={usagePingAvailable} onRate={onRate} onSettings={onSettings} onOpenUpdate={onOpenUpdate} onOpenWhatsNew={onOpenWhatsNew} />,
   }[section];
 
   return (
@@ -103,7 +106,39 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, update, ver
   );
 }
 
-function CameraPane({ settings, vcam, vcamError, platform, distro, stats, onSettings, onControl }: Pick<Props, 'settings' | 'vcam' | 'vcamError' | 'platform' | 'distro' | 'stats' | 'onSettings' | 'onControl'>) {
+/** "OmniCam 2" to "OmniCam 4": the switch shows what Windows has registered, and changing it asks for permission. */
+function ExtraCameras({ state, disabled }: { state: 'off' | 'on'; disabled: boolean }) {
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState('');
+  const change = async (on: boolean) => {
+    if (busy || disabled) return;
+    setBusy(true);
+    setProblem('');
+    const result = await window.omnicam.setExtraCameras(on);
+    setBusy(false);
+    if (result.status === 'cancelled') setProblem('Windows was not given permission, so nothing changed.');
+    else if (result.status === 'failed') setProblem(result.message ?? 'That did not work. The log folder (About) has details.');
+  };
+  return (
+    <>
+      <Field
+        title="Extra cameras"
+        sub={busy ? 'Waiting for Windows…' : disabled ? 'Needs the camera driver: see above.' : 'Adds OmniCam 2, 3 and 4, one phone each.'}
+        info="For setups with several phones, like motion capture. Apps then list four cameras, and each gets its own QR code and tab in this window. All of them use the output settings above, and only camera 1's phone can be a microphone. Windows asks for permission to add or remove them; apps that are open may need restarting to see the change."
+      >
+        <Switch on={state === 'on'} onChange={(on) => void change(on)} />
+      </Field>
+      {problem && (
+        <div className="notice warn">
+          <AlertTriangle />
+          <span>{problem}</span>
+        </div>
+      )}
+    </>
+  );
+}
+
+function CameraPane({ settings, vcam, vcamError, platform, distro, stats, extraCameras, onSettings, onControl }: Pick<Props, 'settings' | 'vcam' | 'vcamError' | 'platform' | 'distro' | 'stats' | 'extraCameras' | 'onSettings' | 'onControl'>) {
   const live = stats.state === 'connected' || stats.state === 'stalled';
   const size = { '720p': '720p', '1080p': '1080p', '4k': '4K' }[settings.outputPreset];
   const sixty = settings.outputFps === 60;
@@ -186,6 +221,7 @@ function CameraPane({ settings, vcam, vcamError, platform, distro, stats, onSett
           onChange={(v) => onSettings({ outputShape: v })}
         />
       </Field>
+      {extraCameras !== 'unsupported' && <ExtraCameras state={extraCameras} disabled={Boolean(vcamError?.startsWith('no-addon'))} />}
       <Field title="When the phone pauses" sub="Locked screen, switched app, lost Wi-Fi.">
         <Segmented
           value={settings.holdLastFrame ? 'hold' : 'placeholder'}
@@ -415,14 +451,19 @@ function AppPane({ settings, platform, trayAvailable, onSettings }: Pick<Props, 
   );
 }
 
+/** "2026-11" as "November 2026". */
+const monthLabel = (month: string) => new Date(`${month}-01T00:00:00Z`).toLocaleDateString(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' });
+
 function AboutPane({
   settings,
   update,
   version,
+  usagePingAvailable,
+  onRate,
   onSettings,
   onOpenUpdate,
   onOpenWhatsNew,
-}: Pick<Props, 'settings' | 'update' | 'version' | 'onSettings' | 'onOpenUpdate' | 'onOpenWhatsNew'>) {
+}: Pick<Props, 'settings' | 'update' | 'version' | 'usagePingAvailable' | 'onRate' | 'onSettings' | 'onOpenUpdate' | 'onOpenWhatsNew'>) {
   return (
     <>
       <h3>About</h3>
@@ -458,6 +499,20 @@ function AboutPane({
       >
         <Switch on={settings.autoUpdateCheck} onChange={(v) => onSettings({ autoUpdateCheck: v })} />
       </Field>
+      {usagePingAvailable && (
+        <Field
+          title="Count this install"
+          sub={`One anonymous ping a month.${settings.usagePing === 'on' && settings.lastPingMonth ? ` Last sent: ${monthLabel(settings.lastPingMonth)}.` : ''}`}
+          info="Tells the developer that an OmniCam install was used this month. It says only the app version and your system (Windows or Linux), nothing else: no name, no ID, nothing about your phone, your video or your files, and your IP address is never saved."
+        >
+          <Switch on={settings.usagePing === 'on'} onChange={(v) => onSettings({ usagePing: v ? 'on' : 'off' })} />
+        </Field>
+      )}
+      {usagePingAvailable && (
+        <Field title="Rate OmniCam" sub="Anonymous, sent once." info="Sends your stars with the app version and your operating system, nothing else.">
+          {settings.rating === 'sent' ? <span className="muted">Sent. Thank you.</span> : <Stars onPick={onRate} />}
+        </Field>
+      )}
       <Field title="Log file" sub="For bug reports. Nothing is sent automatically.">
         <button className="btn" onClick={() => void window.omnicam.openLogs()}>
           Open log folder

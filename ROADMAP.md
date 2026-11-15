@@ -47,17 +47,24 @@ Tauri would plausibly make that ~10–15 MB and ~100 MB. Everything else argues 
   software encoder stalls when it is selected).
 
 **No cloud, no relay, no account.** Video goes phone → PC on the local network or it does not go. No
-TURN server, no signalling service, no telemetry. "No-warning mode" below is the one exception under
-discussion, and it is opt-in by design.
+TURN server, no signalling service. The one thing that leaves your network besides the update check is opt-in:
+since 2.5.0 an install can be counted once a month, and can send a star rating, only if its user says yes
+([PRIVACY.md](PRIVACY.md)). "No-warning mode" below is the other exception under discussion, opt-in by design too.
 
-**One phone at a time.** Scanning a new code replaces the current phone. Several simultaneous phones
-would mean several camera devices, a device-naming scheme, and a UI for all of it.
+**One phone per camera.** Scanning a camera's code with another phone replaces that camera's phone. There is one
+camera unless you turn on Extra cameras (Windows, since 2.5.0), which adds three more.
 
 ---
 
 ## Done
 
 Shipped items from earlier versions of this list, kept so the rest reads against what exists.
+
+### Several phones at once (Windows) — 2.5.0
+
+Settings → Camera → *Extra cameras* registers **OmniCam 2**, **3** and **4**. Each camera has its own tab, QR
+code, phone and rotation, and one app can open all four together, which is what motion capture tools such as
+FreeMoCap need. Not on Linux yet: more v4l2loopback devices need the module reloaded.
 
 ### Linux: v4l2loopback — 2.1.0
 
@@ -191,4 +198,3 @@ Small, verified, and each one has a known home in the code.
 
 - **USB.** A phone hotspot, or USB tethering with the PC joined to that network, already covers it.
 - **Recording, filters, effects, backgrounds.** OBS does all of this, downstream of OmniCam.
-- **Several phones at once** — see "Already decided".

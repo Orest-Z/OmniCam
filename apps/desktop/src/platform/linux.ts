@@ -85,6 +85,8 @@ export const linux: Platform = {
   distro,
   virtualMic: linuxVirtualMic(distro),
   setupCamera: setupCameraLinux,
+  // One v4l2loopback device.
+  extraCameras: null,
   // electron-updater can only replace an AppImage; $APPIMAGE is set when running one.
   updates: () => (!app.isPackaged ? 'dev' : process.env.APPIMAGE ? 'supported' : 'package'),
 };
