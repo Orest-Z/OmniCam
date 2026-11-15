@@ -1,0 +1,23 @@
+// Cloudflare Worker settings for OmniCam's counter. The steps are at the top of worker.mjs.
+{
+  "name": "omnicam-counter",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-11-01",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "omnicam-counter",
+      // From `npx wrangler d1 create omnicam-counter`.
+      "database_id": "c058ab1a-e028-4d86-b2d0-618a7e244a60"
+    }
+  ],
+  // No "observability" (logs) on purpose: the app tells people their address is never saved.
+  // At most 10 requests a minute from one address (an install sends one ping a month). Needs wrangler 4.36 or later.
+  "ratelimits": [
+    {
+      "name": "LIMIT",
+      "namespace_id": "1001",
+      "simple": { "limit": 10, "period": 60 }
+    }
+  ]
+}

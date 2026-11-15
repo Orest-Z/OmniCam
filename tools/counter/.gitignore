@@ -1,0 +1,2 @@
+# Wrangler's local cache and state: never part of the repo.
+.wrangler/
