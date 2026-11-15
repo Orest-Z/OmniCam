@@ -304,7 +304,20 @@ runs `build/linux/omnicam-camera-setup.sh`. `npm run dist:linux` builds the AppI
   point `publish.owner/repo` in `electron-builder.yml` at a releases-only repo (and give CI a token
   for it), or use `provider: generic` against a static host. Neither changes what the app does with
   the feed. Every check downloads `latest.yml`, so its download count on a release is a rough measure
-  of running installs (checks, not unique users); OmniCam has no telemetry.
+  of running installs (checks, not unique users). The only telemetry is the opt-in count below.
+- **Usage ping and star rating (opt-in):** `main/usage-ping.ts`. Once a calendar month, for people who said yes to a
+  one-time question (Settings → About switches it), main POSTs `{ v, os }` to `DEFAULT_PING_URL`: no ID,
+  nothing else. A click on the stars sends `{ v, os, stars }` to `/rate` next to it, once per install. Both
+  are offered once, in the developer's thank-you note under the release notes in What's new (the one dialog an
+  update already shows; closing it ends the asking, and later updates show one line of thanks). An install that
+  never saw that note (a fresh one) gets a quiet line under the live picture instead: the ping question the
+  first time a phone streams, the stars after a phone has streamed on 5 days. Settings → About has both for good. The counter is live at
+  `omnicam-counter.orest-zogju.workers.dev` (`DEFAULT_PING_URL`); `OMNICAM_PING_URL` points a dev build at the counter run
+  locally instead (`node tools/counter/local.mjs`), so testing never adds to the real counts. The counter is a Cloudflare Worker with a D1 database
+  (`tools/counter`, deploy steps at the top of `worker.mjs`); it keeps counts per day, version and system, and
+  shows them on a dashboard at `/stats` (`dashboard.mjs`: one page, no libraries, redrawn every 5 s), which asks
+  for the key and sends it in a header: the key is a Worker secret and never part of an address. PRIVACY.md, the README and the website
+  describe both messages; `test/usage-ping.test.ts` fails if PRIVACY.md stops naming the counter's host.
 - **Code signing** (SignPath Foundation, [CODE_SIGNING.md](CODE_SIGNING.md)): the CI steps run only for a
   release build and only once the repository variable `SIGNPATH_ORGANIZATION_ID` is set (plus
   `SIGNPATH_PROJECT_SLUG`, `SIGNPATH_POLICY_SLUG` and the secret `SIGNPATH_API_TOKEN`). Inside out: the

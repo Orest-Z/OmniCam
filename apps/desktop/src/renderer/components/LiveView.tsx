@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Flashlight, FlipHorizontal2, Mic, MicOff, QrCode, RotateCw, SlidersHorizontal, Unplug, Video, VideoOff } from 'lucide-react';
 import { zoomSteps, type DesktopToPhone } from '@omnicam/protocol';
 import { rotationOf, rotationPatch, type AppSettings, type Rotation, type StreamStats, type VirtualCamStats, type VirtualMicState } from '../../shared/ipc';
@@ -17,6 +17,8 @@ interface Props {
   virtualMic: VirtualMicState | null;
   /** The camera this view shows, 0-based: its rotation is its own. */
   cameraIndex: number;
+  /** One quiet line under the controls (a question that can wait), or nothing. */
+  notice?: ReactNode;
   /** False on cameras 2 to 4: one virtual cable takes one phone's microphone, camera 1's. */
   micAllowed: boolean;
   onSettings: (patch: Partial<AppSettings>) => void;
@@ -32,7 +34,7 @@ interface Props {
  */
 export const SPEAKING_LEVEL = 0.02;
 
-export function LiveView({ stats, vcam, settings, virtualMic, cameraIndex, micAllowed, onSettings, onControl, onShowQr, onOpenMicGuide, onOpenSettings }: Props) {
+export function LiveView({ stats, vcam, settings, virtualMic, cameraIndex, notice, micAllowed, onSettings, onControl, onShowQr, onOpenMicGuide, onOpenSettings }: Props) {
   const live = stats.state === 'connected' || stats.state === 'stalled';
   const facing = stats.trackInfo?.facing ?? 'user';
   const preset = activePreset(stats.trackInfo);
@@ -233,6 +235,7 @@ export function LiveView({ stats, vcam, settings, virtualMic, cameraIndex, micAl
           <Unplug />
         </IconButton>
       </div>
+      {notice}
     </div>
   );
 }

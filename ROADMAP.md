@@ -47,8 +47,9 @@ Tauri would plausibly make that ~10–15 MB and ~100 MB. Everything else argues 
   software encoder stalls when it is selected).
 
 **No cloud, no relay, no account.** Video goes phone → PC on the local network or it does not go. No
-TURN server, no signalling service, no telemetry. "No-warning mode" below is the one exception under
-discussion, and it is opt-in by design.
+TURN server, no signalling service. The one thing that leaves your network besides the update check is opt-in:
+since 2.5.0 an install can be counted once a month, and can send a star rating, only if its user says yes
+([PRIVACY.md](PRIVACY.md)). "No-warning mode" below is the other exception under discussion, opt-in by design too.
 
 **One phone per camera.** Scanning a camera's code with another phone replaces that camera's phone. There is one
 camera unless you turn on Extra cameras (Windows, since 2.5.0), which adds three more.

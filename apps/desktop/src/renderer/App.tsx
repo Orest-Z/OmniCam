@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Bug, Heart, Moon, Settings as SettingsIcon, Sun } from 'lucide-react';
-import type { ConnectionState, UpdateState } from '../shared/ipc';
+import { RATE_AFTER_DAYS, type ConnectionState, type UpdateState } from '../shared/ipc';
 import { LiveView } from './components/LiveView';
 import { MicGuide } from './components/MicGuide';
 import { Mark } from './components/Mark';
 import { PairView } from './components/PairView';
 import { SettingsDialog, portFallback, portFallbackMessage } from './components/SettingsDialog';
 import { UpdateDialog, WhatsNewDialog, updateOnOffer } from './components/UpdateDialog';
-import { Dialog, IconButton } from './components/ui';
+import { Dialog, IconButton, Stars } from './components/ui';
 import { useAppState } from './useAppState';
 import { Toasts, useToasts } from './toasts';
 
@@ -124,6 +124,19 @@ export function App() {
   if (!state) return <div className="app" />;
   const { pairing, settings, stats, vcam, vcamError, camera, cameraStates } = state;
   const showLive = stats.state !== 'idle';
+  const rate = async (stars: number) => {
+    const sent = await window.omnicam.sendRating(stars);
+    push(sent ? 'Thanks for the rating' : "Couldn't send the rating. Try again later.", sent ? 'ok' : 'bad');
+  };
+  // Two questions that can wait, each asked once, one at a time, as a line under the live picture: by then
+  // OmniCam works for this person, and nothing ever pops up over what they are doing.
+  const nudge = !state.usagePingAvailable
+    ? null
+    : settings.usagePing === 'ask'
+      ? 'ping'
+      : settings.rating === 'ask' && settings.daysUsed >= RATE_AFTER_DAYS
+        ? 'rate'
+        : null;
   const badge = updateBadge(state.update);
   // What is on screen now ('system' resolves through the OS); the toggle picks the other one.
   const dark = settings.theme === 'system' ? matchMedia('(prefers-color-scheme: dark)').matches : settings.theme === 'dark';
@@ -190,6 +203,27 @@ export function App() {
             settings={settings}
             virtualMic={state.virtualMic}
             cameraIndex={camera}
+            notice={
+              nudge === 'ping' ? (
+                <div className="nudge" role="note">
+                  <span>Count this install? One anonymous ping a month says only the app version and your system, so the developer can see OmniCam is used. No ID, and your IP address is never saved.</span>
+                  <button className="btn sm" onClick={() => void setSettings({ usagePing: 'on' })}>
+                    Yes
+                  </button>
+                  <button className="btn ghost sm" onClick={() => void setSettings({ usagePing: 'off' })}>
+                    No
+                  </button>
+                </div>
+              ) : nudge === 'rate' ? (
+                <div className="nudge" role="note">
+                  <span>How is OmniCam working for you? An anonymous rating, sent once.</span>
+                  <Stars onPick={(n) => void rate(n)} />
+                  <button className="btn ghost sm" onClick={() => void setSettings({ rating: 'dismissed' })}>
+                    No thanks
+                  </button>
+                </div>
+              ) : null
+            }
             micAllowed={camera === 0}
             onSettings={(p) => void setSettings(p)}
             onControl={(m) => void control(m)}
@@ -210,6 +244,8 @@ export function App() {
           vcamError={vcamError}
           update={state.update}
           version={state.version}
+          usagePingAvailable={state.usagePingAvailable}
+          onRate={(n) => void rate(n)}
           platform={state.platform}
           distro={state.distro}
           trayAvailable={state.trayAvailable}
@@ -236,9 +272,19 @@ export function App() {
       {whatsNewOpen && (
         <WhatsNewDialog
           version={state.version}
+          settings={settings}
+          counter={state.usagePingAvailable}
+          onSettings={(p) => void setSettings(p)}
+          onRate={(n) => void rate(n)}
           onClose={() => {
             setWhatsNewOpen(false);
-            if (settings.notesSeen !== state.version) void setSettings({ notesSeen: state.version });
+            // The note and its two questions were on screen: that was the one time they are asked this way.
+            void setSettings({
+              notesSeen: state.version,
+              thanksSeen: true,
+              ...(state.usagePingAvailable && !settings.thanksSeen && settings.usagePing === 'ask' ? { usagePing: 'off' as const } : {}),
+              ...(state.usagePingAvailable && !settings.thanksSeen && settings.rating === 'ask' ? { rating: 'dismissed' as const } : {}),
+            });
           }}
         />
       )}

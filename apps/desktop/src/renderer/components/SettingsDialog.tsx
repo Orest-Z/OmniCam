@@ -7,7 +7,7 @@ import { firewallSteps } from '../../shared/firewall';
 import { HOTSPOT_HELP } from '../../shared/stream-format';
 import { useLoopbacks } from '../useLoopbacks';
 import { CameraHelp } from './CameraHelp';
-import { Command, Dialog, Segmented, Switch } from './ui';
+import { Command, Dialog, Segmented, Stars, Switch } from './ui';
 import { RELEASES_URL, updateOnOffer, updateSummary } from './UpdateDialog';
 
 interface Props {
@@ -23,6 +23,8 @@ interface Props {
   /** Linux: OmniCam's own microphone; null on Windows (VB-CABLE). */
   virtualMic: VirtualMicState | null;
   extraCameras: AppState['extraCameras'];
+  usagePingAvailable: boolean;
+  onRate: (stars: number) => void;
   stats: StreamStats;
   onSettings: (patch: Partial<AppSettings>) => void;
   onControl: (msg: DesktopToPhone) => void;
@@ -57,7 +59,7 @@ const SECTIONS: { id: SectionId; label: string; icon: LucideIcon }[] = [
  * Settings as five sections in a sidebar. Each opens with a status line, and a section that needs
  * attention carries a dot. Long explanations sit in ⓘ tooltips.
  */
-export function SettingsDialog({ settings, pairing, vcam, vcamError, update, version, platform, distro, trayAvailable, virtualMic, extraCameras, stats, onSettings, onControl, onOpenUpdate, onOpenMicGuide, onOpenWhatsNew, onClose }: Props) {
+export function SettingsDialog({ settings, pairing, vcam, vcamError, update, version, platform, distro, trayAvailable, virtualMic, extraCameras, usagePingAvailable, onRate, stats, onSettings, onControl, onOpenUpdate, onOpenMicGuide, onOpenWhatsNew, onClose }: Props) {
   const fallback = portFallback(pairing);
   const loopbacks = useLoopbacks();
   const sink = loopbacks && pickSink(loopbacks.outputs, settings.micOutput);
@@ -81,7 +83,7 @@ export function SettingsDialog({ settings, pairing, vcam, vcamError, update, ver
     ),
     connection: <ConnectionPane settings={settings} pairing={pairing} platform={platform} distro={distro} onSettings={onSettings} />,
     app: <AppPane settings={settings} platform={platform} trayAvailable={trayAvailable} onSettings={onSettings} />,
-    about: <AboutPane settings={settings} update={update} version={version} onSettings={onSettings} onOpenUpdate={onOpenUpdate} onOpenWhatsNew={onOpenWhatsNew} />,
+    about: <AboutPane settings={settings} update={update} version={version} usagePingAvailable={usagePingAvailable} onRate={onRate} onSettings={onSettings} onOpenUpdate={onOpenUpdate} onOpenWhatsNew={onOpenWhatsNew} />,
   }[section];
 
   return (
@@ -449,14 +451,19 @@ function AppPane({ settings, platform, trayAvailable, onSettings }: Pick<Props, 
   );
 }
 
+/** "2026-11" as "November 2026". */
+const monthLabel = (month: string) => new Date(`${month}-01T00:00:00Z`).toLocaleDateString(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' });
+
 function AboutPane({
   settings,
   update,
   version,
+  usagePingAvailable,
+  onRate,
   onSettings,
   onOpenUpdate,
   onOpenWhatsNew,
-}: Pick<Props, 'settings' | 'update' | 'version' | 'onSettings' | 'onOpenUpdate' | 'onOpenWhatsNew'>) {
+}: Pick<Props, 'settings' | 'update' | 'version' | 'usagePingAvailable' | 'onRate' | 'onSettings' | 'onOpenUpdate' | 'onOpenWhatsNew'>) {
   return (
     <>
       <h3>About</h3>
@@ -492,6 +499,20 @@ function AboutPane({
       >
         <Switch on={settings.autoUpdateCheck} onChange={(v) => onSettings({ autoUpdateCheck: v })} />
       </Field>
+      {usagePingAvailable && (
+        <Field
+          title="Count this install"
+          sub={`One anonymous ping a month.${settings.usagePing === 'on' && settings.lastPingMonth ? ` Last sent: ${monthLabel(settings.lastPingMonth)}.` : ''}`}
+          info="Tells the developer that an OmniCam install was used this month. It says only the app version and your system (Windows or Linux), nothing else: no name, no ID, nothing about your phone, your video or your files, and your IP address is never saved."
+        >
+          <Switch on={settings.usagePing === 'on'} onChange={(v) => onSettings({ usagePing: v ? 'on' : 'off' })} />
+        </Field>
+      )}
+      {usagePingAvailable && (
+        <Field title="Rate OmniCam" sub="Anonymous, sent once." info="Sends your stars with the app version and your operating system, nothing else.">
+          {settings.rating === 'sent' ? <span className="muted">Sent. Thank you.</span> : <Stars onPick={onRate} />}
+        </Field>
+      )}
       <Field title="Log file" sub="For bug reports. Nothing is sent automatically.">
         <button className="btn" onClick={() => void window.omnicam.openLogs()}>
           Open log folder

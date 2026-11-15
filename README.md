@@ -47,7 +47,7 @@
 
 Scan a QR code, tap **Start camera**, and a camera named **OmniCam** appears in Discord, Zoom, Google Meet,
 Chrome, OBS — anything that lists webcams. Video goes phone → PC directly over your Wi-Fi with hardware-encoded
-H.264; nothing leaves your network, and there is no account, no cloud and no app store.
+H.264; your video never leaves your network, and there is no account, no cloud and no app store.
 
 - **Windows and Linux** — Windows 10/11, and Linux x64 as an AppImage, rpm or deb ([which distributions](#install-linux)).
   On Linux the phone's microphone needs nothing extra installed.
@@ -339,7 +339,9 @@ Five sections in a sidebar. Each starts with how things stand, and a dot marks t
 
 **About**
 - **Updates** — OmniCam also checks quietly when it starts and once a day, unless you turn off
-  *Check for updates automatically*; that check is the only connection it makes beyond your network ([PRIVACY.md](PRIVACY.md)). When a new version is out, an *Update available* badge appears in the title bar; nothing is downloaded or installed until you click.
+  *Check for updates automatically*; that check is the only connection it makes beyond your network unless you opt in to being counted or send a rating ([PRIVACY.md](PRIVACY.md)). When a new version is out, an *Update available* badge appears in the title bar; nothing is downloaded or installed until you click.
+- **Count this install** — off unless you turn it on. When on, OmniCam sends one anonymous message a month with its version and your operating system, nothing else, so the developer can see it is being used ([PRIVACY.md](PRIVACY.md)).
+- **Rate OmniCam** — five stars, anonymous, sent once.
 - **Log file** — opens the folder with `omnicam.log`, for bug reports. Nothing is sent automatically.
 
 </td>

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, net, shell } from 'electron';
 import { cpus } from 'node:os';
 import { MAX_CAMERAS, type DesktopToPhone, type PhoneToDesktop } from '@omnicam/protocol';
 import {
@@ -12,6 +12,7 @@ import {
   UI_PREVIEW_FRAME,
   UI_ROTATE_TOKEN,
   UI_SELECT_CAMERA,
+  UI_SEND_RATING,
   UI_SET_EXTRA_CAMERAS,
   UI_SET_PREVIEW,
   UI_SET_SETTINGS,
@@ -40,6 +41,7 @@ import { settings } from './settings';
 import { createTray, updateTray } from './tray';
 import { applyTheme, createOrShowUiWindow, markQuitting, resendPreview, setPreviewWanted, setTrayAvailable, trayAvailable, uiWindow } from './ui-window';
 import { checkForUpdates, downloadUpdate, initUpdater, installUpdate, updateState } from './updater';
+import { pingBody, pingDue, pingUrl, rateBody, rateUrl, utcDay, utcMonth, validStars } from './usage-ping';
 import { outputFpsFor } from '../shared/stream-format';
 import { phoneErrorText } from '../shared/phone-error';
 import { platform } from '../platform';
@@ -112,6 +114,7 @@ async function fullState(): Promise<AppState> {
     version: app.getVersion(),
     platform: process.platform,
     trayAvailable: trayAvailable(),
+    usagePingAvailable: Boolean(pingUrl()),
     distro: platform.distro,
     virtualMic: platform.virtualMic?.state() ?? null,
   };
@@ -127,6 +130,23 @@ async function startServer(): Promise<void> {
   broadcast({ pairing: info });
 }
 
+/** A few bytes to the counter. False when it did not get there (no network, the counter is down or said no). */
+async function tellCounter(url: string, body: string): Promise<boolean> {
+  try {
+    const res = await net.fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body, signal: AbortSignal.timeout(5000) });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/** This month's usage ping, if this person agreed to it and it has not gone out yet. Quiet when offline: it tries again. */
+async function sendUsagePing(): Promise<void> {
+  const url = pingUrl();
+  if (!pingDue(settings.get(), url)) return;
+  if (await tellCounter(url, pingBody(app.getVersion(), process.platform))) broadcast({ settings: settings.update({ lastPingMonth: utcMonth() }) });
+}
+
 async function changeSettings(patch: Partial<AppSettings>): Promise<AppSettings> {
   const prev = settings.get();
   const next = settings.update(patch);
@@ -139,6 +159,7 @@ async function changeSettings(patch: Partial<AppSettings>): Promise<AppSettings>
     platform.setLaunchAtLogin(next.launchAtLogin);
   }
   broadcast({ settings: next });
+  if (next.usagePing !== prev.usagePing) void sendUsagePing();
   return next;
 }
 
@@ -162,6 +183,14 @@ function wireIpc(): void {
     const result = await platform.extraCameras.set(on === true, nativePaths().nativeDir);
     await syncExtraCameras();
     return result;
+  });
+
+  ipcMain.handle(UI_SEND_RATING, async (_e, stars: unknown): Promise<boolean> => {
+    const url = rateUrl();
+    if (!url || !validStars(stars) || settings.get().rating === 'sent') return false;
+    if (!(await tellCounter(url, rateBody(app.getVersion(), process.platform, stars)))) return false;
+    await changeSettings({ rating: 'sent' });
+    return true;
   });
 
   ipcMain.handle(UI_DISCONNECT, () => disconnectPhone());
@@ -197,6 +226,10 @@ function wireIpc(): void {
   let lastStates = '';
   engine.on('stats', (camera: number, s: StreamStats) => {
     updateTray();
+    // A day on which a phone streamed: after a few, the window offers the star rating, once.
+    if (s.state === 'connected' && settings.get().lastUsedDay !== utcDay()) {
+      broadcast({ settings: settings.update({ lastUsedDay: utcDay(), daysUsed: settings.get().daysUsed + 1 }) });
+    }
     const cameraStates = engine.states();
     const changed = cameraStates.join() !== lastStates;
     lastStates = cameraStates.join();
@@ -288,6 +321,9 @@ async function main(): Promise<void> {
   }
 
   initUpdater();
+  // The app can stay in the tray for weeks: look once an hour whether a new month's ping is due.
+  setTimeout(() => void sendUsagePing(), 30_000);
+  setInterval(() => void sendUsagePing(), 3_600_000);
 
   // Re-check LAN addresses periodically: laptops roam between networks.
   setInterval(async () => {

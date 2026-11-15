@@ -25,6 +25,13 @@ anything else that wants several cameras.
 - **One microphone:** only camera 1's phone can be the microphone, because there is one virtual cable.
 - **Off by default:** if you use one phone, nothing changes and apps still list a single OmniCam.
 
+### New: a thank-you, and two optional ways to help
+- **Count this install:** OmniCam can now tell its developer that it is in use, with one anonymous message a
+  month: the app version and your operating system, nothing else, and your IP address is never saved. It is
+  **off unless you say yes**, and Settings → About switches it at any time.
+- **Rate OmniCam:** five stars, anonymous, sent once, only if you click one.
+- Both are asked once, in a note under these release notes. [PRIVACY.md](PRIVACY.md) shows exactly what is sent.
+
 ### Fixed
 - **iPhones held upright arrive upright.** An iPhone used to send its picture lying on its side, so it needed
   the rotate button while an Android did not. Both now arrive the right way up with no rotation.

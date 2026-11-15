@@ -58,6 +58,10 @@ export const UI_CAMERA_SETUP = 'ui:camera-setup';
 export const UI_CAMERA_RETRY = 'ui:camera-retry';
 export const UI_SELECT_CAMERA = 'ui:select-camera';
 export const UI_SET_EXTRA_CAMERAS = 'ui:set-extra-cameras';
+export const UI_SEND_RATING = 'ui:send-rating';
+
+/** The star rating is offered once a phone has streamed on this many days: by then it is someone's own opinion. */
+export const RATE_AFTER_DAYS = 5;
 
 // Desktop state shared by main, engine and UI (the phone never sees these)
 export type ConnectionState =
@@ -189,9 +193,26 @@ export interface AppSettings {
   hardwareDecode: boolean;
   /**
    * Ask GitHub for a newer release at launch and once a day. Off = only when the user clicks
-   * "Check for updates". The only connection OmniCam makes beyond the local network.
+   * "Check for updates". The only connection OmniCam makes beyond the local network, unless `usagePing` is on.
    */
   autoUpdateCheck: boolean;
+  /**
+   * The anonymous usage ping (main/usage-ping.ts): 'ask' until the one-time question is answered, then what
+   * was answered. Only 'on' ever sends anything.
+   */
+  usagePing: 'ask' | 'on' | 'off';
+  /** The UTC month (YYYY-MM) of the last ping that got through: one a month. */
+  lastPingMonth: string;
+  /** The developer's thank-you note in What's new was shown: once in full, one line of thanks from then on. */
+  thanksSeen: boolean;
+  /**
+   * The star rating: 'ask' until the one quiet invitation was answered or closed, 'sent' once a rating went
+   * out (one per install). Settings → About keeps the stars until then.
+   */
+  rating: 'ask' | 'dismissed' | 'sent';
+  /** On how many UTC days a phone streamed, and the last of them. Never sent anywhere: it times the invitation. */
+  daysUsed: number;
+  lastUsedDay: string;
   /** Last window geometry; restored on launch. */
   windowBounds?: { x: number; y: number; width: number; height: number };
 }
@@ -216,6 +237,12 @@ export const DEFAULT_SETTINGS: AppSettings = {
   launchAtLogin: false,
   hardwareDecode: false,
   autoUpdateCheck: true,
+  usagePing: 'ask',
+  lastPingMonth: '',
+  thanksSeen: false,
+  rating: 'ask',
+  daysUsed: 0,
+  lastUsedDay: '',
 };
 
 export interface EngineOffer {
@@ -344,6 +371,8 @@ export interface AppState {
   platform: NodeJS.Platform;
   /** A tray icon is shown. False on desktops without a tray host (stock GNOME): closing minimises. */
   trayAvailable: boolean;
+  /** This build has a counter to send the usage ping and the rating to; without it neither is ever offered. */
+  usagePingAvailable: boolean;
   distro: Distro;
   /** Null where OmniCam creates no microphone (Windows: the user installs VB-CABLE). */
   virtualMic: VirtualMicState | null;
@@ -368,6 +397,8 @@ export interface UiApi {
   selectCamera(camera: number): Promise<void>;
   /** Adds or removes "OmniCam 2" to "OmniCam 4" (Windows asks for permission). The new state arrives as a patch. */
   setExtraCameras(on: boolean): Promise<ExtraCamerasResult>;
+  /** Sends the star rating (1 to 5), once per install. False when it could not be sent. */
+  sendRating(stars: number): Promise<boolean>;
   /** Drops the selected camera's phone and invalidates the QR codes. */
   disconnect(): Promise<void>;
   setPreview(enabled: boolean): Promise<void>;

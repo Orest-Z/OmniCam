@@ -1,9 +1,10 @@
 import { AlertTriangle, ArrowUpRight, Download, RotateCcw } from 'lucide-react';
-import type { StreamStats, UpdateState, VirtualCamStats } from '../../shared/ipc';
-import { Dialog } from './ui';
+import type { AppSettings, StreamStats, UpdateState, VirtualCamStats } from '../../shared/ipc';
+import { Dialog, Stars } from './ui';
 import { ReleaseNotes } from './ReleaseNotes';
 
 export const RELEASES_URL = 'https://github.com/Orest-Z/OmniCam/releases';
+const ISSUES_URL = 'https://github.com/Orest-Z/OmniCam/issues';
 
 interface Props {
   update: UpdateState;
@@ -133,11 +134,69 @@ export function UpdateDialog({ update, version, stats, vcam, platform, onClose }
   );
 }
 
-/** What this version brought: shown once after an update, and from Settings → About. */
-export function WhatsNewDialog({ version, onClose }: { version: string; onClose: () => void }) {
+interface WhatsNewProps {
+  version: string;
+  settings: AppSettings;
+  /** This build has a counter: the note offers the count and the rating. */
+  counter: boolean;
+  onSettings: (patch: Partial<AppSettings>) => void;
+  onRate: (stars: number) => void;
+  onClose: () => void;
+}
+
+/**
+ * What this version brought: shown once after an update, and from Settings → About. Under the notes, the
+ * developer's thank-you: in full the first time (with the count and the rating, each said in so many words),
+ * one line from then on, so an update never turns into asking again.
+ */
+export function WhatsNewDialog({ version, settings, counter, onSettings, onRate, onClose }: WhatsNewProps) {
   return (
     <Dialog title={`What's new in OmniCam ${version}`} className="update" onClose={onClose}>
       <ReleaseNotes notes={[{ version, html: __RELEASE_NOTES__ }]} />
+      {settings.thanksSeen ? (
+        <p className="thanks-line">Thank you for using OmniCam ❤️</p>
+      ) : (
+        <div className="thanks">
+          <b>A note from me</b>
+          <p>I built OmniCam for myself and never expected this many people to use it. Thank you, truly.</p>
+          <p>I make it for free, in my spare time.{counter && ' Two small things help me, and both are optional:'}</p>
+          {counter && (
+            <>
+              <div className="ask">
+                <span>
+                  <b>Count this install.</b> One anonymous ping a month that says only the app version and your system (Windows or Linux), so I can see OmniCam is
+                  being used. No name, no ID, nothing about your phone, your video or your files, and your IP address is never saved.
+                </span>
+                {settings.usagePing === 'on' ? (
+                  <span className="done">Counted. Thank you.</span>
+                ) : (
+                  <button className="btn sm" onClick={() => onSettings({ usagePing: 'on' })}>
+                    Count me
+                  </button>
+                )}
+              </div>
+              <div className="ask">
+                <span>
+                  <b>Leave a rating.</b> Anonymous, sent once.
+                </span>
+                {settings.rating === 'sent' ? <span className="done">Sent. Thank you.</span> : <Stars onPick={onRate} />}
+              </div>
+            </>
+          )}
+          <p>
+            Have an idea, or something not working?{' '}
+            <button className="link" onClick={() => void window.omnicam.openExternal(ISSUES_URL)}>
+              Open an issue on GitHub
+            </button>
+            . I read every one.
+          </p>
+          <p>
+            Thank you for using OmniCam ❤️
+            <br />
+            Orest
+          </p>
+        </div>
+      )}
       <div className="actions">
         <button className="btn primary" onClick={onClose}>
           Got it
