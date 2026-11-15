@@ -26,10 +26,11 @@ class SessionManager {
     return tokenMatches(token, this.token);
   }
 
-  async pairingInfo(): Promise<PairingInfo> {
+  /** `camera`: 0-based. Cameras after the first say which they are in the URL, so a phone comes back to its own. */
+  async pairingInfo(camera = 0): Promise<PairingInfo> {
     const addr = pickAddress(settings.get().preferredIp);
     const ip = addr?.ip ?? '127.0.0.1';
-    const url = `https://${ip}:${this.port}/?t=${this.token}`;
+    const url = `https://${ip}:${this.port}/?t=${this.token}${camera > 0 ? `&cam=${camera + 1}` : ''}`;
     const qrDataUrl = await QRCode.toDataURL(url, {
       errorCorrectionLevel: 'M',
       margin: 1,

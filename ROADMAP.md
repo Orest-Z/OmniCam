@@ -50,14 +50,20 @@ Tauri would plausibly make that ~10–15 MB and ~100 MB. Everything else argues 
 TURN server, no signalling service, no telemetry. "No-warning mode" below is the one exception under
 discussion, and it is opt-in by design.
 
-**One phone at a time.** Scanning a new code replaces the current phone. Several simultaneous phones
-would mean several camera devices, a device-naming scheme, and a UI for all of it.
+**One phone per camera.** Scanning a camera's code with another phone replaces that camera's phone. There is one
+camera unless you turn on Extra cameras (Windows, since 2.5.0), which adds three more.
 
 ---
 
 ## Done
 
 Shipped items from earlier versions of this list, kept so the rest reads against what exists.
+
+### Several phones at once (Windows) — 2.5.0
+
+Settings → Camera → *Extra cameras* registers **OmniCam 2**, **3** and **4**. Each camera has its own tab, QR
+code, phone and rotation, and one app can open all four together, which is what motion capture tools such as
+FreeMoCap need. Not on Linux yet: more v4l2loopback devices need the module reloaded.
 
 ### Linux: v4l2loopback — 2.1.0
 
@@ -191,4 +197,3 @@ Small, verified, and each one has a known home in the code.
 
 - **USB.** A phone hotspot, or USB tethering with the PC joined to that network, already covers it.
 - **Recording, filters, effects, backgrounds.** OBS does all of this, downstream of OmniCam.
-- **Several phones at once** — see "Already decided".

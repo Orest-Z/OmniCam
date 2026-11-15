@@ -110,6 +110,16 @@ svg { display: block; }
 .status.connecting i, .status.stalled i { background: var(--warn); }
 .status.disconnected i { background: var(--danger); }
 /* Update badge in the title bar: same shape as the status pill, but a button. */
+/* Camera tabs (Extra cameras on): one per camera, with its connection state as a dot. */
+.camtabs { display: inline-flex; gap: 2px; padding: 2px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); }
+.camtabs button { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 500; color: var(--text-3); white-space: nowrap; }
+.camtabs button:hover { color: var(--text); }
+.camtabs button.on { background: var(--accent-tint); color: var(--accent-soft); }
+.camtabs i { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); }
+.camtabs .connected i { background: var(--live); }
+.camtabs .connecting i, .camtabs .stalled i { background: var(--warn); }
+.camtabs .disconnected i { background: var(--danger); }
+
 .status.update { color: var(--accent-soft); background: var(--accent-tint); transition: background 0.12s; }
 .status.update:hover { background: rgba(138, 92, 243, 0.24); }
 .status.update i { background: var(--accent); }
@@ -258,6 +268,7 @@ svg { display: block; }
 
 .bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .bar .group { display: inline-flex; align-items: center; gap: 6px; }
+.bar .group[hidden] { display: none; }
 .bar .spacer { flex: 1; }
 .inuse { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--text-2); }
 .inuse i { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); }

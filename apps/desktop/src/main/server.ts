@@ -7,6 +7,7 @@ import type { AddressInfo } from 'node:net';
 import {
   API_HEALTH_PATH,
   API_SESSION_PATH,
+  MAX_CAMERAS,
   type HealthResponse,
   type SessionError,
   type SessionRequest,
@@ -15,7 +16,7 @@ import {
 import type { TlsMaterial } from './cert';
 import { session } from './session';
 import { attachLink, closeLink } from './link';
-import { AttemptBudget, offerIncludesAddress, resolvePhoneFile } from './pairing-guard';
+import { AttemptBudget, cameraIndex, offerIncludesAddress, resolvePhoneFile } from './pairing-guard';
 import { engine } from './engine-bridge';
 
 const MIME: Record<string, string> = {
@@ -72,8 +73,8 @@ function serveStatic(res: ServerResponse, urlPath: string) {
   createReadStream(file).pipe(res);
 }
 
-// One negotiation at a time and a budget per client: a misbehaving device on the LAN cannot keep the
-// engine busy renegotiating (each attempt tears down the current phone). The budget has to stay well
+// One negotiation at a time per camera and a budget per client: a misbehaving device on the LAN cannot keep
+// the engine busy renegotiating (each attempt tears down that camera's current phone). The budget has to stay well
 // clear of legitimate traffic — a phone whose Wi-Fi drops retries every 10 s at the end of its
 // backoff, and several phones can share one address behind a router.
 const SESSION_BURST = 20;
@@ -81,7 +82,7 @@ const SESSION_WINDOW_MS = 60_000;
 const SESSION_RETRY_AFTER_S = 5;
 const REJECT_LOG_INTERVAL_MS = 5_000;
 const budget = new AttemptBudget(SESSION_BURST, SESSION_WINDOW_MS);
-let negotiating = false;
+const negotiating = new Array<boolean>(MAX_CAMERAS).fill(false);
 let lastRejectLogAt = 0;
 
 /**
@@ -129,8 +130,15 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       return json(res, 403, e);
     }
     const ip = req.socket.remoteAddress ?? '?';
-    if (negotiating || !budget.allow(ip)) {
-      logRejected(ip, negotiating ? 'another phone is negotiating' : `more than ${SESSION_BURST} attempts a minute`);
+    // After the token: which cameras exist is nobody else's business.
+    const camera = cameraIndex(body.camera, engine.count > 1, MAX_CAMERAS);
+    if (camera === null) {
+      logRejected(ip, `asked for camera ${JSON.stringify(body.camera)}, which is not on`);
+      const e: SessionError = { ok: false, error: 'bad-request', message: 'That camera is not turned on in the OmniCam app. Scan its QR code again.' };
+      return json(res, 400, e);
+    }
+    if (negotiating[camera] || !budget.allow(ip)) {
+      logRejected(ip, negotiating[camera] ? 'another phone is negotiating' : `more than ${SESSION_BURST} attempts a minute`);
       const e: SessionError = { ok: false, error: 'busy', retryAfterSeconds: SESSION_RETRY_AFTER_S };
       res.setHeader('retry-after', String(SESSION_RETRY_AFTER_S));
       return json(res, 429, e);
@@ -140,10 +148,10 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       const e: SessionError = { ok: false, error: 'use-link' };
       return json(res, 409, e);
     }
-    negotiating = true;
+    negotiating[camera] = true;
     try {
-      console.log(`session: ${body.device.platform} from ${req.socket.remoteAddress}`);
-      const result = await engine.negotiate(body.sdp, body.device);
+      console.log(`session: ${body.device.platform} from ${req.socket.remoteAddress}${camera ? ` for camera ${camera + 1}` : ''}`);
+      const result = await engine.negotiate(camera, body.sdp, body.device);
       const ok: SessionResponse = { ok: true, ...result };
       return json(res, 200, ok);
     } catch (err) {
@@ -157,7 +165,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       const e: SessionError = { ok: false, error, message: NEGOTIATION_ERRORS[error] };
       return json(res, 503, e);
     } finally {
-      negotiating = false;
+      negotiating[camera] = false;
     }
   }
 

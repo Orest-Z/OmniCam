@@ -16,9 +16,14 @@ export function broadcast(patch: StatePatch): void {
   uiWindow()?.webContents.send(UI_STATE, patch);
 }
 
-/** Drops the phone and invalidates its QR so it cannot silently reconnect. */
+/**
+ * Drops the phone of the camera the window shows and invalidates its QR so it cannot silently reconnect.
+ * The QR codes share one token, so it stays while another camera has a phone: that phone could never
+ * come back after a Wi-Fi drop otherwise.
+ */
 export async function disconnectPhone(): Promise<void> {
-  engine.disconnect();
-  session.rotateToken();
-  broadcast({ pairing: await session.pairingInfo() });
+  engine.disconnect(engine.shown);
+  const othersConnected = engine.states().some((state, camera) => camera !== engine.shown && state !== 'idle');
+  if (!othersConnected) session.rotateToken();
+  broadcast({ pairing: await session.pairingInfo(engine.shown) });
 }

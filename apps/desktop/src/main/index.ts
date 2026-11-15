@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { cpus } from 'node:os';
-import type { DesktopToPhone, PhoneToDesktop } from '@omnicam/protocol';
+import { MAX_CAMERAS, type DesktopToPhone, type PhoneToDesktop } from '@omnicam/protocol';
 import {
   UI_CAMERA_RETRY,
   UI_CAMERA_SETUP,
@@ -11,6 +11,8 @@ import {
   UI_OPEN_LOGS,
   UI_PREVIEW_FRAME,
   UI_ROTATE_TOKEN,
+  UI_SELECT_CAMERA,
+  UI_SET_EXTRA_CAMERAS,
   UI_SET_PREVIEW,
   UI_SET_SETTINGS,
   UI_UPDATE_CHECK,
@@ -21,11 +23,15 @@ import {
   type AppSettings,
   type AppState,
   type CameraSetupResult,
+  type ExtraCamerasResult,
   type PreviewFrame,
+  type StatePatch,
+  type StreamStats,
+  type VirtualCamStats,
 } from '../shared/ipc';
 import { broadcast, disconnectPhone } from './actions';
 import { loadOrCreateCert } from './cert';
-import { engine } from './engine-bridge';
+import { engine, nativePaths } from './engine-bridge';
 import { installFileLog, logDir } from './log';
 import { migrateLegacyUserData } from './user-data';
 import { phoneServer } from './server';
@@ -69,15 +75,39 @@ if (!app.requestSingleInstanceLock()) {
   void main();
 }
 
-let vcamError: string | null = null;
+/** Extra cameras as the system has them; 'unsupported' until the first look, and for good off Windows. */
+let extraCameras: AppState['extraCameras'] = 'unsupported';
+
+type ShownCamera = Pick<AppState, 'camera' | 'cameraStates' | 'pairing' | 'stats' | 'vcam' | 'vcamError'>;
+
+/** Everything in the window's state that belongs to the camera it shows. */
+async function shownCamera(): Promise<ShownCamera> {
+  const camera = engine.shown;
+  return {
+    camera,
+    cameraStates: engine.states(),
+    pairing: await session.pairingInfo(camera).catch(() => null),
+    stats: engine.statsOf(camera),
+    vcam: engine.vcamOf(camera),
+    vcamError: engine.errorOf(camera),
+  };
+}
+
+/** Reads whether "OmniCam 2" to "OmniCam 4" are registered and runs that many cameras. */
+async function syncExtraCameras(): Promise<void> {
+  if (!platform.extraCameras) return;
+  const on = await platform.extraCameras.registered();
+  extraCameras = on ? 'on' : 'off';
+  engine.setCount(on ? MAX_CAMERAS : 1);
+  updateTray();
+  broadcast({ extraCameras, ...(await shownCamera()) });
+}
 
 async function fullState(): Promise<AppState> {
   return {
-    pairing: await session.pairingInfo().catch(() => null),
+    ...(await shownCamera()),
     settings: settings.get(),
-    stats: engine.stats,
-    vcam: engine.vcam,
-    vcamError,
+    extraCameras,
     update: updateState(),
     version: app.getVersion(),
     platform: process.platform,
@@ -91,7 +121,7 @@ async function startServer(): Promise<void> {
   const tls = await loadOrCreateCert();
   const port = await phoneServer.start(tls, settings.get().port);
   session.setPort(port);
-  const info = await session.pairingInfo();
+  const info = await session.pairingInfo(engine.shown);
   // Dev convenience only: the token is a secret, never log it from a packaged build.
   console.log(app.isPackaged ? `OmniCam phone page on port ${port}` : `OmniCam phone page: ${info.url}`);
   broadcast({ pairing: info });
@@ -117,13 +147,28 @@ function wireIpc(): void {
 
   ipcMain.handle(UI_SET_SETTINGS, (_e, patch: Partial<AppSettings>) => changeSettings(patch));
 
-  ipcMain.handle(UI_CONTROL, (_e, msg: DesktopToPhone) => engine.control(msg));
+  // To the phone of the camera the window shows: phones differ, so each has its own.
+  ipcMain.handle(UI_CONTROL, (_e, msg: DesktopToPhone) => engine.control(engine.shown, msg));
+
+  ipcMain.handle(UI_SELECT_CAMERA, async (_e, camera: unknown) => {
+    if (typeof camera !== 'number' || !Number.isInteger(camera) || camera < 0 || camera >= engine.count) return;
+    engine.show(camera);
+    updateTray();
+    broadcast(await shownCamera());
+  });
+
+  ipcMain.handle(UI_SET_EXTRA_CAMERAS, async (_e, on: unknown): Promise<ExtraCamerasResult> => {
+    if (!platform.extraCameras) return { status: 'failed', message: 'This system has one OmniCam camera.' };
+    const result = await platform.extraCameras.set(on === true, nativePaths().nativeDir);
+    await syncExtraCameras();
+    return result;
+  });
 
   ipcMain.handle(UI_DISCONNECT, () => disconnectPhone());
 
   ipcMain.handle(UI_ROTATE_TOKEN, async () => {
     session.rotateToken();
-    broadcast({ pairing: await session.pairingInfo() });
+    broadcast({ pairing: await session.pairingInfo(engine.shown) });
   });
 
   ipcMain.handle(UI_SET_PREVIEW, (_e, enabled: boolean) => setPreviewWanted(enabled));
@@ -148,31 +193,42 @@ function wireIpc(): void {
   });
   ipcMain.handle(UI_CAMERA_RETRY, () => engine.applySettings(settings.get()));
 
-  engine.on('stats', (s) => {
-    updateTray(s);
-    broadcast({ stats: s });
+  // The window shows one camera: only its numbers go there, plus every camera's state for the tabs.
+  let lastStates = '';
+  engine.on('stats', (camera: number, s: StreamStats) => {
+    updateTray();
+    const cameraStates = engine.states();
+    const changed = cameraStates.join() !== lastStates;
+    lastStates = cameraStates.join();
+    if (camera === engine.shown) broadcast(changed ? { stats: s, cameraStates } : { stats: s });
+    else if (changed) broadcast({ cameraStates });
   });
-  engine.on('vcam', (v) => broadcast({ vcam: v }));
-  engine.on('preview', (frame: PreviewFrame) => uiWindow()?.webContents.send(UI_PREVIEW_FRAME, frame));
-  engine.on('phone', (msg: PhoneToDesktop) => {
+  engine.on('vcam', (camera: number, v: VirtualCamStats) => {
+    if (camera === engine.shown) broadcast({ vcam: v });
+  });
+  engine.on('preview', (camera: number, frame: PreviewFrame) => {
+    if (camera === engine.shown) uiWindow()?.webContents.send(UI_PREVIEW_FRAME, frame);
+  });
+  engine.on('phone', (camera: number, msg: PhoneToDesktop) => {
     if (msg.type === 'error') {
-      console.warn('[phone]', msg.message);
-      uiWindow()?.webContents.send(UI_PHONE_ERROR, phoneErrorText(msg, engine.stats.device?.platform));
+      console.warn(camera ? `[phone, camera ${camera + 1}]` : '[phone]', msg.message);
+      const text = phoneErrorText(msg, engine.statsOf(camera).device?.platform);
+      uiWindow()?.webContents.send(UI_PHONE_ERROR, engine.count > 1 ? `Camera ${camera + 1}: ${text}` : text);
     }
     // Apps get exactly the virtual camera's rate, so it follows the rate the phone's camera really
     // runs at, whichever side changed the resolution: 720p60 reaches Zoom at 60, and a phone that
     // only managed 30 doesn't get its frames doubled. Only on a change: it restarts the device.
-    if (msg.type === 'trackInfo') {
+    // The cameras share one output rate, and it is camera 1's phone that sets it.
+    if (msg.type === 'trackInfo' && camera === 0) {
       const fps = outputFpsFor(msg.info.frameRate);
       if (fps !== settings.get().outputFps) void changeSettings({ outputFps: fps });
     }
   });
-  engine.on('vcam-error', (message: string) => {
-    vcamError = message;
-    uiWindow()?.webContents.send(UI_VCAM_ERROR, message);
+  engine.on('vcam-error', (camera: number, message: string | null) => {
+    if (camera === engine.shown) uiWindow()?.webContents.send(UI_VCAM_ERROR, message);
   });
   engine.on('restarted', () => {
-    broadcast({ stats: engine.stats, vcam: engine.vcam });
+    void shownCamera().then(broadcast);
     resendPreview();
   });
 }
@@ -183,6 +239,8 @@ async function main(): Promise<void> {
 
   applyTheme(settings.get().theme);
   wireIpc();
+  // Before the engine starts its cameras, so the extra ones come up with the first.
+  await syncExtraCameras().catch((err) => console.warn('extra cameras: could not read their state', err));
   engine.create();
   // Linux: "OmniCam Microphone" exists while OmniCam runs, whether or not the phone's mic is on, so apps
   // can be set up before it is. The engine finds "OmniCam Feed" like any other loopback.
@@ -233,7 +291,7 @@ async function main(): Promise<void> {
 
   // Re-check LAN addresses periodically: laptops roam between networks.
   setInterval(async () => {
-    const info = await session.pairingInfo().catch(() => null);
+    const info = await session.pairingInfo(engine.shown).catch(() => null);
     if (info) broadcast({ pairing: info });
   }, 15_000);
 

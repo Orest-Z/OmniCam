@@ -35,12 +35,18 @@
 !macroend
 
 !macro customUnInstall
-  DetailPrint "Unregistering OmniCam virtual camera..."
-  nsExec::ExecToLog '"$SYSDIR\regsvr32.exe" /u /s "$INSTDIR\resources\native\omnicam_vcam.dll"'
-  Pop $0
-  ${If} ${FileExists} "$INSTDIR\resources\native\x86\omnicam_vcam.dll"
-    nsExec::ExecToLog '"$WINDIR\SysWOW64\regsvr32.exe" /u /s "$INSTDIR\resources\native\x86\omnicam_vcam.dll"'
+  ; An update runs this uninstaller first (with --updated), then installs over it. Unregistering
+  ; here would also unlist "OmniCam 2" to "OmniCam 4" (Settings > Extra cameras), which the install
+  ; does not list again: so the registration stays, and customInstall refreshes it. Only a real
+  ; uninstall removes the cameras, all four (/u unlists the extra ones too).
+  ${IfNot} ${isUpdated}
+    DetailPrint "Unregistering OmniCam virtual camera..."
+    nsExec::ExecToLog '"$SYSDIR\regsvr32.exe" /u /s "$INSTDIR\resources\native\omnicam_vcam.dll"'
     Pop $0
+    ${If} ${FileExists} "$INSTDIR\resources\native\x86\omnicam_vcam.dll"
+      nsExec::ExecToLog '"$WINDIR\SysWOW64\regsvr32.exe" /u /s "$INSTDIR\resources\native\x86\omnicam_vcam.dll"'
+      Pop $0
+    ${EndIf}
   ${EndIf}
   nsExec::ExecToLog 'netsh advfirewall firewall delete rule name="OmniCam"'
   Pop $0

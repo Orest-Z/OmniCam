@@ -1,4 +1,4 @@
-import { API_SESSION_PATH } from '@omnicam/protocol';
+import { API_SESSION_PATH, MAX_CAMERAS } from '@omnicam/protocol';
 import type { SessionRequest, SessionResponse, SessionError, DeviceInfo } from '@omnicam/protocol';
 
 export class SignalingError extends Error {
@@ -12,9 +12,19 @@ export class SignalingError extends Error {
   }
 }
 
+/**
+ * The camera this page feeds, from its URL's `cam` (the QR code of "OmniCam 2" to "OmniCam 4" carries it).
+ * Anything else, or nothing, is camera 1.
+ */
+export function cameraNumber(search = location.search): number {
+  const n = Number(new URLSearchParams(search).get('cam'));
+  return Number.isInteger(n) && n >= 2 && n <= MAX_CAMERAS ? n : 1;
+}
+
 /** One-shot signaling: POST the complete offer, get the complete answer back. */
-export async function exchangeSdp(token: string, sdp: string, device: DeviceInfo): Promise<SessionResponse> {
-  const body: SessionRequest = { token, sdp, device };
+export async function exchangeSdp(token: string, sdp: string, device: DeviceInfo, camera = 1): Promise<SessionResponse> {
+  // Camera 1 sends what it always sent, so it works with an older desktop app too.
+  const body: SessionRequest = camera > 1 ? { token, sdp, device, camera } : { token, sdp, device };
   let res: Response;
   try {
     res = await fetch(API_SESSION_PATH, {

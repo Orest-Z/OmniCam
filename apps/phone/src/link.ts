@@ -25,6 +25,8 @@ function h264Level(width: number, height: number, fps: number): string {
 
 export interface LinkOptions {
   token: string;
+  /** The camera this phone feeds, 1 to MAX_CAMERAS. */
+  camera: number;
   /** Frames are read from what this element shows. */
   video: HTMLVideoElement;
   bitrateFor(width: number, height: number): number;
@@ -80,8 +82,8 @@ export class PhoneLink {
 
   constructor(options: LinkOptions) {
     this.o = options;
-    const { token } = options;
-    this.ws = new WebSocket(`wss://${location.host}${API_LINK_PATH}?t=${encodeURIComponent(token)}`);
+    const { token, camera } = options;
+    this.ws = new WebSocket(`wss://${location.host}${API_LINK_PATH}?t=${encodeURIComponent(token)}${camera > 1 ? `&cam=${camera}` : ''}`);
     this.ws.binaryType = 'arraybuffer';
     this.ws.onopen = () => {
       this.wasOpen = true;

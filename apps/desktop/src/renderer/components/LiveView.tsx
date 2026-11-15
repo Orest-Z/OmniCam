@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Flashlight, FlipHorizontal2, Mic, MicOff, QrCode, RotateCw, SlidersHorizontal, Unplug, Video, VideoOff } from 'lucide-react';
 import { zoomSteps, type DesktopToPhone } from '@omnicam/protocol';
-import type { AppSettings, StreamStats, VirtualCamStats, VirtualMicState } from '../../shared/ipc';
+import { rotationOf, rotationPatch, type AppSettings, type Rotation, type StreamStats, type VirtualCamStats, type VirtualMicState } from '../../shared/ipc';
 import { micNameFor, pickSink } from '../../shared/audio-sink';
 import { activePreset, HOTSPOT_HELP, isUpscaled, sizeLabel, WIFI_HELP } from '../../shared/stream-format';
 import { useLoopbacks } from '../useLoopbacks';
@@ -15,6 +15,10 @@ interface Props {
   settings: AppSettings;
   /** Linux: OmniCam's own microphone; null on Windows (VB-CABLE). */
   virtualMic: VirtualMicState | null;
+  /** The camera this view shows, 0-based: its rotation is its own. */
+  cameraIndex: number;
+  /** False on cameras 2 to 4: one virtual cable takes one phone's microphone, camera 1's. */
+  micAllowed: boolean;
   onSettings: (patch: Partial<AppSettings>) => void;
   onControl: (msg: DesktopToPhone) => void;
   onShowQr: () => void;
@@ -28,10 +32,11 @@ interface Props {
  */
 export const SPEAKING_LEVEL = 0.02;
 
-export function LiveView({ stats, vcam, settings, virtualMic, onSettings, onControl, onShowQr, onOpenMicGuide, onOpenSettings }: Props) {
+export function LiveView({ stats, vcam, settings, virtualMic, cameraIndex, micAllowed, onSettings, onControl, onShowQr, onOpenMicGuide, onOpenSettings }: Props) {
   const live = stats.state === 'connected' || stats.state === 'stalled';
   const facing = stats.trackInfo?.facing ?? 'user';
   const preset = activePreset(stats.trackInfo);
+  const rotation = rotationOf(settings, cameraIndex);
   const zoom = stats.caps?.zoom;
   const zooms = zoomSteps(zoom);
   // Lights the button the phone is at; a level between buttons lights none.
@@ -85,7 +90,8 @@ export function LiveView({ stats, vcam, settings, virtualMic, onSettings, onCont
       </div>
 
       <div className="bar">
-        <div className="group">
+        {/* A phone on an extra camera sends its camera only, so there is nothing to switch. */}
+        <div className="group" hidden={!micAllowed}>
           {/* The phone keeps one of the two on, so the last one can't be switched off. */}
           <IconButton
             title={camera ? 'Turn the phone camera off' : 'Turn the phone camera on'}
@@ -107,7 +113,7 @@ export function LiveView({ stats, vcam, settings, virtualMic, onSettings, onCont
 
         {camera && (
           <>
-            <span className="divider" />
+            {micAllowed && <span className="divider" />}
 
             <div className="group">
               <Segmented
@@ -161,9 +167,9 @@ export function LiveView({ stats, vcam, settings, virtualMic, onSettings, onCont
                 <FlipHorizontal2 />
               </IconButton>
               <IconButton
-                title={`Rotate output (${settings.rotation}°)`}
-                on={settings.rotation !== 0}
-                onClick={() => onSettings({ rotation: ((settings.rotation + 90) % 360) as AppSettings['rotation'] })}
+                title={`Rotate this camera (${rotation}°)`}
+                on={rotation !== 0}
+                onClick={() => onSettings(rotationPatch(settings, cameraIndex, ((rotation + 90) % 360) as Rotation))}
               >
                 <RotateCw />
               </IconButton>

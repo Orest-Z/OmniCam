@@ -62,13 +62,10 @@ declare global {
   }
 }
 
-/**
- * Loads the addon from an absolute path and returns camera 1 ("OmniCam"). Returns null (with
- * reason) when it is not built/present.
- */
-export function loadVcam(addonPath: string): { addon: VcamAddon | null; reason?: string } {
+/** Loads the addon from an absolute path. Returns null (with reason) when it is not built/present. */
+export function loadVcam(addonPath: string): { addon: VcamModule | null; reason?: string } {
   try {
-    const addon = (window.require(addonPath) as VcamModule).camera(0);
+    const addon = window.require(addonPath) as VcamModule;
     return { addon };
   } catch (err) {
     return { addon: null, reason: `no-addon: native addon not available: ${(err as Error).message}` };
