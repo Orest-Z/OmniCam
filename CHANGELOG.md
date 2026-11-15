@@ -25,6 +25,8 @@ anything else that wants several cameras.
 - **Off by default:** if you use one phone, nothing changes and apps still list a single OmniCam.
 
 ### Fixed
+- **iPhones held upright arrive upright.** An iPhone used to send its picture lying on its side, so it needed
+  the rotate button while an Android did not. Both now arrive the right way up with no rotation.
 - **A phone that reconnected while on standby stayed at 5 fps**, even once an app was using its camera. It now
   returns to full frame rate.
 - **Apps that skip "frozen" cameras now list OmniCam.** Some motion capture tools read two frames and drop a

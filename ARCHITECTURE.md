@@ -108,6 +108,9 @@ Up to four cameras, "OmniCam" and "OmniCam 2" to "OmniCam 4", one phone each, al
   follows camera 1's phone only.
 - **Per camera:** the rotation (`rotation` for camera 1, `extraRotations` for the others) and what the phone
   films: the window's phone controls, resolution included, go to the selected camera's phone only.
+- **Upright phones:** the answer SDP drops `urn:3gpp:video-orientation` (`sdp.ts`), so Safari turns the frames
+  itself. With it an iPhone held upright arrived on its side (the frame pump never sees the flag) while an
+  Android arrived upright, and no single rotation suited both.
 - **One microphone:** only camera 1's phone plays into the virtual cable. The page of cameras 2 to 4 hides the
   microphone choices and ignores `setMic`.
 - **Window:** `AppState` carries the selected camera's `pairing`, `stats`, `vcam` and `vcamError`, plus
