@@ -27,6 +27,8 @@ anything else that wants several cameras.
 ### Fixed
 - **A phone that reconnected while on standby stayed at 5 fps**, even once an app was using its camera. It now
   returns to full frame rate.
+- **Apps that skip "frozen" cameras now list OmniCam.** Some motion capture tools read two frames and drop a
+  camera when they are identical, which OmniCam's placeholder and repeated frames were.
 
 Measured with four simulated phones on one PC (Ryzen 7 5700X): at 720p60 and at 1080p30 all four cameras held
 their frame rate with no dropped frames, using well under one CPU core in total. Not on Linux yet, where

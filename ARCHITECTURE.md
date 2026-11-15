@@ -58,7 +58,9 @@ PHONE (browser)                       DESKTOP (Electron)
 
 - **Frames never cross Electron IPC.** The engine loads the addon in-process.
 - **The native thread owns the camera clock.** JS deposits frames; C++ repeats the last one when
-  the source stalls and shows a placeholder when nothing is connected.
+  the source stalls and shows a placeholder when nothing is connected. No two frames in a row are
+  bit-identical (the first byte's lowest bit alternates): FreeMoCap skips a camera whose first two
+  frames are equal as "probably a virtual camera".
 - **Security model:** per-launch random token in the QR URL; `/api/session` rejects anything
   else (constant-time compare, one negotiation at a time per camera, an attempt budget per client); one
   active phone per camera. The camera a phone names is untrusted input like the rest of its request

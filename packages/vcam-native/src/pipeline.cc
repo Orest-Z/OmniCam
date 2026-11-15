@@ -453,6 +453,7 @@ void Pipeline::workerLoop() {
     auto lastSentAt = clock::now() - period;
     auto lastConsumerPoll = clock::time_point{};
     bool showPlaceholder = true;
+    uint8_t tick = 0;
 
     while (running_) {
         bool wantPreview;
@@ -518,13 +519,18 @@ void Pipeline::workerLoop() {
         now = clock::now();
         const bool due = now - lastSentAt >= keepalive;
         if (haveNew || due) {
-            const uint8_t* frame = nullptr;
+            uint8_t* frame = nullptr;
             if (showPlaceholder || !haveOut_) frame = placeholderSet_ ? placeholder_.data() : nullptr;
             if (!frame) {
                 if (!haveOut_) fillBlack(out_);
                 frame = out_.data();
             }
             if (!haveNew && consumers_ > 0) repeated_++;
+            // No two frames in a row are bit-identical: the lowest bit of the first byte alternates.
+            // Motion capture apps (FreeMoCap) read two frames when they look for cameras and skip one
+            // whose frames are equal as "not a real camera", which a repeat or the placeholder would be.
+            tick ^= 1;
+            frame[0] = (uint8_t)((frame[0] & ~1) | tick);
             device_->sendFrame(frame);
             lastSentAt = now;
         }
