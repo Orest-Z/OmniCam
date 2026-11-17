@@ -53,6 +53,9 @@ H.264; your video never leaves your network, and there is no account, no cloud a
   On Linux the phone's microphone needs nothing extra installed.
 - **Phone side** — any modern browser: iPhone (Safari) or Android (Chrome). It's just a web page served by your PC.
 - **Quality** — 720p, 720p60, 1080p or 4K from the phone's camera, hardware H.264, latency on par with a native camera app.
+- **Up to 4 phones at once** (Windows) — turn on [Extra cameras](#settings) and you get **OmniCam**, **OmniCam 2**, **3**
+  and **4**, one phone each, all streaming together. Built for multi-angle setups such as motion capture with
+  [FreeMoCap](https://freemocap.org/). Free, no watermark, no Pro tier.
 - **Controls** — front/back camera, torch (a screen light on the front camera), resolution, mirror, rotate, Fill/Fit — from the PC or from the phone. Light or dark desktop app.
 - **Stays out of the way** — runs from the tray; closing the window keeps the camera live. The phone drops to 5 fps
   once no app is using the camera *and* the OmniCam window is closed or hidden.
@@ -69,6 +72,9 @@ H.264; your video never leaves your network, and there is no account, no cloud a
 | Account / cloud          | **none**                 | none              | none              | account           | none              |
 | Video path               | phone → PC on your Wi-Fi | Wi-Fi / USB       | Wi-Fi / USB       | Wi-Fi / USB       | Wi-Fi / USB       |
 | Microphone               | yes (Windows: VB-CABLE)  | yes               | yes               | yes               | yes               |
+| Several phones at once   | **up to 4, free** (Windows) | in OBS only; HD needs Pro, else watermark | not advertised | not advertised | discontinued |
+Several phones at once means several separate cameras that any app can open together, which is what multi-camera
+tools like FreeMoCap need. OmniCam has been tested with FreeMoCap and four phones.
 
 The trade-off for "no app" is a browser security warning the first time (explained below), and USB is not an option
 yet — a phone hotspot or USB tethering with the PC on it works as a stand-in.
@@ -117,8 +123,10 @@ becomes the default output, OmniCam switches it back.
   with Secure Boot on, a signing key enrolled once ([Install (Linux)](#install-linux)).
 - **A browser warning the first time** on each phone, per network — unavoidable without a public certificate, and
   explained step by step below.
-- **One phone per camera.** One camera by default; up to four on Windows with [Extra cameras](#settings). Scanning a
-  camera's code with another phone replaces that camera's phone. Only camera 1's phone can be the microphone.
+- **One phone per camera, four cameras at most, several cameras on Windows only.** One camera by default; up to four
+  phones at once on Windows with [Extra cameras](#settings) (Linux has one camera for now). Scanning a camera's code
+  with another phone replaces that camera's phone. Only camera 1's phone can be the microphone. Older or low-end phones
+  can lag a little when four stream together.
 - **The installer isn't code-signed yet**, so SmartScreen asks you to confirm. Signing through SignPath
   Foundation is being set up; [CODE_SIGNING.md](CODE_SIGNING.md) has the policy.
 - **No USB path yet** — Wi-Fi, or a hotspot/tethering so both devices share one network.
